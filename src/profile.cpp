@@ -71,26 +71,20 @@ int develop_profile(std::vector<double> &initial_guess,
                     std::vector<double> &eta_grid, std::vector<double> &rhs,
                     std::vector<double> &score, bool &converged) {
   int nb_steps = eta_grid.size() - 1;
-  printf("%d\n", nb_steps);
 
   assert(state_grid.size() / (nb_steps + 1) == SYSTEM_RANK);
 
   initialize_state(state_grid, initial_guess);
 
-  double min_step = 1e-3;
+  double min_step = 1e-2;
   double eta_step = 1.;
 
   int step_id = 0;
   int offset = 0;
   while (step_id < nb_steps) {
 
-    print_state(state_grid, offset);
-
     // Compute rhs and limit time step
     eta_step = std::min(min_step, compute_rhs(state_grid, rhs, offset));
-
-    print_state(rhs, 0);
-    printf("step = %.2e. \n\n", eta_step);
 
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
@@ -105,9 +99,9 @@ int develop_profile(std::vector<double> &initial_guess,
 
     // Check convergence
     double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
-    // converged = rate < 1e-3;
-    // if (converged)
-    //   break;
+    converged = rate < 1e-3;
+    if (converged)
+      break;
   }
 
   // Compute score
