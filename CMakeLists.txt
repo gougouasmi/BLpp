@@ -17,3 +17,12 @@ add_executable(search_profile
     src/profile.cpp
 )
 target_include_directories(search_profile PRIVATE src)
+
+###
+# Tests
+#
+enable_testing()
+
+add_executable(trivial_test tests/trivial_test.cpp)
+
+add_test(NAME TrivialTest COMMAND trivial_test)
