@@ -27,6 +27,9 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
 
+  ProfileParams profile_params;
+  profile_params.set_default();
+
   std::vector<double> initial_guess(2, 0.0);
   std::vector<double> rhs(5, 0.0);
   std::vector<double> score(2, 0.0);
@@ -34,11 +37,11 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
   std::vector<double> state_grid(2000 * 5, 0.0);
   std::vector<double> eta_grid(2000, 0.0);
 
-  bool converged = false;
+  bool converged;
 
   double delta_fpp, delta_gp;
 
-  double min_res_norm = 1e6;
+  double min_res_norm;
   double res_norm;
 
   int min_fid, min_gid;
@@ -53,6 +56,8 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
     fpp0 = fpp_min;
     gp0 = gp_min;
 
+    min_res_norm = 1e3;
+
     min_fid = 0;
     min_gid = 0;
 
@@ -64,10 +69,14 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
       for (int gid = 0; gid < ydim; gid++) {
         initial_guess[1] = gp0;
 
-        develop_profile(initial_guess, state_grid, eta_grid, rhs, score,
+        profile_params.set_initial_values(initial_guess);
+
+        develop_profile(profile_params, state_grid, eta_grid, rhs, score,
                         converged);
 
-        res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
+        res_norm = 1e3;
+        if (converged)
+          res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
 
         if (res_norm < min_res_norm) {
 
@@ -76,7 +85,7 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
           min_gid = gid;
 
           if (res_norm < rtol) {
-            printf("Solution found: f''(0)=%.6f, g'(0)=%.6f", fpp0, gp0);
+            printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", fpp0, gp0);
             best_guess[0] = fpp0;
             best_guess[1] = gp0;
             return;
@@ -90,7 +99,7 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
     }
 
     // (2 / 2) Define next bounds
-    double x0, x1 = fpp_min, fpp_max;
+    double x0 = fpp_min, x1 = fpp_max;
     double xs = fpp_min + delta_fpp * min_fid;
 
     if (min_fid == 0) {
@@ -106,7 +115,7 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
       }
     }
 
-    double y0, y1 = gp_min, gp_max;
+    double y0 = gp_min, y1 = gp_max;
     double ys = gp_min + delta_gp * min_gid;
 
     if (min_gid == 0) {
@@ -123,7 +132,7 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
     }
 
     printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next window "
-           "=[[%.ef, %.2e], [%.2e, %.2e]\n",
+           "=[[%.3f, %.3f], [%.3f, %.3f]\n",
            iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
   }
 }

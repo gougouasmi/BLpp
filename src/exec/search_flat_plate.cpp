@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "profile_search.h"
@@ -7,17 +8,13 @@
 int main(int argc, char *argv[]) {
 
   SearchWindow window;
-  window.fpp_min = 0.2;
-  window.fpp_max = 0.8;
-  window.gp_min = 0.2;
-  window.gp_max = 0.2;
-  window.xdim = 10;
-  window.ydim = 10;
+  window.set_default();
+  window.parse_cmd_inputs(argc, argv);
+  window.print();
 
   SearchParams params;
-  params.max_iter = 10;
-  params.rtol = 1e-2;
-  params.verbose = true;
+  params.set_default();
+  params.parse_cmd_inputs(argc, argv);
 
   std::vector<double> best_guess(2, 0.0);
 

@@ -10,18 +10,10 @@
  *
  */
 
-static int SYSTEM_RANK = 5;
-
-static int FPP_ID = 0;
-static int GP_ID = 1;
-static int FP_ID = 2;
-static int F_ID = 3;
-static int G_ID = 4;
-
 void initialize_state(std::vector<double> &state,
-                      std::vector<double> &initial_state) {
-  double fpp0 = initial_state[0];
-  double gp0 = initial_state[1];
+                      ProfileParams &profile_params) {
+  double fpp0 = profile_params.fpp0;
+  double gp0 = profile_params.gp0;
 
   double fp0 = 0;
   double g0 = 0.2;
@@ -66,17 +58,20 @@ void print_state(std::vector<double> &state, int offset) {
          state[offset + 2], state[offset + 3], state[offset + 4]);
 }
 
-int develop_profile(std::vector<double> &initial_guess,
+int develop_profile(ProfileParams &profile_params,
                     std::vector<double> &state_grid,
                     std::vector<double> &eta_grid, std::vector<double> &rhs,
                     std::vector<double> &score, bool &converged) {
+  assert(profile_params.valid());
+
+  converged = false;
   int nb_steps = eta_grid.size() - 1;
 
   assert(state_grid.size() / (nb_steps + 1) == SYSTEM_RANK);
 
-  initialize_state(state_grid, initial_guess);
+  initialize_state(state_grid, profile_params);
 
-  double min_step = 1e-2;
+  double min_step = profile_params.min_eta_step;
   double eta_step = 1.;
 
   int step_id = 0;
