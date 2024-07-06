@@ -1,16 +1,80 @@
+#include "flat_plate.h"
+
+#include <algorithm>
 #include <cassert>
-#include <iostream>
 
-#include "profile.h"
-#include "profile_search.h"
+FlatPlate::FlatPlate(int max_nb_steps)
+    : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_default) {
+  state_grid.resize(FLAT_PLATE_RANK * _max_nb_steps);
+  eta_grid.resize(_max_nb_steps);
+  rhs.resize(FLAT_PLATE_RANK);
+}
 
-/*
- *
- *
- *
- */
-void box_profile_search(SearchWindow &window, SearchParams &params,
-                        std::vector<double> &best_guess) {
+void FlatPlate::InitializeState(ProfileParams &profile_params) {
+  double fpp0 = profile_params.fpp0;
+  double gp0 = profile_params.gp0;
+
+  double fp0 = 0;
+  double g0 = 0.2;
+
+  double romu0 = 1.;
+  double prandtl0 = 1.;
+
+  state_grid[FPP_ID] = romu0 * fpp0;
+  state_grid[FP_ID] = fp0;
+  state_grid[F_ID] = 0;
+  state_grid[GP_ID] = (romu0 / prandtl0) * gp0;
+  state_grid[G_ID] = g0;
+}
+
+int FlatPlate::DevelopProfile(ProfileParams &profile_params,
+                              std::vector<double> &score, bool &converged) {
+  assert(profile_params.AreValid());
+
+  converged = false;
+  int nb_steps = eta_grid.size() - 1;
+
+  assert(state_grid.size() / (nb_steps + 1) == FLAT_PLATE_RANK);
+
+  InitializeState(profile_params);
+
+  double min_step = profile_params.min_eta_step;
+  double eta_step = 1.;
+
+  int step_id = 0;
+  int offset = 0;
+  while (step_id < nb_steps) {
+
+    // Compute rhs and limit time step
+    eta_step = std::min(min_step, compute_rhs(state_grid, rhs, offset));
+
+    // Evolve state/grid forward
+    eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
+    for (int var_id = 0; var_id < FLAT_PLATE_RANK; ++var_id) {
+      state_grid[offset + FLAT_PLATE_RANK + var_id] =
+          state_grid[offset + var_id] + eta_step * rhs[var_id];
+    }
+
+    // Update indexing
+    offset += FLAT_PLATE_RANK;
+    step_id += 1;
+
+    // Check convergence
+    double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
+    converged = rate < 1e-3;
+    if (converged)
+      break;
+  }
+
+  // Compute score
+  score[0] = state_grid[offset + FP_ID] - 1.;
+  score[1] = state_grid[offset + G_ID] - 1;
+
+  return step_id;
+}
+
+void FlatPlate::BoxProfileSearch(SearchWindow &window, SearchParams &params,
+                                 std::vector<double> &best_guess) {
 
   int max_iter = params.max_iter;
   double rtol = params.rtol;
@@ -28,14 +92,10 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
   double gp_max = window.gp_max;
 
   ProfileParams profile_params;
-  profile_params.set_default();
+  profile_params.SetDefault();
 
   std::vector<double> initial_guess(2, 0.0);
-  std::vector<double> rhs(5, 0.0);
   std::vector<double> score(2, 0.0);
-
-  std::vector<double> state_grid(2000 * 5, 0.0);
-  std::vector<double> eta_grid(2000, 0.0);
 
   bool converged;
 
@@ -69,10 +129,10 @@ void box_profile_search(SearchWindow &window, SearchParams &params,
       for (int gid = 0; gid < ydim; gid++) {
         initial_guess[1] = gp0;
 
-        profile_params.set_initial_values(initial_guess);
+        profile_params.SetInitialValues(initial_guess);
+        InitializeState(profile_params);
 
-        develop_profile(profile_params, state_grid, eta_grid, rhs, score,
-                        converged);
+        DevelopProfile(profile_params, score, converged);
 
         res_norm = 1e3;
         if (converged)

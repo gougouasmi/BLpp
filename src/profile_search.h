@@ -12,7 +12,7 @@ typedef struct SearchWindow {
   int xdim;
   int ydim;
 
-  void set_default() {
+  void SetDefault() {
     fpp_min = 0.01;
     fpp_max = 10.0;
     gp_min = 0.1;
@@ -20,13 +20,14 @@ typedef struct SearchWindow {
     xdim = 10;
     ydim = 10;
   }
-  void print() const {
+
+  void Print() const {
     printf("Window = {fpp_min=%.2e, fpp_max=%.2e, gp_min=%.2e, gp_max=%.2e, "
            "xdim=%d, ydim=%d}.\n\n",
            fpp_min, fpp_max, gp_min, gp_max, xdim, ydim);
   }
 
-  void parse_cmd_inputs(int argc, char *argv[]) {
+  void ParseCmdInputs(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i];
       if (arg == "-fbounds") {
@@ -59,13 +60,13 @@ typedef struct SearchParams {
   bool verbose;
   double rtol;
 
-  void set_default() {
+  void SetDefault() {
     max_iter = 20;
     rtol = 1e-3;
     verbose = false;
   }
 
-  void parse_cmd_inputs(int argc, char *argv[]) {
+  void ParseCmdInputs(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i];
       if (arg == "-maxiter") {
@@ -83,8 +84,5 @@ typedef struct SearchParams {
   }
 
 } SearchParams;
-
-void box_profile_search(SearchWindow &window, SearchParams &params,
-                        std::vector<double> &best_guess);
 
 #endif

@@ -3,22 +3,24 @@
 #include <string>
 #include <vector>
 
+#include "flat_plate.h"
 #include "profile_search.h"
 
 int main(int argc, char *argv[]) {
 
   SearchWindow window;
-  window.set_default();
-  window.parse_cmd_inputs(argc, argv);
-  window.print();
+  window.SetDefault();
+  window.ParseCmdInputs(argc, argv);
 
   SearchParams params;
-  params.set_default();
-  params.parse_cmd_inputs(argc, argv);
+  params.SetDefault();
+  params.ParseCmdInputs(argc, argv);
 
   std::vector<double> best_guess(2, 0.0);
 
-  box_profile_search(window, params, best_guess);
+  FlatPlate flat_plate(2000);
+
+  flat_plate.BoxProfileSearch(window, params, best_guess);
 
   return 0;
 }

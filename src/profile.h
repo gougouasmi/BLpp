@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-static int SYSTEM_RANK = 5;
+static int FLAT_PLATE_RANK = 5;
 
 static int FPP_ID = 0;
 static int GP_ID = 1;
@@ -12,30 +12,48 @@ static int FP_ID = 2;
 static int F_ID = 3;
 static int G_ID = 4;
 
+enum WallType { Wall, Adiabatic };
+
 typedef struct ProfileParams {
   int nb_steps;
+
+  WallType wall_type;
   double fpp0;
   double gp0;
+  double g0;
 
   double min_eta_step;
 
-  bool valid() const {
+  bool AreValid() const {
     return (nb_steps > 1) && (fpp0 >= 0.) && (gp0 >= 0.) && (min_eta_step > 0);
   }
 
-  void set_default() {
+  void SetDefault() {
     nb_steps = 2000;
     fpp0 = 0.5;
     gp0 = 0.5;
+    wall_type = WallType::Wall;
+    g0 = 0.2;
     min_eta_step = 1e-2;
   }
 
-  void set_initial_values(std::vector<double> &initial_vals) {
+  void SetInitialValues(std::vector<double> &initial_vals) {
     fpp0 = initial_vals[0];
-    gp0 = initial_vals[1];
+
+    switch (wall_type) {
+    case WallType::Wall:
+      gp0 = initial_vals[1];
+      break;
+    case WallType::Adiabatic:
+      g0 = initial_vals[1];
+      break;
+    default:
+      printf("\nwall_type not recognized\n");
+      break;
+    }
   }
 
-  void parse_cmd_inputs(int argc, char *argv[]) {
+  void ParseCmdInputs(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i];
       if (arg == "-n") {
@@ -68,9 +86,10 @@ typedef struct ProfileParams {
 
 } ProfileParams;
 
-int develop_profile(ProfileParams &profile_params,
-                    std::vector<double> &state_grid,
-                    std::vector<double> &eta_grid, std::vector<double> &rhs,
-                    std::vector<double> &score, bool &converged);
+double compute_rhs_default(std::vector<double> &state, std::vector<double> &rhs,
+                           int offset);
+
+typedef double (*RhsFunction)(std::vector<double> &state,
+                              std::vector<double> &rhs, int offset);
 
 #endif
