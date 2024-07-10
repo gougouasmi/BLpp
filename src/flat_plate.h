@@ -9,6 +9,7 @@
 class FlatPlate {
 public:
   FlatPlate(int max_nb_steps);
+  FlatPlate(int max_nb_steps, RhsFunction rhs_fun, InitializeFunction init_fun);
 
   void InitializeState(ProfileParams &ProfileParams);
   int DevelopProfile(ProfileParams &profile_params, std::vector<double> &score,
@@ -24,6 +25,7 @@ private:
   std::vector<double> rhs;
 
   RhsFunction compute_rhs;
+  InitializeFunction initialize;
 };
 
 #endif

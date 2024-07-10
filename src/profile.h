@@ -4,13 +4,13 @@
 #include <iostream>
 #include <vector>
 
-static int FLAT_PLATE_RANK = 5;
+const int FLAT_PLATE_RANK = 5;
 
-static int FPP_ID = 0;
-static int GP_ID = 1;
-static int FP_ID = 2;
-static int F_ID = 3;
-static int G_ID = 4;
+const int FPP_ID = 0;
+const int GP_ID = 1;
+const int FP_ID = 2;
+const int F_ID = 3;
+const int G_ID = 4;
 
 enum WallType { Wall, Adiabatic };
 
@@ -24,8 +24,16 @@ typedef struct ProfileParams {
 
   double min_eta_step;
 
+  double pe = 1.;
+  double he = 1.;
+  double roe = 1.;
+  double ue = 1.;
+  double mue = 1.;
+
+  double eckert = 1.;
+
   bool AreValid() const {
-    return (nb_steps > 1) && (fpp0 >= 0.) && (gp0 >= 0.) && (min_eta_step > 0);
+    return (nb_steps >= 1) && (fpp0 >= 0.) && (gp0 >= 0.) && (min_eta_step > 0);
   }
 
   void SetDefault() {
@@ -74,22 +82,38 @@ typedef struct ProfileParams {
         } else {
           printf("profile g'(0) spec is incomplete.\n");
         }
+      } else if (arg == "-g0") {
+        if (i + 1 < argc) {
+          g0 = std::stod(argv[++i]);
+        } else {
+          printf("profile g(0) spec is incomplete.\n");
+        }
       } else if (arg == "-eta") {
         if (i + 1 < argc) {
           min_eta_step = std::stod(argv[++i]);
         } else {
           printf("profile eta spec is incomplete.\n");
         }
+      } else if (arg == "-wadiab") {
+        wall_type = WallType::Adiabatic;
       }
     }
   }
-
 } ProfileParams;
 
 double compute_rhs_default(std::vector<double> &state, std::vector<double> &rhs,
-                           int offset);
+                           int offset, ProfileParams &params);
+double compute_rhs_cpg(std::vector<double> &state, std::vector<double> &rhs,
+                       int offset, ProfileParams &params);
+
+void initialize_default(ProfileParams &profile_params,
+                        std::vector<double> &state);
+void initialize_cpg(ProfileParams &profile_params, std::vector<double> &state);
 
 typedef double (*RhsFunction)(std::vector<double> &state,
-                              std::vector<double> &rhs, int offset);
+                              std::vector<double> &rhs, int offset,
+                              ProfileParams &profile_params);
+typedef void (*InitializeFunction)(ProfileParams &profile_params,
+                                   std::vector<double> &state);
 
 #endif

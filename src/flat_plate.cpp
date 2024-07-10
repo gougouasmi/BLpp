@@ -1,30 +1,28 @@
 #include "flat_plate.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <cassert>
 
 FlatPlate::FlatPlate(int max_nb_steps)
-    : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_default) {
-  state_grid.resize(FLAT_PLATE_RANK * _max_nb_steps);
-  eta_grid.resize(_max_nb_steps);
+    : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_default),
+      initialize(initialize_default) {
+  state_grid.resize(FLAT_PLATE_RANK * (1 + _max_nb_steps));
+  eta_grid.resize(1 + _max_nb_steps);
+  rhs.resize(FLAT_PLATE_RANK);
+}
+
+FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
+                     InitializeFunction init_fun)
+    : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_fun),
+      initialize(init_fun) {
+  state_grid.resize(FLAT_PLATE_RANK * (1 + _max_nb_steps));
+  eta_grid.resize((1 + _max_nb_steps));
   rhs.resize(FLAT_PLATE_RANK);
 }
 
 void FlatPlate::InitializeState(ProfileParams &profile_params) {
-  double fpp0 = profile_params.fpp0;
-  double gp0 = profile_params.gp0;
-
-  double fp0 = 0;
-  double g0 = 0.2;
-
-  double romu0 = 1.;
-  double prandtl0 = 1.;
-
-  state_grid[FPP_ID] = romu0 * fpp0;
-  state_grid[FP_ID] = fp0;
-  state_grid[F_ID] = 0;
-  state_grid[GP_ID] = (romu0 / prandtl0) * gp0;
-  state_grid[G_ID] = g0;
+  initialize(profile_params, state_grid);
 }
 
 int FlatPlate::DevelopProfile(ProfileParams &profile_params,
@@ -46,7 +44,8 @@ int FlatPlate::DevelopProfile(ProfileParams &profile_params,
   while (step_id < nb_steps) {
 
     // Compute rhs and limit time step
-    eta_step = std::min(min_step, compute_rhs(state_grid, rhs, offset));
+    eta_step = std::min(min_step,
+                        compute_rhs(state_grid, rhs, offset, profile_params));
 
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
