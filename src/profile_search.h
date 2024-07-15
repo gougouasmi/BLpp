@@ -1,6 +1,7 @@
 #ifndef PROFILE_SEARCH_H
 #define PROFILE_SEARCH_H
 
+#include <cassert>
 #include <iostream>
 #include <vector>
 
@@ -34,6 +35,7 @@ typedef struct SearchWindow {
         if (i + 2 < argc) {
           fpp_min = std::stod(argv[++i]);
           fpp_max = std::stod(argv[++i]);
+          assert(fpp_min < fpp_max);
         } else {
           printf("fbounds spec is incomplete. Setting default.");
         }
@@ -41,13 +43,16 @@ typedef struct SearchWindow {
         if (i + 2 < argc) {
           gp_min = std::stod(argv[++i]);
           gp_max = std::stod(argv[++i]);
+          assert(gp_min < gp_max);
         } else {
           printf("gbounds spec is incomplete. Setting default.");
         }
-      } else if (arg == "-boxdim") {
+      } else if (arg == "-boxdims") {
         if (i + 2 < argc) {
           xdim = std::stoi(argv[++i]);
           ydim = std::stoi(argv[++i]);
+          assert(xdim > 1);
+          assert(ydim > 1);
         }
       }
     }
@@ -72,10 +77,12 @@ typedef struct SearchParams {
       if (arg == "-maxiter") {
         if (i + 1 < argc) {
           max_iter = std::stoi(argv[++i]);
+          assert(max_iter >= 1);
         }
       } else if (arg == "-rtol") {
         if (i + 1 < argc) {
           rtol = std::stod(argv[++i]);
+          assert(rtol > 0);
         }
       } else if (arg == "-v") {
         verbose = true;

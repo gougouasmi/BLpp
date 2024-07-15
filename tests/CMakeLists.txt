@@ -19,3 +19,6 @@ enable_testing()
 
 add_executable(test_gas_model gas_model_test.cpp)
 add_test(NAME TestGasModel COMMAND test_gas_model)
+
+add_executable(test_atmosphere atmosphere_test.cpp)
+add_test(NAME TestAtmosphere COMMAND test_atmosphere)

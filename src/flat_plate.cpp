@@ -72,12 +72,14 @@ int FlatPlate::DevelopProfile(ProfileParams &profile_params,
   return step_id;
 }
 
-void FlatPlate::BoxProfileSearch(SearchWindow &window, SearchParams &params,
+void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
+                                 SearchWindow &window,
+                                 SearchParams &search_params,
                                  std::vector<double> &best_guess) {
 
-  int max_iter = params.max_iter;
-  double rtol = params.rtol;
-  bool verbose = params.verbose;
+  int max_iter = search_params.max_iter;
+  double rtol = search_params.rtol;
+  bool verbose = search_params.verbose;
 
   int xdim = window.xdim;
   int ydim = window.ydim;
@@ -89,9 +91,6 @@ void FlatPlate::BoxProfileSearch(SearchWindow &window, SearchParams &params,
   double fpp_max = window.fpp_max;
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
-
-  ProfileParams profile_params;
-  profile_params.SetDefault();
 
   std::vector<double> initial_guess(2, 0.0);
   std::vector<double> score(2, 0.0);

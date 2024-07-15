@@ -14,8 +14,8 @@ public:
   void InitializeState(ProfileParams &ProfileParams);
   int DevelopProfile(ProfileParams &profile_params, std::vector<double> &score,
                      bool &converged);
-  void BoxProfileSearch(SearchWindow &window, SearchParams &params,
-                        std::vector<double> &best_guess);
+  void BoxProfileSearch(ProfileParams &profile_params, SearchWindow &window,
+                        SearchParams &params, std::vector<double> &best_guess);
 
 private:
   int _max_nb_steps;
