@@ -10,22 +10,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 #
 
 add_library(utils_lib
-    src/utils.cpp
+    src/utils/utils.cpp
 )
-target_include_directories(utils_lib PRIVATE src)
+target_include_directories(utils_lib PUBLIC src/utils)
 
 
 add_library(profile_lib
     src/profile.cpp
 )
-target_include_directories(profile_lib PRIVATE src)
+target_include_directories(profile_lib PRIVATE src src/physics)
 target_link_libraries(profile_lib PRIVATE utils_lib)
 
 add_library(flat_plate_lib
     src/flat_plate.cpp
     src/flat_plate_factory.cpp
 )
-target_include_directories(flat_plate_lib PRIVATE src)
+target_include_directories(flat_plate_lib PRIVATE src src/physics)
 target_link_libraries(flat_plate_lib PRIVATE utils_lib)
 target_link_libraries(flat_plate_lib PRIVATE profile_lib)
 
@@ -45,7 +45,7 @@ add_executable(search_profile
 )
 
 target_link_libraries(search_profile PRIVATE flat_plate_lib profile_lib utils_lib)
-target_include_directories(search_profile PRIVATE src)
+target_include_directories(search_profile PRIVATE src src/physics)
 
 ###
 # Tests

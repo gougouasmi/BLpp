@@ -31,8 +31,6 @@ int main(int argc, char *argv[]) {
 
   ProfileParams profile_params;
   profile_params.SetDefault();
-
-  FlatPlate flat_plate = FlatPlateFactory(profile_params.nb_steps, "cpg");
   double altitude_km = 5., mach_number = 0.2;
   ParseEntryParams(argc, argv, altitude_km, mach_number);
   SetEntryConditions(altitude_km, mach_number, profile_params);
@@ -40,6 +38,7 @@ int main(int argc, char *argv[]) {
   printf("Entry conditions: altitude=%.2f km, mach_number=%.2f\n\n",
          altitude_km, mach_number);
 
+  FlatPlate flat_plate = FlatPlateFactory(profile_params.nb_steps, "cpg");
   std::vector<double> best_guess(2, 0.0);
 
   flat_plate.BoxProfileSearch(profile_params, search_window, search_params,

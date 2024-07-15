@@ -8,11 +8,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CMAKE_CXX_STANDARD_REQUIRED True)
 
     # Include the src directory
-    include_directories(${CMAKE_SOURCE_DIR}/../src)
-
+    include_directories(../src ../src/physics)
 else()
     # Include the src directory relative to the main project
     include_directories(${CMAKE_SOURCE_DIR}/src)
+    include_directories(${CMAKE_SOURCE_DIR}/src/physics)
 endif()
 
 enable_testing()
@@ -22,3 +22,8 @@ add_test(NAME TestGasModel COMMAND test_gas_model)
 
 add_executable(test_atmosphere atmosphere_test.cpp)
 add_test(NAME TestAtmosphere COMMAND test_atmosphere)
+
+#message(STATUS "CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}\n")
+#message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}\n")
+#get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
+#message(STATUS "Include directories: ${inc_dirs}\n")
