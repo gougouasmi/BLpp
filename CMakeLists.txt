@@ -45,7 +45,7 @@ add_executable(search_profile
 )
 
 target_link_libraries(search_profile PRIVATE flat_plate_lib profile_lib utils_lib)
-target_include_directories(search_profile PRIVATE src src/physics)
+target_include_directories(search_profile PRIVATE src src/physics src/utils)
 
 ###
 # Tests

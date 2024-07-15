@@ -6,6 +6,7 @@
 #include "atmosphere.h"
 #include "flat_plate_factory.h"
 #include "profile_search.h"
+#include "timers.h"
 
 /*
  *
@@ -39,10 +40,36 @@ int main(int argc, char *argv[]) {
          altitude_km, mach_number);
 
   FlatPlate flat_plate = FlatPlateFactory(profile_params.nb_steps, "cpg");
+
+  // Serial solution
   std::vector<double> best_guess(2, 0.0);
 
-  flat_plate.BoxProfileSearch(profile_params, search_window, search_params,
-                              best_guess);
+  auto serial_task = [&profile_params, &search_window, &search_params,
+                      &best_guess, &flat_plate]() {
+    flat_plate.BoxProfileSearch(profile_params, search_window, search_params,
+                                best_guess);
+  };
+
+  double avg_duration = timeit(serial_task, 1);
+
+  std::cout << "Serial search took " << avg_duration << " seconds."
+            << std::endl;
+
+  printf("\n");
+
+  // Parallel solution
+  std::vector<double> parallel_best_guess(2, 0.0);
+
+  auto parallel_task = [&profile_params, &search_window, &search_params,
+                        &parallel_best_guess, &flat_plate]() {
+    flat_plate.BoxProfileSearchParallel(profile_params, search_window,
+                                        search_params, parallel_best_guess);
+  };
+
+  avg_duration = timeit(parallel_task, 1);
+
+  std::cout << "Parallel search took " << avg_duration << " seconds."
+            << std::endl;
 
   return 0;
 }
