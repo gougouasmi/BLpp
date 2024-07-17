@@ -7,37 +7,23 @@
 
 FlatPlate::FlatPlate(int max_nb_steps)
     : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_default),
-      initialize(initialize_default) {
-
-  state_grids.resize(_max_nb_workers);
-  eta_grids.resize(_max_nb_workers);
-  rhs_vecs.resize(_max_nb_workers);
-
-  for (int worker_id = 0; worker_id < _max_nb_workers; worker_id++) {
-    state_grids[worker_id].resize(FLAT_PLATE_RANK * (1 + _max_nb_steps));
-    eta_grids[worker_id].resize((1 + _max_nb_steps));
-    rhs_vecs[worker_id].resize(FLAT_PLATE_RANK);
-  }
-}
+      initialize(initialize_default),
+      state_grids(_max_nb_workers,
+                  std::vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
+      eta_grids(_max_nb_workers, std::vector<double>(1 + _max_nb_steps)),
+      rhs_vecs(_max_nb_workers, std::vector<double>(FLAT_PLATE_RANK)) {}
 
 FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
                      InitializeFunction init_fun)
     : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_fun),
-      initialize(init_fun) {
-
-  state_grids.resize(_max_nb_workers);
-  eta_grids.resize(_max_nb_workers);
-  rhs_vecs.resize(_max_nb_workers);
-
-  for (int worker_id = 0; worker_id < _max_nb_workers; worker_id++) {
-    state_grids[worker_id].resize(FLAT_PLATE_RANK * (1 + _max_nb_steps));
-    eta_grids[worker_id].resize((1 + _max_nb_steps));
-    rhs_vecs[worker_id].resize(FLAT_PLATE_RANK);
-  }
-}
+      initialize(init_fun),
+      state_grids(_max_nb_workers,
+                  std::vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
+      eta_grids(_max_nb_workers, std::vector<double>(1 + _max_nb_steps)),
+      rhs_vecs(_max_nb_workers, std::vector<double>(FLAT_PLATE_RANK)) {}
 
 void FlatPlate::InitializeState(ProfileParams &profile_params, int worker_id) {
-  initialize(profile_params, state_grids[0]);
+  initialize(profile_params, state_grids[worker_id]);
 }
 
 int FlatPlate::DevelopProfile(ProfileParams &profile_params,
@@ -96,11 +82,12 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
                                  SearchWindow &window,
                                  SearchParams &search_params,
                                  std::vector<double> &best_guess) {
-
+  // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
 
+  // Fetch search window parameters
   int xdim = window.xdim;
   int ydim = window.ydim;
 
@@ -112,32 +99,26 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
 
+  // Temporary arrays
   std::vector<double> initial_guess(2, 0.0);
   std::vector<double> score(2, 0.0);
 
-  bool converged;
-
-  double delta_fpp, delta_gp;
-
-  double min_res_norm;
   double res_norm;
-
-  int min_fid, min_gid;
-
-  double fpp0, gp0;
 
   for (int iter = 0; iter < max_iter; iter++) {
 
-    delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
-    delta_gp = (gp_max - gp_min) / (ydim - 1);
+    double delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
+    double delta_gp = (gp_max - gp_min) / (ydim - 1);
 
-    fpp0 = fpp_min;
-    gp0 = gp_min;
+    double fpp0 = fpp_min;
+    double gp0 = gp_min;
 
-    min_res_norm = 1e3;
+    double min_res_norm = 1e3;
 
-    min_fid = 0;
-    min_gid = 0;
+    bool converged;
+
+    int min_fid = 0;
+    int min_gid = 0;
 
     // (1 / 2) Develop profiles on square grid of initial conditions
     for (int fid = 0; fid < xdim; fid++) {
@@ -209,7 +190,8 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
       }
     }
 
-    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next window "
+    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next "
+           "window "
            "=[[%.3f, %.3f], [%.3f, %.3f]\n",
            iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
   }
@@ -239,28 +221,12 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
 
-  // Temporary arrays
-  std::vector<double> initial_guess(2, 0.0);
-  std::vector<double> score(2, 0.0);
-
-  bool converged;
-
-  double delta_fpp, delta_gp;
-
-  double min_res_norm;
-  double res_norm;
-
-  int min_fid, min_gid;
+  using SearchResult = std::tuple<double, int, int>;
 
   for (int iter = 0; iter < max_iter; iter++) {
 
-    delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
-    delta_gp = (gp_max - gp_min) / (ydim - 1);
-
-    min_res_norm = 1e3;
-
-    min_fid = 0;
-    min_gid = 0;
+    double delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
+    double delta_gp = (gp_max - gp_min) / (ydim - 1);
 
     // (1 / 2) Develop profiles on square grid of initial conditions
     auto local_search_task =
@@ -268,8 +234,6 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
          this](const int fid_start, const int fid_end, const int gid_start,
                const int gid_end, const int worker_id) mutable {
           bool converged = false;
-          double fpp0 = fpp_min;
-          double gp0 = gp_min;
 
           std::vector<double> initial_guess(2, 0.0);
           std::vector<double> score(2, 0.0);
@@ -277,12 +241,13 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
           double res_norm;
           double min_res_norm = 1e30;
 
-          int min_fid = 0, min_gid = 0;
+          int min_fid = fid_start, min_gid = gid_start;
 
+          double fpp0 = fpp_min + fid_start * delta_fpp;
           for (int fid = fid_start; fid < fid_end; fid++) {
             initial_guess[0] = fpp0;
 
-            gp0 = gp_min;
+            double gp0 = gp_min + gid_start * delta_gp;
             for (int gid = gid_start; gid < gid_end; gid++) {
               initial_guess[1] = gp0;
 
@@ -301,8 +266,7 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
                   min_gid = gid;
 
                   if (res_norm < rtol) {
-                    return std::tuple<double, int, int>(min_res_norm, min_fid,
-                                                        min_gid);
+                    return SearchResult(min_res_norm, min_fid, min_gid);
                   }
                 }
               }
@@ -312,35 +276,35 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
 
             fpp0 += delta_fpp;
           }
-          return std::tuple<double, int, int>(min_res_norm, min_fid, min_gid);
+          return SearchResult(min_res_norm, min_fid, min_gid);
         };
 
-    // One thread involved (debugging)
-    // auto ftr =
-    // std::async(std::launch::async, local_search_task, 0, xdim, 0, ydim, 0);//
-    // std::tuple < double, int, int> result = ftr.get();
+    double min_res_norm = 1e30;
+    int min_fid = 0, min_gid = 0;
 
-    // 2 threads
-    auto ftr1 = std::async(std::launch::async, local_search_task, 0,
-                           (int)(xdim / 2), 0, ydim, 0);
-    auto ftr2 = std::async(std::launch::async, local_search_task,
-                           (int)(xdim / 2), xdim, 0, ydim, 1);
+    // 4 threads
+    std::vector<std::future<SearchResult>> futures;
 
-    using Result = std::tuple<double, int, int>;
+    futures.emplace_back(std::async(std::launch::async, local_search_task, 0,
+                                    xdim / 2, 0, ydim / 2, 0));
+    futures.emplace_back(std::async(std::launch::async, local_search_task,
+                                    xdim / 2, xdim, 0, ydim / 2, 1));
+    futures.emplace_back(std::async(std::launch::async, local_search_task, 0,
+                                    xdim / 2, ydim / 2, ydim, 2));
+    futures.emplace_back(std::async(std::launch::async, local_search_task,
+                                    xdim / 2, xdim, ydim / 2, ydim, 3));
 
-    Result result_1 = ftr1.get();
-    Result result_2 = ftr2.get();
-
-    if (std::get<0>(result_1) < std::get<0>(result_2)) {
-      min_res_norm = std::get<0>(result_1);
-      min_fid = std::get<1>(result_1);
-      min_gid = std::get<2>(result_1);
-    } else {
-      min_res_norm = std::get<0>(result_2);
-      min_fid = std::get<1>(result_2);
-      min_gid = std::get<2>(result_2);
+    for (auto &ftr : futures) {
+      SearchResult result = ftr.get();
+      double res_norm = std::get<0>(result);
+      if (res_norm < min_res_norm) {
+        min_res_norm = res_norm;
+        min_fid = std::get<1>(result);
+        min_gid = std::get<2>(result);
+      }
     }
 
+    // If your best guess is good enough, terminate.
     if (min_res_norm < rtol) {
       best_guess[0] = fpp_min + min_fid * delta_fpp;
       best_guess[1] = gp_min + min_gid * delta_gp;
@@ -383,7 +347,8 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
       }
     }
 
-    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next window "
+    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next "
+           "window "
            "=[[%.3f, %.3f], [%.3f, %.3f]\n",
            iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
   }

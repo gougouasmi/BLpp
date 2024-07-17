@@ -5,6 +5,17 @@ project("Boundary Layer" VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Option to enable debugging
+option(ENABLE_DEBUG "Enable debugging information" OFF)
+
+# Set compiler flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
+if(ENABLE_DEBUG)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+  message(STATUS "Debugging enabled.\n")
+endif()
+
 ###
 # Define libraries
 #

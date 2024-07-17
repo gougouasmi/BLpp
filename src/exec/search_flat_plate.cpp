@@ -17,6 +17,8 @@
  *    flag : max_iter,   flag_args (1) : max_iter
  *    flag : res_tol,    flag_args (1) : res_tol
  *    flag : v (verbose) flag_args (0)
+ *    flag : altitude,   flag_args (1) : altitude_km
+ *    flag : mach,       flag_args (1) : mach_number
  *
  */
 

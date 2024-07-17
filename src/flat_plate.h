@@ -23,7 +23,7 @@ public:
                                 vector<double> &best_guess);
 
 private:
-  const int _max_nb_workers = 2;
+  const int _max_nb_workers = 8;
   int _max_nb_steps;
 
   vector<vector<double>> state_grids;
