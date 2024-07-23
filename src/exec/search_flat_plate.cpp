@@ -73,5 +73,22 @@ int main(int argc, char *argv[]) {
   std::cout << "Parallel search took " << avg_duration << " seconds."
             << std::endl;
 
+  printf("\n");
+
+  // Parallel solution with queues
+  std::vector<double> parallel_queues_best_guess(2, 0.0);
+
+  auto parallel_queues_task = [&profile_params, &search_window, &search_params,
+                               &parallel_queues_best_guess, &flat_plate]() {
+    flat_plate.BoxProfileSearchParallelWithQueues(profile_params, search_window,
+                                                  search_params,
+                                                  parallel_queues_best_guess);
+  };
+
+  avg_duration = timeit(parallel_queues_task, 1);
+
+  std::cout << "Parallel search with queues took " << avg_duration
+            << " seconds." << std::endl;
+
   return 0;
 }

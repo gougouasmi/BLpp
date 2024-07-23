@@ -21,6 +21,10 @@ public:
   void BoxProfileSearchParallel(ProfileParams &profile_params,
                                 SearchWindow &window, SearchParams &params,
                                 vector<double> &best_guess);
+  void BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
+                                          SearchWindow &window,
+                                          SearchParams &params,
+                                          vector<double> &best_guess);
 
 private:
   const int _max_nb_workers = 8;

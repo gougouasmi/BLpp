@@ -353,3 +353,205 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
            iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
   }
 }
+
+#include "message_queue.h"
+#include <memory>
+
+void FlatPlate::BoxProfileSearchParallelWithQueues(
+    ProfileParams &profile_params, SearchWindow &window,
+    SearchParams &search_params, std::vector<double> &best_guess) {
+  // Fetch search parameters
+  int max_iter = search_params.max_iter;
+  double rtol = search_params.rtol;
+  bool verbose = search_params.verbose;
+
+  // Fetch search window parameters
+  int xdim = window.xdim;
+  int ydim = window.ydim;
+
+  assert(xdim > 1);
+  assert(ydim > 1);
+
+  double fpp_min = window.fpp_min;
+  double fpp_max = window.fpp_max;
+  double gp_min = window.gp_min;
+  double gp_max = window.gp_max;
+
+  // Define queues for SearchInput and SearchResult
+  std::shared_ptr<MessageQueue<SearchInput>> work_queue(
+      new MessageQueue<SearchInput>());
+  std::shared_ptr<MessageQueue<SearchResult>> result_queue(
+      new MessageQueue<SearchResult>());
+
+  // Spawn worker threads
+  auto local_search_task = [rtol, profile_params, work_queue, result_queue,
+                            this](const int worker_id) mutable {
+    while (true) {
+      SearchInput inputs = work_queue->fetch();
+
+      if (inputs.Stop()) {
+        break;
+      }
+
+      bool result_sent = false;
+
+      // Search!
+      const double fpp_min = inputs.x0;
+      const double delta_fpp = inputs.dx;
+      const double gp_min = inputs.y0;
+      const double delta_gp = inputs.dy;
+
+      const int fid_start = inputs.xid_start;
+      const int fid_end = inputs.xid_end;
+      const int gid_start = inputs.yid_start;
+      const int gid_end = inputs.yid_end;
+
+      bool converged = false;
+
+      std::vector<double> initial_guess(2, 0.0);
+      std::vector<double> score(2, 0.0);
+
+      double res_norm;
+      double min_res_norm = 1e30;
+
+      int min_fid = fid_start, min_gid = gid_start;
+
+      double fpp0 = fpp_min + fid_start * delta_fpp;
+      for (int fid = fid_start; fid < fid_end; fid++) {
+        initial_guess[0] = fpp0;
+
+        double gp0 = gp_min + gid_start * delta_gp;
+        for (int gid = gid_start; gid < gid_end; gid++) {
+          initial_guess[1] = gp0;
+
+          profile_params.SetInitialValues(initial_guess);
+          InitializeState(profile_params, worker_id);
+
+          DevelopProfile(profile_params, score, converged, worker_id);
+
+          if (converged) {
+            res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
+
+            if (res_norm < min_res_norm) {
+
+              min_res_norm = res_norm;
+              min_fid = fid;
+              min_gid = gid;
+
+              if (res_norm < rtol) {
+                result_queue->send(
+                    SearchResult(min_res_norm, min_fid, min_gid));
+
+                // Force nested loop termination
+                fid = fid_end;
+                gid = gid_end;
+                result_sent = true;
+              }
+            }
+          }
+
+          gp0 += delta_gp;
+        }
+
+        fpp0 += delta_fpp;
+      }
+
+      if (!result_sent) {
+        result_queue->send(SearchResult(min_res_norm, min_fid, min_gid));
+      }
+    }
+  };
+
+  std::vector<std::future<void>> futures;
+  for (int worker_id = 0; worker_id < 4; worker_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, local_search_task, worker_id));
+  }
+
+  for (int iter = 0; iter < max_iter; iter++) {
+
+    // Compute step sizes
+    double delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
+    double delta_gp = (gp_max - gp_min) / (ydim - 1);
+
+    // Send work orders
+    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, 0,
+                                 xdim / 2, 0, ydim / 2));
+    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, xdim / 2,
+                                 xdim, 0, ydim / 2));
+    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, 0,
+                                 xdim / 2, ydim / 2, ydim));
+    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, xdim / 2,
+                                 xdim, ydim / 2, ydim));
+
+    // Fetch best guesses from workers
+    double min_res_norm = 1e30;
+    int min_fid = 0, min_gid = 0;
+
+    int processed_results = 0;
+    while (processed_results < 4) {
+      SearchResult result = result_queue->fetch();
+
+      if (result.res_norm < min_res_norm) {
+        min_res_norm = result.res_norm;
+        min_fid = result.xid;
+        min_gid = result.yid;
+      }
+
+      processed_results += 1;
+    }
+
+    // If your best guess is good enough, terminate.
+    if (min_res_norm < rtol) {
+      best_guess[0] = fpp_min + min_fid * delta_fpp;
+      best_guess[1] = gp_min + min_gid * delta_gp;
+      printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", best_guess[0],
+             best_guess[1]);
+      work_queue->stop();
+      return;
+    }
+
+    // (2 / 2) Define next bounds
+    double x0 = fpp_min, x1 = fpp_max;
+    double xs = fpp_min + delta_fpp * min_fid;
+
+    if (min_fid == 0) {
+      fpp_min = 0.5 * x0;
+      fpp_max = 0.5 * (x0 + x1);
+    } else {
+      if (min_fid == xdim - 1) {
+        fpp_max += 0.5 * (x1 - x0);
+        fpp_min = 0.5 * (x0 + x1);
+      } else {
+        fpp_min = 0.5 * (x0 + xs);
+        fpp_max = 0.5 * (xs + x1);
+      }
+    }
+
+    double y0 = gp_min, y1 = gp_max;
+    double ys = gp_min + delta_gp * min_gid;
+
+    if (min_gid == 0) {
+      gp_min = 0.5 * y0;
+      gp_max = 0.5 * (y0 + y1);
+    } else {
+      if (min_gid == ydim - 1) {
+        gp_max += 0.5 * (y1 - y0);
+        gp_min = 0.5 * (y0 + y1);
+      } else {
+        gp_min = 0.5 * (y0 + ys);
+        gp_max = 0.5 * (ys + y1);
+      }
+    }
+
+    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next "
+           "window "
+           "=[[%.3f, %.3f], [%.3f, %.3f]\n",
+           iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
+  }
+
+  work_queue->stop();
+
+  std::for_each(futures.begin(), futures.end(),
+                [](std::future<void> &ftr) { ftr.wait(); });
+}

@@ -92,4 +92,36 @@ typedef struct SearchParams {
 
 } SearchParams;
 
+struct SearchInput {
+  double x0;
+  double dx;
+  double y0;
+  double dy;
+
+  int xid_start;
+  int xid_end;
+  int yid_start;
+  int yid_end;
+
+  SearchInput(double x0_val, double dx_val, double y0_val, double dy_val,
+              int xid_start_val, int xid_end_val, int yid_start_val,
+              int yid_end_val)
+      : x0(x0_val), dx(dx_val), y0(y0_val), dy(dy_val),
+        xid_start(xid_start_val), xid_end(xid_end_val),
+        yid_start(yid_start_val), yid_end(yid_end_val){};
+  static SearchInput StopMessage() {
+    return SearchInput(0., 0., 0., 0., 0, 0, 0, 0);
+  };
+  bool Stop() { return (dx == 0.) || (dy == 0.); };
+};
+
+struct SearchResult {
+  double res_norm;
+  int xid;
+  int yid;
+  SearchResult(double res_val, int xid_val, int yid_val)
+      : res_norm(res_val), xid(xid_val), yid(yid_val){};
+  static SearchResult StopMessage() { return SearchResult(1e30, -1, -1); };
+};
+
 #endif
