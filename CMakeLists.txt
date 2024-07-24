@@ -44,6 +44,7 @@ target_link_libraries(flat_plate_lib PRIVATE profile_lib)
 # Define executables
 #
 
+# Develop a self-similar profile for set initial conditions
 add_executable(devel_profile
     src/exec/develop_flat_plate.cpp
 )
@@ -51,6 +52,7 @@ add_executable(devel_profile
 target_link_libraries(devel_profile PRIVATE flat_plate_lib profile_lib utils_lib)
 target_include_directories(devel_profile PRIVATE src)
 
+# Search for the initial conditions that develop into the correct self-similar profile
 add_executable(search_profile
     src/exec/search_flat_plate.cpp
 )

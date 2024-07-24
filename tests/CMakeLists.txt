@@ -17,13 +17,27 @@ endif()
 
 enable_testing()
 
+# Test gas model functions
 add_executable(test_gas_model gas_model_test.cpp)
 add_test(NAME TestGasModel COMMAND test_gas_model)
 
+# Test atmosphere functions
 add_executable(test_atmosphere atmosphere_test.cpp)
 add_test(NAME TestAtmosphere COMMAND test_atmosphere)
 
-#message(STATUS "CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}\n")
-#message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}\n")
-#get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
-#message(STATUS "Include directories: ${inc_dirs}\n")
+# Test direct LU solve
+add_executable(test_dense_solve
+    dense_linear_solve_test.cpp
+    ../src/linalg/dense_direct_solver.cpp
+)
+target_include_directories(test_dense_solve PRIVATE ../src/linalg)
+add_test(NAME TestDenseSolver COMMAND test_dense_solve)
+
+# Test Newton solve
+add_executable(test_newton_solve
+    newton_solve_test.cpp 
+    ../src/linalg/dense_direct_solver.cpp
+    ../src/linalg/dense_matrix.cpp
+)
+target_include_directories(test_newton_solve PRIVATE ../src/linalg ../src/solvers)
+add_test(NAME TestNewtonSolver COMMAND test_newton_solve)
