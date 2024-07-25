@@ -13,6 +13,7 @@ constexpr int F_ID = 3;
 constexpr int G_ID = 4;
 
 enum WallType { Wall, Adiabatic };
+enum TimeScheme { Explicit, Implicit };
 
 typedef struct ProfileParams {
   int nb_steps;
@@ -22,6 +23,7 @@ typedef struct ProfileParams {
   double gp0;
   double g0;
 
+  TimeScheme scheme = TimeScheme::Explicit;
   double max_step;
 
   double pe = 1.;
@@ -96,6 +98,8 @@ typedef struct ProfileParams {
         }
       } else if (arg == "-wadiab") {
         wall_type = WallType::Adiabatic;
+      } else if (arg == "-implicit") {
+        scheme = TimeScheme::Implicit;
       }
     }
   }

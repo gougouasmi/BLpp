@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 
+#include "atmosphere.h"
 #include "flat_plate_factory.h"
 #include "profile.h"
 
@@ -19,30 +20,28 @@
  */
 int main(int argc, char *argv[]) {
 
+  // Parse Profile parameters
   ProfileParams profile_params;
   profile_params.SetDefault();
   profile_params.ParseCmdInputs(argc, argv);
 
-  int max_steps = profile_params.nb_steps;
-  int profile_size = 0;
+  double altitude_km = 5., mach_number = 0.2;
+  ParseEntryParams(argc, argv, altitude_km, mach_number);
+  SetEntryConditions(altitude_km, mach_number, profile_params);
+
+  printf("Entry conditions: altitude=%.2f km, mach_number=%.2f\n\n",
+         altitude_km, mach_number);
+
+  // Build FlatPlate instance and develop profile
+  FlatPlate flat_plate = FlatPlateFactory(profile_params.nb_steps, "cpg");
 
   std::vector<double> score(2);
-  bool converged = false;
+  bool converged = flat_plate.DevelopProfile(profile_params, score);
 
-  //
-  FlatPlate flat_plate = FlatPlateFactory(max_steps, "cpg");
-
-  profile_params.pe = 54169.57583733044;
-  profile_params.ue = 64.10008686421571;
-  profile_params.he = 256801.321;
-
-  // profile_params.fpp0 = 0.45;
-  // profile_params.gp0 = 0.38;
-
-  profile_size = flat_plate.DevelopProfile(profile_params, score, converged);
-
-  printf("Profile size: %d, Score: [%.5e, %.5e].\n", profile_size, score[0],
-         score[1]);
+  if (converged)
+    printf("Profile converged, score: [%.5e, %.5e].\n", score[0], score[1]);
+  else
+    printf("Profile did not converge.\n");
 
   return 0;
 }

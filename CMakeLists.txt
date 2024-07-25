@@ -60,7 +60,7 @@ add_executable(devel_profile
 )
 
 target_link_libraries(devel_profile PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
-target_include_directories(devel_profile PRIVATE src)
+target_include_directories(devel_profile PRIVATE src src/physics)
 
 # Develop a self-similar profile using Implicit BE
 add_executable(devel_profile_implicit

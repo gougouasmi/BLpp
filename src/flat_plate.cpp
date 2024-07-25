@@ -29,32 +29,41 @@ void FlatPlate::InitializeState(ProfileParams &profile_params, int worker_id) {
   initialize(profile_params, state_grids[worker_id]);
 }
 
-int FlatPlate::DevelopProfile(ProfileParams &profile_params,
-                              std::vector<double> &score, bool &converged,
-                              int worker_id) {
+bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
+                               std::vector<double> &score, int worker_id) {
+  if (profile_params.scheme == TimeScheme::Explicit) {
+    return DevelopProfileExplicit(profile_params, score, worker_id);
+  } else if (profile_params.scheme == TimeScheme::Implicit) {
+    return DevelopProfileImplicit(profile_params, score, worker_id);
+  } else {
+    printf("Time Scheme not recognized!");
+    return false;
+  }
+}
+
+bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
+                                       std::vector<double> &score,
+                                       int worker_id) {
   assert(profile_params.AreValid());
 
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
 
-  converged = false;
   int nb_steps = eta_grid.size() - 1;
 
   assert(state_grid.size() / (nb_steps + 1) == FLAT_PLATE_RANK);
 
   InitializeState(profile_params, worker_id);
-
   double max_step = profile_params.max_step;
-  double eta_step = 1.;
 
   int step_id = 0;
   int offset = 0;
   while (step_id < nb_steps) {
 
     // Compute rhs and limit time step
-    eta_step = std::min(max_step,
-                        compute_rhs(state_grid, rhs, offset, profile_params));
+    double eta_step = std::min(
+        max_step, compute_rhs(state_grid, rhs, offset, profile_params));
 
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
@@ -66,31 +75,28 @@ int FlatPlate::DevelopProfile(ProfileParams &profile_params,
     // Update indexing
     offset += FLAT_PLATE_RANK;
     step_id += 1;
-
-    // Check convergence
-    double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
-    converged = rate < 1e-3;
-    if (converged)
-      break;
   }
+
+  // Check convergence
+  double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
+  bool converged = rate < 1e-3;
 
   // Compute score
   score[0] = state_grid[offset + FP_ID] - 1.;
   score[1] = state_grid[offset + G_ID] - 1;
 
-  return step_id;
+  return converged;
 }
 
-int FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
-                                      std::vector<double> &score,
-                                      bool &converged, int worker_id) {
+bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
+                                       std::vector<double> &score,
+                                       int worker_id) {
   assert(profile_params.AreValid());
 
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
 
-  converged = false;
   int nb_steps = eta_grid.size() - 1;
 
   assert(state_grid.size() / (nb_steps + 1) == FLAT_PLATE_RANK);
@@ -166,8 +172,10 @@ int FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     bool pass = NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
                                   limit_update_fun, newton_params);
     if (!pass) {
-      printf("\n\nUnsuccesful newton solve! Aborting.\n\n");
-      break;
+      score[0] = state_grid[offset + FP_ID] - 1.0;
+      score[1] = state_grid[offset + G_ID] - 1.0;
+
+      return false;
     }
 
     // Evolve state/grid forward
@@ -180,21 +188,17 @@ int FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     // Update indexing
     offset += FLAT_PLATE_RANK;
     step_id += 1;
-
-    // Check convergence
-    compute_rhs(solution_buffer, rhs, 0, profile_params);
-
-    double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
-    converged = rate < 1e-3;
-    if (converged)
-      break;
   }
+
+  compute_rhs(solution_buffer, rhs, 0, profile_params);
+  double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
+  bool converged = rate < 1e-3;
 
   // Compute score
   score[0] = state_grid[offset + FP_ID] - 1.;
   score[1] = state_grid[offset + G_ID] - 1;
 
-  return step_id;
+  return converged;
 }
 
 void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
@@ -234,8 +238,6 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
 
     double min_res_norm = 1e3;
 
-    bool converged;
-
     int min_fid = 0;
     int min_gid = 0;
 
@@ -250,7 +252,7 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
         profile_params.SetInitialValues(initial_guess);
         InitializeState(profile_params);
 
-        DevelopProfile(profile_params, score, converged);
+        bool converged = DevelopProfile(profile_params, score);
 
         if (converged) {
           res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
@@ -350,8 +352,6 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
         [fpp_min, gp_min, delta_fpp, delta_gp, rtol, profile_params,
          this](const int fid_start, const int fid_end, const int gid_start,
                const int gid_end, const int worker_id) mutable {
-          bool converged = false;
-
           std::vector<double> initial_guess(2, 0.0);
           std::vector<double> score(2, 0.0);
 
@@ -371,7 +371,7 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
               profile_params.SetInitialValues(initial_guess);
               InitializeState(profile_params, worker_id);
 
-              DevelopProfile(profile_params, score, converged, worker_id);
+              bool converged = DevelopProfile(profile_params, score, worker_id);
 
               if (converged) {
                 res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
@@ -523,8 +523,6 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
       const int gid_start = inputs.yid_start;
       const int gid_end = inputs.yid_end;
 
-      bool converged = false;
-
       std::vector<double> initial_guess(2, 0.0);
       std::vector<double> score(2, 0.0);
 
@@ -544,7 +542,7 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
           profile_params.SetInitialValues(initial_guess);
           InitializeState(profile_params, worker_id);
 
-          DevelopProfile(profile_params, score, converged, worker_id);
+          bool converged = DevelopProfile(profile_params, score, worker_id);
 
           if (converged) {
             res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);

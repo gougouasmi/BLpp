@@ -14,13 +14,14 @@ public:
   FlatPlate(int max_nb_steps, RhsFunction rhs_fun, InitializeFunction init_fun,
             RhsJacobianFunction jacobian_fun);
 
-  void InitializeState(ProfileParams &ProfileParams, int worker_id = 0);
-  int DevelopProfile(ProfileParams &profile_params, vector<double> &score,
-                     bool &converged, int worker_id = 0);
+  void InitializeState(ProfileParams &profile_params, int worker_id = 0);
 
-  int DevelopProfileImplicit(ProfileParams &profile_params,
-                             vector<double> &score, bool &converged,
-                             int worker_id = 0);
+  bool DevelopProfile(ProfileParams &profile_params, vector<double> &score,
+                      int worker_id = 0);
+  bool DevelopProfileExplicit(ProfileParams &profile_params,
+                              vector<double> &score, int worker_id = 0);
+  bool DevelopProfileImplicit(ProfileParams &profile_params,
+                              vector<double> &score, int worker_id = 0);
 
   void BoxProfileSearch(ProfileParams &profile_params, SearchWindow &window,
                         SearchParams &params, vector<double> &best_guess);
