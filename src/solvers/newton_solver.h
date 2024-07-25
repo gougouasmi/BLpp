@@ -23,7 +23,7 @@ double vector_norm(const std::vector<double> &x) {
 }
 
 template <typename ObjectiveFun, typename JacobianFun, typename LimitUpdateFun>
-void NewtonSolveDirect(std::vector<double> &initial_guess,
+bool NewtonSolveDirect(std::vector<double> &initial_guess,
                        ObjectiveFun objective_fun, JacobianFun jacobian_fun,
                        LimitUpdateFun limit_update_fun,
                        const NewtonParams &newton_params) {
@@ -33,6 +33,7 @@ void NewtonSolveDirect(std::vector<double> &initial_guess,
   bool verbose = newton_params.verbose;
 
   int system_size = initial_guess.size();
+  assert(system_size > 0);
 
   std::vector<double> &state = initial_guess;
   std::vector<double> residual(system_size, 0.);
@@ -45,7 +46,8 @@ void NewtonSolveDirect(std::vector<double> &initial_guess,
 
   double res_norm = vector_norm(residual);
 
-  printf("\n** START: res_norm=%.2e **\n", res_norm);
+  if (verbose)
+    printf("\n** START: res_norm=%.2e **\n", res_norm);
 
   int iter = 0;
   while (iter < max_iter) {
@@ -59,6 +61,10 @@ void NewtonSolveDirect(std::vector<double> &initial_guess,
 
     // Line Search
     double alpha = limit_update_fun(state, state_varn);
+    if (alpha == 0) {
+      printf("** ERROR : Initial line search coeff is zero.\n");
+      break;
+    }
 
     for (int idx = 0; idx < system_size; idx++) {
       state[idx] += alpha * state_varn[idx];
@@ -85,17 +91,20 @@ void NewtonSolveDirect(std::vector<double> &initial_guess,
 
     // Review results
     if (!success) {
-      printf(" => Unsuccessful line search.\n");
+      if (verbose)
+        printf(" => Unsuccessful line search.\n");
       break;
     }
 
-    printf("**  Iter#%d, ||x|| = %.2e, ||dx|| = %.2e, a = "
-           "%.2e, ||R|| = %.2e\n",
-           iter + 1, vector_norm(state), vector_norm(state_varn), alpha,
-           res_norm);
+    if (verbose)
+      printf("**  Iter#%d, ||x|| = %.2e, ||dx|| = %.2e, a = "
+             "%.2e, ||R|| = %.2e\n",
+             iter + 1, vector_norm(state), vector_norm(state_varn), alpha,
+             res_norm);
 
     if (res_norm < rtol) {
-      printf(" => Solution found. ||R|| = %.2e\n", res_norm);
+      if (verbose)
+        printf(" => Solution found. ||R|| = %.2e\n", res_norm);
       break;
     }
 
@@ -103,7 +112,10 @@ void NewtonSolveDirect(std::vector<double> &initial_guess,
     jacobian_fun(state, jacobian_matrix);
   }
 
-  printf("** END: ||R|| = %.2e **\n\n", res_norm);
+  if (verbose)
+    printf("** END: ||R|| = %.2e **\n\n", res_norm);
+
+  return (res_norm < rtol);
 }
 
 #endif

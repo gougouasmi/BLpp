@@ -1,4 +1,5 @@
 #include "flat_plate.h"
+#include "newton_solver.h"
 #include "utils.h"
 
 #include <algorithm>
@@ -8,15 +9,17 @@
 FlatPlate::FlatPlate(int max_nb_steps)
     : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_default),
       initialize(initialize_default),
+      compute_rhs_jacobian(compute_rhs_jacobian_default),
       state_grids(_max_nb_workers,
                   std::vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, std::vector<double>(1 + _max_nb_steps)),
       rhs_vecs(_max_nb_workers, std::vector<double>(FLAT_PLATE_RANK)) {}
 
 FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
-                     InitializeFunction init_fun)
+                     InitializeFunction init_fun,
+                     RhsJacobianFunction jacobian_fun)
     : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_fun),
-      initialize(init_fun),
+      compute_rhs_jacobian(jacobian_fun), initialize(init_fun),
       state_grids(_max_nb_workers,
                   std::vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, std::vector<double>(1 + _max_nb_steps)),
@@ -42,7 +45,7 @@ int FlatPlate::DevelopProfile(ProfileParams &profile_params,
 
   InitializeState(profile_params, worker_id);
 
-  double min_step = profile_params.min_eta_step;
+  double max_step = profile_params.max_step;
   double eta_step = 1.;
 
   int step_id = 0;
@@ -50,7 +53,7 @@ int FlatPlate::DevelopProfile(ProfileParams &profile_params,
   while (step_id < nb_steps) {
 
     // Compute rhs and limit time step
-    eta_step = std::min(min_step,
+    eta_step = std::min(max_step,
                         compute_rhs(state_grid, rhs, offset, profile_params));
 
     // Evolve state/grid forward
@@ -65,6 +68,122 @@ int FlatPlate::DevelopProfile(ProfileParams &profile_params,
     step_id += 1;
 
     // Check convergence
+    double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
+    converged = rate < 1e-3;
+    if (converged)
+      break;
+  }
+
+  // Compute score
+  score[0] = state_grid[offset + FP_ID] - 1.;
+  score[1] = state_grid[offset + G_ID] - 1;
+
+  return step_id;
+}
+
+int FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
+                                      std::vector<double> &score,
+                                      bool &converged, int worker_id) {
+  assert(profile_params.AreValid());
+
+  vector<double> &state_grid = state_grids[worker_id];
+  vector<double> &eta_grid = eta_grids[worker_id];
+  vector<double> &rhs = rhs_vecs[worker_id];
+
+  converged = false;
+  int nb_steps = eta_grid.size() - 1;
+
+  assert(state_grid.size() / (nb_steps + 1) == FLAT_PLATE_RANK);
+
+  InitializeState(profile_params, worker_id);
+  double eta_step = profile_params.max_step;
+
+  int step_id = 0;
+  int offset = 0;
+
+  // Setup nonlinear solver functions
+  int xdim = FLAT_PLATE_RANK;
+
+  auto objective_fun = [xdim, worker_id, &eta_step, &offset, &profile_params,
+                        &state_grid, this](const std::vector<double> &state,
+                                           std::vector<double> &residual) {
+    // U^{n+1} - U^{n} = R(U^{n+1})
+    compute_rhs(state, residual, 0, profile_params);
+    for (int idx = 0; idx < xdim; idx++) {
+      residual[idx] *= -eta_step;
+      residual[idx] += state[idx] - state_grid[offset + idx];
+    };
+  };
+
+  auto limit_update_fun = [xdim](const std::vector<double> &state,
+                                 const std::vector<double> &state_varn) {
+    double alpha = 1.;
+
+    if (state_varn[FP_ID] < 0) {
+      alpha = std::min(alpha, 0.2 * state[FP_ID] / (-state_varn[FP_ID]));
+    }
+    alpha = std::min(alpha, 0.2 * state[G_ID] / fabs(state_varn[G_ID] + 1e-30));
+
+    return alpha;
+  };
+
+  auto jacobian_fun = [xdim, &eta_step, &offset, &profile_params,
+                       this](const std::vector<double> &state,
+                             DenseMatrix &matrix) {
+    std::vector<double> &matrix_data = matrix.GetData();
+
+    compute_rhs_jacobian(state, matrix_data, profile_params);
+    int local_offset = 0;
+    for (int idx = 0; idx < xdim; idx++) {
+
+      for (int idy = 0; idy < idx; idy++) {
+        matrix_data[local_offset] *= -eta_step;
+        local_offset += 1;
+      }
+
+      matrix_data[local_offset] *= -eta_step;
+      matrix_data[local_offset] += 1.;
+      local_offset += 1;
+
+      for (int idy = idx + 1; idy < xdim; idy++) {
+        matrix_data[local_offset] *= -eta_step;
+        local_offset += 1;
+      }
+    }
+  };
+
+  std::vector<double> solution_buffer(xdim, 0.);
+  for (int idx = 0; idx < xdim; idx++) {
+    solution_buffer[idx] = state_grid[idx];
+  }
+
+  NewtonParams newton_params;
+
+  // Time loop
+  while (step_id < nb_steps) {
+
+    // Solve nonlinear system
+    bool pass = NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
+                                  limit_update_fun, newton_params);
+    if (!pass) {
+      printf("\n\nUnsuccesful newton solve! Aborting.\n\n");
+      break;
+    }
+
+    // Evolve state/grid forward
+    eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
+
+    for (int var_id = 0; var_id < FLAT_PLATE_RANK; ++var_id) {
+      state_grid[offset + FLAT_PLATE_RANK + var_id] = solution_buffer[var_id];
+    }
+
+    // Update indexing
+    offset += FLAT_PLATE_RANK;
+    step_id += 1;
+
+    // Check convergence
+    compute_rhs(solution_buffer, rhs, 0, profile_params);
+
     double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
     converged = rate < 1e-3;
     if (converged)
@@ -221,8 +340,6 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
 
-  using SearchResult = std::tuple<double, int, int>;
-
   for (int iter = 0; iter < max_iter; iter++) {
 
     double delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
@@ -296,11 +413,11 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
 
     for (auto &ftr : futures) {
       SearchResult result = ftr.get();
-      double res_norm = std::get<0>(result);
+      double res_norm = result.res_norm;
       if (res_norm < min_res_norm) {
         min_res_norm = res_norm;
-        min_fid = std::get<1>(result);
-        min_gid = std::get<2>(result);
+        min_fid = result.xid;
+        min_gid = result.yid;
       }
     }
 

@@ -4,13 +4,13 @@
 #include <iostream>
 #include <vector>
 
-const int FLAT_PLATE_RANK = 5;
+constexpr int FLAT_PLATE_RANK = 5;
 
-const int FPP_ID = 0;
-const int GP_ID = 1;
-const int FP_ID = 2;
-const int F_ID = 3;
-const int G_ID = 4;
+constexpr int FPP_ID = 0;
+constexpr int GP_ID = 1;
+constexpr int FP_ID = 2;
+constexpr int F_ID = 3;
+constexpr int G_ID = 4;
 
 enum WallType { Wall, Adiabatic };
 
@@ -22,7 +22,7 @@ typedef struct ProfileParams {
   double gp0;
   double g0;
 
-  double min_eta_step;
+  double max_step;
 
   double pe = 1.;
   double he = 1.;
@@ -33,7 +33,7 @@ typedef struct ProfileParams {
   double eckert = 1.;
 
   bool AreValid() const {
-    return (nb_steps >= 1) && (fpp0 >= 0.) && (gp0 >= 0.) && (min_eta_step > 0);
+    return (nb_steps >= 1) && (fpp0 >= 0.) && (gp0 >= 0.) && (max_step > 0);
   }
 
   void SetDefault() {
@@ -42,7 +42,7 @@ typedef struct ProfileParams {
     gp0 = 0.5;
     wall_type = WallType::Wall;
     g0 = 0.2;
-    min_eta_step = 1e-2;
+    max_step = 1e-2;
   }
 
   void SetInitialValues(std::vector<double> &initial_vals) {
@@ -90,7 +90,7 @@ typedef struct ProfileParams {
         }
       } else if (arg == "-eta") {
         if (i + 1 < argc) {
-          min_eta_step = std::stod(argv[++i]);
+          max_step = std::stod(argv[++i]);
         } else {
           printf("profile eta spec is incomplete.\n");
         }
@@ -101,19 +101,32 @@ typedef struct ProfileParams {
   }
 } ProfileParams;
 
-double compute_rhs_default(std::vector<double> &state, std::vector<double> &rhs,
-                           int offset, ProfileParams &params);
-double compute_rhs_cpg(std::vector<double> &state, std::vector<double> &rhs,
-                       int offset, ProfileParams &params);
+double compute_rhs_default(const std::vector<double> &state,
+                           std::vector<double> &rhs, int offset,
+                           ProfileParams &params);
+double compute_rhs_cpg(const std::vector<double> &state,
+                       std::vector<double> &rhs, int offset,
+                       ProfileParams &params);
+
+void compute_rhs_jacobian_default(const std::vector<double> &state,
+                                  std::vector<double> &matrix_data,
+                                  ProfileParams &params);
+void compute_rhs_jacobian_cpg(const std::vector<double> &state,
+                              std::vector<double> &matrix_data,
+                              ProfileParams &params);
 
 void initialize_default(ProfileParams &profile_params,
                         std::vector<double> &state);
 void initialize_cpg(ProfileParams &profile_params, std::vector<double> &state);
 
-typedef double (*RhsFunction)(std::vector<double> &state,
-                              std::vector<double> &rhs, int offset,
-                              ProfileParams &profile_params);
 typedef void (*InitializeFunction)(ProfileParams &profile_params,
                                    std::vector<double> &state);
+
+typedef double (*RhsFunction)(const std::vector<double> &state,
+                              std::vector<double> &rhs, int offset,
+                              ProfileParams &profile_params);
+typedef void (*RhsJacobianFunction)(const std::vector<double> &state,
+                                    std::vector<double> &matrix_data,
+                                    ProfileParams &profile_params);
 
 #endif

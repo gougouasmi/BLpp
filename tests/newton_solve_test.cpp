@@ -24,8 +24,8 @@ void ScalarSolve() {
 
   NewtonParams newton_params;
 
-  NewtonSolveDirect(solution, objective_fun, jacobian_fun, limit_update_fun,
-                    newton_params);
+  bool pass = NewtonSolveDirect(solution, objective_fun, jacobian_fun,
+                                limit_update_fun, newton_params);
 
   std::vector<double> residual(xdim, 0.);
   objective_fun(solution, residual);
@@ -66,8 +66,8 @@ void SystemSolve() {
 
   NewtonParams newton_params;
 
-  NewtonSolveDirect(solution, objective_fun, jacobian_fun, limit_update_fun,
-                    newton_params);
+  bool pass = NewtonSolveDirect(solution, objective_fun, jacobian_fun,
+                                limit_update_fun, newton_params);
 
   std::vector<double> residual(xdim, 0.);
   objective_fun(solution, residual);
