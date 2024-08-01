@@ -29,6 +29,7 @@ target_include_directories(utils_lib PUBLIC src/utils)
 # Profile functions
 add_library(profile_lib
     src/profile.cpp
+    src/profile_lsim.cpp
 )
 target_include_directories(profile_lib PRIVATE src src/physics)
 target_link_libraries(profile_lib PRIVATE utils_lib)
@@ -49,7 +50,6 @@ target_include_directories(flat_plate_lib PRIVATE src src/physics src/solvers sr
 target_link_libraries(flat_plate_lib PRIVATE utils_lib)
 target_link_libraries(flat_plate_lib PRIVATE profile_lib)
 
-
 ###
 # Define executables
 #
@@ -62,14 +62,6 @@ add_executable(devel_profile
 target_link_libraries(devel_profile PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
 target_include_directories(devel_profile PRIVATE src src/physics)
 
-# Develop a self-similar profile using Implicit BE
-add_executable(devel_profile_implicit
-    src/exec/develop_flat_plate_implicit.cpp
-)
-
-target_link_libraries(devel_profile_implicit PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
-target_include_directories(devel_profile_implicit PRIVATE src src/solvers)
-
 # Search for the initial conditions that develop into the correct self-similar profile
 add_executable(search_profile
     src/exec/search_flat_plate.cpp
@@ -77,6 +69,14 @@ add_executable(search_profile
 
 target_link_libraries(search_profile PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
 target_include_directories(search_profile PRIVATE src src/physics src/utils)
+
+# Compute 2D profile
+add_executable(compute_profiles
+    src/exec/compute_flat_plate_local_sim.cpp
+)
+
+target_link_libraries(compute_profiles PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
+target_include_directories(compute_profiles PRIVATE src src/physics src/utils)
 
 ###
 # Tests

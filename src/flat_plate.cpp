@@ -201,10 +201,10 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
   return converged;
 }
 
-void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
-                                 SearchWindow &window,
-                                 SearchParams &search_params,
-                                 std::vector<double> &best_guess) {
+int FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
+                                SearchWindow &window,
+                                SearchParams &search_params,
+                                std::vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -267,7 +267,7 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
               printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", fpp0, gp0);
               best_guess[0] = fpp0;
               best_guess[1] = gp0;
-              return;
+              return 0;
             }
           }
         }
@@ -316,15 +316,17 @@ void FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
            "=[[%.3f, %.3f], [%.3f, %.3f]\n",
            iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
   }
+
+  return 0;
 }
 
 #include <future>
 #include <thread>
 
-void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
-                                         SearchWindow &window,
-                                         SearchParams &search_params,
-                                         std::vector<double> &best_guess) {
+int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
+                                        SearchWindow &window,
+                                        SearchParams &search_params,
+                                        std::vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -342,59 +344,62 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
 
+  int best_worker_id = -1;
+
   for (int iter = 0; iter < max_iter; iter++) {
 
     double delta_fpp = (fpp_max - fpp_min) / (xdim - 1);
     double delta_gp = (gp_max - gp_min) / (ydim - 1);
 
     // (1 / 2) Develop profiles on square grid of initial conditions
-    auto local_search_task =
-        [fpp_min, gp_min, delta_fpp, delta_gp, rtol, profile_params,
-         this](const int fid_start, const int fid_end, const int gid_start,
-               const int gid_end, const int worker_id) mutable {
-          std::vector<double> initial_guess(2, 0.0);
-          std::vector<double> score(2, 0.0);
+    auto local_search_task = [fpp_min, gp_min, delta_fpp, delta_gp, rtol,
+                              profile_params,
+                              this](const int fid_start, const int fid_end,
+                                    const int gid_start, const int gid_end,
+                                    const int worker_id) mutable {
+      std::vector<double> initial_guess(2, 0.0);
+      std::vector<double> score(2, 0.0);
 
-          double res_norm;
-          double min_res_norm = 1e30;
+      double res_norm;
+      double min_res_norm = 1e30;
 
-          int min_fid = fid_start, min_gid = gid_start;
+      int min_fid = fid_start, min_gid = gid_start;
 
-          double fpp0 = fpp_min + fid_start * delta_fpp;
-          for (int fid = fid_start; fid < fid_end; fid++) {
-            initial_guess[0] = fpp0;
+      double fpp0 = fpp_min + fid_start * delta_fpp;
+      for (int fid = fid_start; fid < fid_end; fid++) {
+        initial_guess[0] = fpp0;
 
-            double gp0 = gp_min + gid_start * delta_gp;
-            for (int gid = gid_start; gid < gid_end; gid++) {
-              initial_guess[1] = gp0;
+        double gp0 = gp_min + gid_start * delta_gp;
+        for (int gid = gid_start; gid < gid_end; gid++) {
+          initial_guess[1] = gp0;
 
-              profile_params.SetInitialValues(initial_guess);
-              InitializeState(profile_params, worker_id);
+          profile_params.SetInitialValues(initial_guess);
+          InitializeState(profile_params, worker_id);
 
-              bool converged = DevelopProfile(profile_params, score, worker_id);
+          bool converged = DevelopProfile(profile_params, score, worker_id);
 
-              if (converged) {
-                res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
+          if (converged) {
+            res_norm = sqrt(score[0] * score[0] + score[1] * score[1]);
 
-                if (res_norm < min_res_norm) {
+            if (res_norm < min_res_norm) {
 
-                  min_res_norm = res_norm;
-                  min_fid = fid;
-                  min_gid = gid;
+              min_res_norm = res_norm;
+              min_fid = fid;
+              min_gid = gid;
 
-                  if (res_norm < rtol) {
-                    return SearchResult(min_res_norm, min_fid, min_gid);
-                  }
-                }
+              if (res_norm < rtol) {
+                return SearchResult(min_res_norm, min_fid, min_gid, worker_id);
               }
-
-              gp0 += delta_gp;
             }
-
-            fpp0 += delta_fpp;
           }
-          return SearchResult(min_res_norm, min_fid, min_gid);
-        };
+
+          gp0 += delta_gp;
+        }
+
+        fpp0 += delta_fpp;
+      }
+      return SearchResult(min_res_norm, min_fid, min_gid, worker_id);
+    };
 
     double min_res_norm = 1e30;
     int min_fid = 0, min_gid = 0;
@@ -418,6 +423,7 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
         min_res_norm = res_norm;
         min_fid = result.xid;
         min_gid = result.yid;
+        best_worker_id = result.worker_id;
       }
     }
 
@@ -428,7 +434,7 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
       printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", best_guess[0],
              best_guess[1]);
 
-      return;
+      return best_worker_id;
     }
 
     // (2 / 2) Define next bounds
@@ -469,12 +475,14 @@ void FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
            "=[[%.3f, %.3f], [%.3f, %.3f]\n",
            iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
   }
+
+  return best_worker_id;
 }
 
 #include "message_queue.h"
 #include <memory>
 
-void FlatPlate::BoxProfileSearchParallelWithQueues(
+int FlatPlate::BoxProfileSearchParallelWithQueues(
     ProfileParams &profile_params, SearchWindow &window,
     SearchParams &search_params, std::vector<double> &best_guess) {
   // Fetch search parameters
@@ -493,6 +501,8 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
   double fpp_max = window.fpp_max;
   double gp_min = window.gp_min;
   double gp_max = window.gp_max;
+
+  int best_worker_id = -1;
 
   // Define queues for SearchInput and SearchResult
   std::shared_ptr<MessageQueue<SearchInput>> work_queue(
@@ -555,7 +565,7 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
 
               if (res_norm < rtol) {
                 result_queue->send(
-                    SearchResult(min_res_norm, min_fid, min_gid));
+                    SearchResult(min_res_norm, min_fid, min_gid, worker_id));
 
                 // Force nested loop termination
                 fid = fid_end;
@@ -572,7 +582,8 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
       }
 
       if (!result_sent) {
-        result_queue->send(SearchResult(min_res_norm, min_fid, min_gid));
+        result_queue->send(
+            SearchResult(min_res_norm, min_fid, min_gid, worker_id));
       }
     }
   };
@@ -611,6 +622,7 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
         min_res_norm = result.res_norm;
         min_fid = result.xid;
         min_gid = result.yid;
+        best_worker_id = result.worker_id;
       }
 
       processed_results += 1;
@@ -623,7 +635,7 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
       printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", best_guess[0],
              best_guess[1]);
       work_queue->stop();
-      return;
+      return best_worker_id;
     }
 
     // (2 / 2) Define next bounds
@@ -669,4 +681,71 @@ void FlatPlate::BoxProfileSearchParallelWithQueues(
 
   std::for_each(futures.begin(), futures.end(),
                 [](std::future<void> &ftr) { ftr.wait(); });
+
+  return best_worker_id;
+}
+
+/*
+ * This function computes the whole 2D profile using the local-similarity method
+ *
+ * The output should be grid data (xi, eta) -> (x, y, state)
+ *
+ * Function parameters should be:
+ *  1. grid (xi, eta)
+ *  2. wall properties wrt xi
+ *  3. edge properties wrt xi
+ */
+
+void FlatPlate::Compute(std::vector<double> &xi_grid,
+                        std::vector<double> &edge_field,
+                        SearchParams &search_params,
+                        std::vector<std::vector<double>> &bl_state_grid) {
+  // Output arrays should have consistent dimensions
+  assert(bl_state_grid.size() >= 1);
+  int eta_dim = eta_grids[0].size();
+
+  assert(FLAT_PLATE_RANK * eta_dim == state_grids[0].size());
+  assert(bl_state_grid[0].size() == state_grids[0].size());
+
+  // Checking edge_field has the correct dimensions
+  int xi_dim = xi_grid.size();
+  assert(xi_dim == bl_state_grid.size());
+  assert(edge_field.size() == xi_dim * 6);
+
+  // Parameters
+  ProfileParams profile_params;
+  profile_params.SetDefault();
+
+  SearchWindow search_window;
+  search_window.SetDefault();
+
+  //
+  std::vector<double> best_guess(2, 0.5);
+
+  int offset = 0;
+  for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
+    // Set local profile settings
+    profile_params.ue = edge_field[offset + 0];
+    profile_params.he = edge_field[offset + 1];
+    profile_params.pe = edge_field[offset + 2];
+    profile_params.xi = edge_field[offset + 3];
+    profile_params.due_dxi = edge_field[offset + 4];
+    profile_params.dhe_dxi = edge_field[offset + 5];
+
+    // Call search method
+    int worker_id = BoxProfileSearchParallel(profile_params, search_window,
+                                             search_params, best_guess);
+
+    // Copy profile to output vector
+    bl_state_grid[xi_id] = state_grids[worker_id];
+
+    // Define search window for next iterations
+    search_window.fpp_min = 0.8 * best_guess[0];
+    search_window.fpp_max = 1.2 * best_guess[0];
+    search_window.gp_min = 0.8 * best_guess[1];
+    search_window.gp_max = 1.2 * best_guess[1];
+
+    // Update offset for edge conditions
+    offset += 6;
+  }
 }

@@ -26,10 +26,15 @@ typedef struct ProfileParams {
   TimeScheme scheme = TimeScheme::Explicit;
   double max_step;
 
-  double pe = 1.;
-  double he = 1.;
-  double roe = 1.;
   double ue = 1.;
+  double he = 1.;
+  double pe = 1.;
+
+  double xi = 0.;
+  double due_dxi = 0.;
+  double dhe_dxi = 0.;
+
+  double roe = 1.;
   double mue = 1.;
 
   double eckert = 1.;

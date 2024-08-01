@@ -14,8 +14,10 @@ public:
   FlatPlate(int max_nb_steps, RhsFunction rhs_fun, InitializeFunction init_fun,
             RhsJacobianFunction jacobian_fun);
 
+  //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
 
+  // ODE integration (eta)
   bool DevelopProfile(ProfileParams &profile_params, vector<double> &score,
                       int worker_id = 0);
   bool DevelopProfileExplicit(ProfileParams &profile_params,
@@ -23,15 +25,20 @@ public:
   bool DevelopProfileImplicit(ProfileParams &profile_params,
                               vector<double> &score, int worker_id = 0);
 
-  void BoxProfileSearch(ProfileParams &profile_params, SearchWindow &window,
-                        SearchParams &params, vector<double> &best_guess);
-  void BoxProfileSearchParallel(ProfileParams &profile_params,
-                                SearchWindow &window, SearchParams &params,
-                                vector<double> &best_guess);
-  void BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
-                                          SearchWindow &window,
-                                          SearchParams &params,
-                                          vector<double> &best_guess);
+  // Shooting algorithm implementations
+  int BoxProfileSearch(ProfileParams &profile_params, SearchWindow &window,
+                       SearchParams &params, vector<double> &best_guess);
+  int BoxProfileSearchParallel(ProfileParams &profile_params,
+                               SearchWindow &window, SearchParams &params,
+                               vector<double> &best_guess);
+  int BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
+                                         SearchWindow &window,
+                                         SearchParams &params,
+                                         vector<double> &best_guess);
+
+  void Compute(std::vector<double> &xi_grid, std::vector<double> &edge_field,
+               SearchParams &search_params,
+               std::vector<std::vector<double>> &bl_state_grid);
 
 private:
   const int _max_nb_workers = 8;

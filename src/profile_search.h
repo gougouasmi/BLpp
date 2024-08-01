@@ -119,9 +119,11 @@ struct SearchResult {
   double res_norm;
   int xid;
   int yid;
-  SearchResult(double res_val, int xid_val, int yid_val)
-      : res_norm(res_val), xid(xid_val), yid(yid_val){};
-  static SearchResult StopMessage() { return SearchResult(1e30, -1, -1); };
+  int worker_id;
+  SearchResult(double res_val, int xid_val, int yid_val, int worker_id_val)
+      : res_norm(res_val), xid(xid_val), yid(yid_val),
+        worker_id(worker_id_val){};
+  static SearchResult StopMessage() { return SearchResult(1e30, -1, -1, -1); };
 };
 
 #endif
