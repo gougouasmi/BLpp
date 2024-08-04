@@ -65,21 +65,19 @@ int main(int argc, char *argv[]) {
   int xi_dim = 5;
 
   std::vector<double> edge_field(xi_dim * 6, 0.);
-  std::vector<double> xi_grid(xi_dim, 6);
   std::vector<std::vector<double>> bl_state_grid(
       xi_dim, std::vector<double>(FLAT_PLATE_RANK * (eta_dim + 1), 0.));
 
   for (int xid = 0; xid < xi_dim; xid++) {
-    xi_grid[xid] = (double)xid / 10.;
 
     edge_field[6 * xid + 0] = profile_params.ue; // ue
     edge_field[6 * xid + 1] = profile_params.he; // he
     edge_field[6 * xid + 2] = profile_params.pe; // pe
 
-    edge_field[6 * xid + 3] = xi_grid[xid]; // xi
-    edge_field[6 * xid + 4] = 0.;           // due_dxi
-    edge_field[6 * xid + 5] = 0.;           // dhe_dxi
+    edge_field[6 * xid + 3] = (double)xid / 10.; // xi
+    edge_field[6 * xid + 4] = 0.;                // due_dxi
+    edge_field[6 * xid + 5] = 0.;                // dhe_dxi
   }
 
-  flat_plate.Compute(xi_grid, edge_field, search_params, bl_state_grid);
+  flat_plate.ComputeLS(edge_field, search_params, bl_state_grid);
 }

@@ -36,9 +36,11 @@ public:
                                          SearchParams &params,
                                          vector<double> &best_guess);
 
-  void Compute(std::vector<double> &xi_grid, std::vector<double> &edge_field,
-               SearchParams &search_params,
-               std::vector<std::vector<double>> &bl_state_grid);
+  // 2D profile calculation
+  void ComputeLS(const vector<double> &edge_field, SearchParams &search_params,
+                 vector<vector<double>> &bl_state_grid);
+  void ComputeDD(const vector<double> &edge_field, SearchParams &search_params,
+                 vector<vector<double>> &bl_state_grid);
 
 private:
   const int _max_nb_workers = 8;
@@ -47,6 +49,8 @@ private:
   vector<vector<double>> state_grids;
   vector<vector<double>> eta_grids;
   vector<vector<double>> rhs_vecs;
+
+  vector<double> field_grid;
 
   RhsFunction compute_rhs;
   RhsJacobianFunction compute_rhs_jacobian;

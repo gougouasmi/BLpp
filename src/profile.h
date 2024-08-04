@@ -12,6 +12,8 @@ constexpr int FP_ID = 2;
 constexpr int F_ID = 3;
 constexpr int G_ID = 4;
 
+constexpr int FIELD_RANK = 8;
+
 enum WallType { Wall, Adiabatic };
 enum TimeScheme { Explicit, Implicit };
 
@@ -110,17 +112,21 @@ typedef struct ProfileParams {
   }
 } ProfileParams;
 
-double compute_rhs_default(const std::vector<double> &state,
-                           std::vector<double> &rhs, int offset,
-                           ProfileParams &params);
-double compute_rhs_cpg(const std::vector<double> &state,
-                       std::vector<double> &rhs, int offset,
-                       ProfileParams &params);
+double compute_rhs_default(const std::vector<double> &state, int state_offset,
+                           const std::vector<double> &field, int field_offset,
+                           std::vector<double> &rhs, ProfileParams &params);
+double compute_rhs_cpg(const std::vector<double> &state, int state_offset,
+                       const std::vector<double> &field, int field_offset,
+                       std::vector<double> &rhs, ProfileParams &params);
 
 void compute_rhs_jacobian_default(const std::vector<double> &state,
+                                  const std::vector<double> &field,
+                                  int field_offset,
                                   std::vector<double> &matrix_data,
                                   ProfileParams &params);
 void compute_rhs_jacobian_cpg(const std::vector<double> &state,
+                              const std::vector<double> &field,
+                              int field_offset,
                               std::vector<double> &matrix_data,
                               ProfileParams &params);
 
@@ -132,9 +138,13 @@ typedef void (*InitializeFunction)(ProfileParams &profile_params,
                                    std::vector<double> &state);
 
 typedef double (*RhsFunction)(const std::vector<double> &state,
-                              std::vector<double> &rhs, int offset,
+                              int state_offset,
+                              const std::vector<double> &field,
+                              int field_offset, std::vector<double> &rhs,
                               ProfileParams &profile_params);
 typedef void (*RhsJacobianFunction)(const std::vector<double> &state,
+                                    const std::vector<double> &field,
+                                    int field_offset,
                                     std::vector<double> &matrix_data,
                                     ProfileParams &profile_params);
 

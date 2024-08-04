@@ -11,9 +11,10 @@ FlatPlate::FlatPlate(int max_nb_steps)
       initialize(initialize_default),
       compute_rhs_jacobian(compute_rhs_jacobian_default),
       state_grids(_max_nb_workers,
-                  std::vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
-      eta_grids(_max_nb_workers, std::vector<double>(1 + _max_nb_steps)),
-      rhs_vecs(_max_nb_workers, std::vector<double>(FLAT_PLATE_RANK)) {}
+                  vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
+      eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
+      field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
+      rhs_vecs(_max_nb_workers, vector<double>(FLAT_PLATE_RANK)) {}
 
 FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
                      InitializeFunction init_fun,
@@ -21,16 +22,17 @@ FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
     : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_fun),
       compute_rhs_jacobian(jacobian_fun), initialize(init_fun),
       state_grids(_max_nb_workers,
-                  std::vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
-      eta_grids(_max_nb_workers, std::vector<double>(1 + _max_nb_steps)),
-      rhs_vecs(_max_nb_workers, std::vector<double>(FLAT_PLATE_RANK)) {}
+                  vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
+      eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
+      field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
+      rhs_vecs(_max_nb_workers, vector<double>(FLAT_PLATE_RANK)) {}
 
 void FlatPlate::InitializeState(ProfileParams &profile_params, int worker_id) {
   initialize(profile_params, state_grids[worker_id]);
 }
 
 bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
-                               std::vector<double> &score, int worker_id) {
+                               vector<double> &score, int worker_id) {
   if (profile_params.scheme == TimeScheme::Explicit) {
     return DevelopProfileExplicit(profile_params, score, worker_id);
   } else if (profile_params.scheme == TimeScheme::Implicit) {
@@ -42,8 +44,7 @@ bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
 }
 
 bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
-                                       std::vector<double> &score,
-                                       int worker_id) {
+                                       vector<double> &score, int worker_id) {
   assert(profile_params.AreValid());
 
   vector<double> &state_grid = state_grids[worker_id];
@@ -58,22 +59,25 @@ bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
   double max_step = profile_params.max_step;
 
   int step_id = 0;
-  int offset = 0;
+  int state_offset = 0;
+  int field_offset = 0;
   while (step_id < nb_steps) {
 
     // Compute rhs and limit time step
-    double eta_step = std::min(
-        max_step, compute_rhs(state_grid, rhs, offset, profile_params));
+    double eta_step =
+        std::min(max_step, compute_rhs(state_grid, state_offset, field_grid,
+                                       field_offset, rhs, profile_params));
 
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
     for (int var_id = 0; var_id < FLAT_PLATE_RANK; ++var_id) {
-      state_grid[offset + FLAT_PLATE_RANK + var_id] =
-          state_grid[offset + var_id] + eta_step * rhs[var_id];
+      state_grid[state_offset + FLAT_PLATE_RANK + var_id] =
+          state_grid[state_offset + var_id] + eta_step * rhs[var_id];
     }
 
     // Update indexing
-    offset += FLAT_PLATE_RANK;
+    state_offset += FLAT_PLATE_RANK;
+    field_offset += FIELD_RANK;
     step_id += 1;
   }
 
@@ -82,15 +86,14 @@ bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
   bool converged = rate < 1e-3;
 
   // Compute score
-  score[0] = state_grid[offset + FP_ID] - 1.;
-  score[1] = state_grid[offset + G_ID] - 1;
+  score[0] = state_grid[state_offset + FP_ID] - 1.;
+  score[1] = state_grid[state_offset + G_ID] - 1;
 
   return converged;
 }
 
 bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
-                                       std::vector<double> &score,
-                                       int worker_id) {
+                                       vector<double> &score, int worker_id) {
   assert(profile_params.AreValid());
 
   vector<double> &state_grid = state_grids[worker_id];
@@ -105,24 +108,26 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
   double eta_step = profile_params.max_step;
 
   int step_id = 0;
-  int offset = 0;
+  int state_offset = 0;
+  int field_offset = 0;
 
   // Setup nonlinear solver functions
   int xdim = FLAT_PLATE_RANK;
 
-  auto objective_fun = [xdim, worker_id, &eta_step, &offset, &profile_params,
-                        &state_grid, this](const std::vector<double> &state,
-                                           std::vector<double> &residual) {
+  auto objective_fun = [xdim, worker_id, &eta_step, &state_offset,
+                        &field_offset, &profile_params, &state_grid,
+                        this](const vector<double> &state,
+                              vector<double> &residual) {
     // U^{n+1} - U^{n} = R(U^{n+1})
-    compute_rhs(state, residual, 0, profile_params);
+    compute_rhs(state, 0, field_grid, field_offset, residual, profile_params);
     for (int idx = 0; idx < xdim; idx++) {
       residual[idx] *= -eta_step;
-      residual[idx] += state[idx] - state_grid[offset + idx];
+      residual[idx] += state[idx] - state_grid[state_offset + idx];
     };
   };
 
-  auto limit_update_fun = [xdim](const std::vector<double> &state,
-                                 const std::vector<double> &state_varn) {
+  auto limit_update_fun = [xdim](const vector<double> &state,
+                                 const vector<double> &state_varn) {
     double alpha = 1.;
 
     if (state_varn[FP_ID] < 0) {
@@ -133,12 +138,13 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     return alpha;
   };
 
-  auto jacobian_fun = [xdim, &eta_step, &offset, &profile_params,
-                       this](const std::vector<double> &state,
-                             DenseMatrix &matrix) {
-    std::vector<double> &matrix_data = matrix.GetData();
+  auto jacobian_fun = [xdim, &eta_step, &state_offset, &field_offset,
+                       &profile_params,
+                       this](const vector<double> &state, DenseMatrix &matrix) {
+    vector<double> &matrix_data = matrix.GetData();
 
-    compute_rhs_jacobian(state, matrix_data, profile_params);
+    compute_rhs_jacobian(state, field_grid, field_offset, matrix_data,
+                         profile_params);
     int local_offset = 0;
     for (int idx = 0; idx < xdim; idx++) {
 
@@ -158,7 +164,7 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     }
   };
 
-  std::vector<double> solution_buffer(xdim, 0.);
+  vector<double> solution_buffer(xdim, 0.);
   for (int idx = 0; idx < xdim; idx++) {
     solution_buffer[idx] = state_grid[idx];
   }
@@ -172,8 +178,8 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     bool pass = NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
                                   limit_update_fun, newton_params);
     if (!pass) {
-      score[0] = state_grid[offset + FP_ID] - 1.0;
-      score[1] = state_grid[offset + G_ID] - 1.0;
+      score[0] = state_grid[state_offset + FP_ID] - 1.0;
+      score[1] = state_grid[state_offset + G_ID] - 1.0;
 
       return false;
     }
@@ -182,21 +188,25 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
 
     for (int var_id = 0; var_id < FLAT_PLATE_RANK; ++var_id) {
-      state_grid[offset + FLAT_PLATE_RANK + var_id] = solution_buffer[var_id];
+      state_grid[state_offset + FLAT_PLATE_RANK + var_id] =
+          solution_buffer[var_id];
     }
 
     // Update indexing
-    offset += FLAT_PLATE_RANK;
+    state_offset += FLAT_PLATE_RANK;
+    field_offset += FIELD_RANK;
+
     step_id += 1;
   }
 
-  compute_rhs(solution_buffer, rhs, 0, profile_params);
+  compute_rhs(solution_buffer, 0, field_grid, field_offset, rhs,
+              profile_params);
   double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
   bool converged = rate < 1e-3;
 
   // Compute score
-  score[0] = state_grid[offset + FP_ID] - 1.;
-  score[1] = state_grid[offset + G_ID] - 1;
+  score[0] = state_grid[state_offset + FP_ID] - 1.;
+  score[1] = state_grid[state_offset + G_ID] - 1;
 
   return converged;
 }
@@ -204,7 +214,7 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
 int FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
                                 SearchWindow &window,
                                 SearchParams &search_params,
-                                std::vector<double> &best_guess) {
+                                vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -223,8 +233,8 @@ int FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
   double gp_max = window.gp_max;
 
   // Temporary arrays
-  std::vector<double> initial_guess(2, 0.0);
-  std::vector<double> score(2, 0.0);
+  vector<double> initial_guess(2, 0.0);
+  vector<double> score(2, 0.0);
 
   double res_norm;
 
@@ -326,7 +336,7 @@ int FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
 int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
                                         SearchWindow &window,
                                         SearchParams &search_params,
-                                        std::vector<double> &best_guess) {
+                                        vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -357,8 +367,8 @@ int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
                               this](const int fid_start, const int fid_end,
                                     const int gid_start, const int gid_end,
                                     const int worker_id) mutable {
-      std::vector<double> initial_guess(2, 0.0);
-      std::vector<double> score(2, 0.0);
+      vector<double> initial_guess(2, 0.0);
+      vector<double> score(2, 0.0);
 
       double res_norm;
       double min_res_norm = 1e30;
@@ -405,7 +415,7 @@ int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
     int min_fid = 0, min_gid = 0;
 
     // 4 threads
-    std::vector<std::future<SearchResult>> futures;
+    vector<std::future<SearchResult>> futures;
 
     futures.emplace_back(std::async(std::launch::async, local_search_task, 0,
                                     xdim / 2, 0, ydim / 2, 0));
@@ -482,9 +492,10 @@ int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
 #include "message_queue.h"
 #include <memory>
 
-int FlatPlate::BoxProfileSearchParallelWithQueues(
-    ProfileParams &profile_params, SearchWindow &window,
-    SearchParams &search_params, std::vector<double> &best_guess) {
+int FlatPlate::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
+                                                  SearchWindow &window,
+                                                  SearchParams &search_params,
+                                                  vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -533,8 +544,8 @@ int FlatPlate::BoxProfileSearchParallelWithQueues(
       const int gid_start = inputs.yid_start;
       const int gid_end = inputs.yid_end;
 
-      std::vector<double> initial_guess(2, 0.0);
-      std::vector<double> score(2, 0.0);
+      vector<double> initial_guess(2, 0.0);
+      vector<double> score(2, 0.0);
 
       double res_norm;
       double min_res_norm = 1e30;
@@ -588,7 +599,7 @@ int FlatPlate::BoxProfileSearchParallelWithQueues(
     }
   };
 
-  std::vector<std::future<void>> futures;
+  vector<std::future<void>> futures;
   for (int worker_id = 0; worker_id < 4; worker_id++) {
     futures.emplace_back(
         std::async(std::launch::async, local_search_task, worker_id));
@@ -695,11 +706,9 @@ int FlatPlate::BoxProfileSearchParallelWithQueues(
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-
-void FlatPlate::Compute(std::vector<double> &xi_grid,
-                        std::vector<double> &edge_field,
-                        SearchParams &search_params,
-                        std::vector<std::vector<double>> &bl_state_grid) {
+void FlatPlate::ComputeLS(const vector<double> &edge_field,
+                          SearchParams &search_params,
+                          vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
   assert(bl_state_grid.size() >= 1);
   int eta_dim = eta_grids[0].size();
@@ -708,9 +717,8 @@ void FlatPlate::Compute(std::vector<double> &xi_grid,
   assert(bl_state_grid[0].size() == state_grids[0].size());
 
   // Checking edge_field has the correct dimensions
-  int xi_dim = xi_grid.size();
+  int xi_dim = edge_field.size() / 6;
   assert(xi_dim == bl_state_grid.size());
-  assert(edge_field.size() == xi_dim * 6);
 
   // Parameters
   ProfileParams profile_params;
@@ -720,17 +728,17 @@ void FlatPlate::Compute(std::vector<double> &xi_grid,
   search_window.SetDefault();
 
   //
-  std::vector<double> best_guess(2, 0.5);
+  vector<double> best_guess(2, 0.5);
 
-  int offset = 0;
+  int edge_offset = 0;
   for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
     // Set local profile settings
-    profile_params.ue = edge_field[offset + 0];
-    profile_params.he = edge_field[offset + 1];
-    profile_params.pe = edge_field[offset + 2];
-    profile_params.xi = edge_field[offset + 3];
-    profile_params.due_dxi = edge_field[offset + 4];
-    profile_params.dhe_dxi = edge_field[offset + 5];
+    profile_params.ue = edge_field[edge_offset + 0];
+    profile_params.he = edge_field[edge_offset + 1];
+    profile_params.pe = edge_field[edge_offset + 2];
+    profile_params.xi = edge_field[edge_offset + 3];
+    profile_params.due_dxi = edge_field[edge_offset + 4];
+    profile_params.dhe_dxi = edge_field[edge_offset + 5];
 
     // Call search method
     int worker_id = BoxProfileSearchParallel(profile_params, search_window,
@@ -746,6 +754,133 @@ void FlatPlate::Compute(std::vector<double> &xi_grid,
     search_window.gp_max = 1.2 * best_guess[1];
 
     // Update offset for edge conditions
-    offset += 6;
+    edge_offset += 6;
+  }
+}
+
+/*
+ * This function computes the whole 2D profile using the
+ * difference-differential method.
+ *
+ * The output should be grid data (xi, eta) -> (x, y, state)
+ *
+ * Function parameters should be:
+ *  1. grid (xi, eta)
+ *  2. wall properties wrt xi
+ *  3. edge properties wrt xi
+ */
+void FlatPlate::ComputeDD(const vector<double> &edge_field,
+                          SearchParams &search_params,
+                          vector<vector<double>> &bl_state_grid) {
+  // Output arrays should have consistent dimensions
+  assert(bl_state_grid.size() >= 1);
+  int eta_dim = eta_grids[0].size();
+
+  assert(FLAT_PLATE_RANK * eta_dim == state_grids[0].size());
+  assert(bl_state_grid[0].size() == state_grids[0].size());
+
+  // Checking edge_field has the correct dimensions
+  int xi_dim = edge_field.size() / 6;
+  assert(xi_dim == bl_state_grid.size());
+
+  // Parameters
+  ProfileParams profile_params;
+  profile_params.SetDefault();
+
+  SearchWindow search_window;
+  search_window.SetDefault();
+
+  const int EDGE_FIELD_RANK = 6;
+  double dxi1 = 1. / (edge_field[EDGE_FIELD_RANK + 3] - edge_field[0]);
+
+  //
+  vector<double> best_guess(2, 0.5);
+
+  int edge_offset = 0;
+  for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
+    // Set local profile settings
+    profile_params.ue = edge_field[edge_offset + 0];
+    profile_params.he = edge_field[edge_offset + 1];
+    profile_params.pe = edge_field[edge_offset + 2];
+    profile_params.xi = edge_field[edge_offset + 3];
+    profile_params.due_dxi = edge_field[edge_offset + 4];
+    profile_params.dhe_dxi = edge_field[edge_offset + 5];
+
+    // Compute field
+    if (xi_id > 0) {
+
+      int eta_offset = 0;
+      if (xi_id > 1) {
+        // 2nd order backward difference
+
+        for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+
+          double fp_im1 =
+              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + FP_ID];
+          double f_im1 =
+              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + F_ID];
+          double g_im1 =
+              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + G_ID];
+
+          double fp_im2 =
+              state_grids[xi_id - 2][eta_id * FLAT_PLATE_RANK + FP_ID];
+          double f_im2 =
+              state_grids[xi_id - 2][eta_id * FLAT_PLATE_RANK + F_ID];
+          double g_im2 =
+              state_grids[xi_id - 2][eta_id * FLAT_PLATE_RANK + G_ID];
+
+          field_grid[eta_offset + 0] = dxi1 * 3.; //
+          field_grid[eta_offset + 1] = dxi1 * (-4. * fp_im1 + fp_im2);
+          field_grid[eta_offset + 2] = -dxi1 * 3.;
+          field_grid[eta_offset + 3] = dxi1 * (4. * f_im1 - f_im2);
+
+          field_grid[eta_offset + 4] = dxi1 * 3.;
+          field_grid[eta_offset + 5] = dxi1 * (-4. * g_im1 + g_im2);
+          field_grid[eta_offset + 6] = -dxi1 * 3.;
+          field_grid[eta_offset + 7] = dxi1 * (4. * f_im1 - f_im2);
+
+          eta_offset += FIELD_RANK;
+        }
+
+      } else {
+        // 1st order backward difference
+        for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+          double fp_im1 =
+              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + FP_ID];
+          double f_im1 =
+              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + F_ID];
+          double g_im1 =
+              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + G_ID];
+
+          field_grid[eta_offset + 0] = dxi1;
+          field_grid[eta_offset + 1] = -dxi1 * fp_im1;
+          field_grid[eta_offset + 2] = -dxi1;
+          field_grid[eta_offset + 3] = dxi1 * f_im1;
+
+          field_grid[eta_offset + 4] = dxi1;
+          field_grid[eta_offset + 5] = -dxi1 * g_im1;
+          field_grid[eta_offset + 6] = -dxi1;
+          field_grid[eta_offset + 7] = dxi1 * f_im1;
+
+          eta_offset += FIELD_RANK;
+        }
+      }
+    }
+
+    // Call search method
+    int worker_id = BoxProfileSearchParallel(profile_params, search_window,
+                                             search_params, best_guess);
+
+    // Copy profile to output vector
+    bl_state_grid[xi_id] = state_grids[worker_id];
+
+    // Define search window for next iterations
+    search_window.fpp_min = 0.8 * best_guess[0];
+    search_window.fpp_max = 1.2 * best_guess[0];
+    search_window.gp_min = 0.8 * best_guess[1];
+    search_window.gp_max = 1.2 * best_guess[1];
+
+    // Update offset for edge conditions
+    edge_offset += 6;
   }
 }

@@ -2,18 +2,20 @@
 #include "gas_model.h"
 
 double compute_lsim_rhs_default(const std::vector<double> &state,
-                                std::vector<double> &rhs, int offset,
+                                int state_offset,
+                                const std::vector<double> &field,
+                                int field_offset, std::vector<double> &rhs,
                                 ProfileParams &params) {
   double romu = 1.0;
   double prandtl = 1.0;
   double eckert = 1.0;
 
-  double fp = state[offset + FP_ID];
-  double g = state[offset + G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
-  double fpp = state[offset + FPP_ID] / romu;
-  double f = state[offset + F_ID];
-  double gp = state[offset + GP_ID] / romu * prandtl;
+  double fpp = state[state_offset + FPP_ID] / romu;
+  double f = state[state_offset + F_ID];
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
 
   double xi = params.xi;
   double ue = params.ue;
@@ -36,6 +38,8 @@ double compute_lsim_rhs_default(const std::vector<double> &state,
 }
 
 void compute_lsim_rhs_jacobian_default(const std::vector<double> &state,
+                                       const std::vector<double> &field,
+                                       int field_offset,
                                        std::vector<double> &matrix_data,
                                        ProfileParams &params) {
   assert(matrix_data.size() == FLAT_PLATE_RANK * FLAT_PLATE_RANK);
@@ -105,12 +109,12 @@ void compute_lsim_rhs_jacobian_default(const std::vector<double> &state,
   matrix_data[offset + G_ID] = 0.;
 }
 
-double compute_lsim_rhs_cpg(const std::vector<double> &state,
-                            std::vector<double> &rhs, int offset,
-                            ProfileParams &params) {
+double compute_lsim_rhs_cpg(const std::vector<double> &state, int state_offset,
+                            const std::vector<double> &field, int field_offset,
+                            std::vector<double> &rhs, ProfileParams &params) {
   //
-  double fp = state[offset + FP_ID];
-  double g = state[offset + G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
   double pe = params.pe;
   double he = params.he;
@@ -137,9 +141,9 @@ double compute_lsim_rhs_cpg(const std::vector<double> &state,
   double prandtl = mu * cp / k;
   double eckert = params.eckert;
 
-  double fpp = state[offset + FPP_ID] / romu;
-  double f = state[offset + F_ID];
-  double gp = state[offset + GP_ID] / romu * prandtl;
+  double fpp = state[state_offset + FPP_ID] / romu;
+  double f = state[state_offset + F_ID];
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
 
   rhs[FPP_ID] = -f * fpp + 2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi;
   rhs[FP_ID] = fpp;
@@ -156,6 +160,8 @@ double compute_lsim_rhs_cpg(const std::vector<double> &state,
 }
 
 void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
+                                   const std::vector<double> &field,
+                                   int field_offset,
                                    std::vector<double> &matrix_data,
                                    ProfileParams &params) {
   assert(matrix_data.size() == FLAT_PLATE_RANK * FLAT_PLATE_RANK);
