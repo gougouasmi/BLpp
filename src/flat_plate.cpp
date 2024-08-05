@@ -2,25 +2,40 @@
 #include "newton_solver.h"
 #include "utils.h"
 
+#include "profile_functions_default.h"
+
 #include <algorithm>
 #include <cassert>
 #include <tuple>
 
 FlatPlate::FlatPlate(int max_nb_steps)
-    : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_default),
-      initialize(initialize_default),
-      compute_rhs_jacobian(compute_rhs_jacobian_default),
+    : _max_nb_steps(max_nb_steps), initialize(initialize_default),
+      compute_rhs_self_similar(compute_rhs_default),
+      compute_rhs_locally_similar(compute_lsim_rhs_default),
+      compute_rhs_diff_diff(compute_full_rhs_default),
+      compute_rhs_jacobian_self_similar(compute_rhs_jacobian_default),
+      compute_rhs_jacobian_locally_similar(compute_lsim_rhs_jacobian_default),
+      compute_rhs_jacobian_diff_diff(compute_full_rhs_jacobian_default),
       state_grids(_max_nb_workers,
                   vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
       field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
       rhs_vecs(_max_nb_workers, vector<double>(FLAT_PLATE_RANK)) {}
 
-FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
-                     InitializeFunction init_fun,
-                     RhsJacobianFunction jacobian_fun)
-    : _max_nb_steps(max_nb_steps), compute_rhs(compute_rhs_fun),
-      compute_rhs_jacobian(jacobian_fun), initialize(init_fun),
+FlatPlate::FlatPlate(int max_nb_steps, InitializeFunction init_fun,
+                     RhsFunction rhs_self_similar_fun,
+                     RhsFunction rhs_locally_similar_fun,
+                     RhsFunction rhs_diff_diff_fun,
+                     RhsJacobianFunction jacobian_self_similar_fun,
+                     RhsJacobianFunction jacobian_locally_similar_fun,
+                     RhsJacobianFunction jacobian_diff_diff_fun)
+    : _max_nb_steps(max_nb_steps), initialize(init_fun),
+      compute_rhs_self_similar(rhs_self_similar_fun),
+      compute_rhs_locally_similar(rhs_locally_similar_fun),
+      compute_rhs_diff_diff(rhs_diff_diff_fun),
+      compute_rhs_jacobian_self_similar(jacobian_self_similar_fun),
+      compute_rhs_jacobian_locally_similar(jacobian_locally_similar_fun),
+      compute_rhs_jacobian_diff_diff(jacobian_diff_diff_fun),
       state_grids(_max_nb_workers,
                   vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
@@ -29,6 +44,32 @@ FlatPlate::FlatPlate(int max_nb_steps, RhsFunction compute_rhs_fun,
 
 void FlatPlate::InitializeState(ProfileParams &profile_params, int worker_id) {
   initialize(profile_params, state_grids[worker_id]);
+}
+
+RhsFunction FlatPlate::GetRhsFun(ProfileType ptype) {
+  if (ptype == ProfileType::SelfSimilar)
+    return compute_rhs_self_similar;
+
+  if (ptype == ProfileType::LocallySimilar)
+    return compute_rhs_locally_similar;
+
+  if (ptype == ProfileType::DifferenceDifferential)
+    return compute_rhs_diff_diff;
+
+  return nullptr;
+}
+
+RhsJacobianFunction FlatPlate::GetJacobianFun(ProfileType ptype) {
+  if (ptype == ProfileType::SelfSimilar)
+    return compute_rhs_jacobian_self_similar;
+
+  if (ptype == ProfileType::LocallySimilar)
+    return compute_rhs_jacobian_locally_similar;
+
+  if (ptype == ProfileType::DifferenceDifferential)
+    return compute_rhs_jacobian_diff_diff;
+
+  return nullptr;
 }
 
 bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
@@ -46,6 +87,9 @@ bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
 bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
                                        vector<double> &score, int worker_id) {
   assert(profile_params.AreValid());
+
+  RhsFunction compute_rhs = GetRhsFun(profile_params.ptype);
+  assert(compute_rhs != nullptr);
 
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
@@ -96,6 +140,13 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
                                        vector<double> &score, int worker_id) {
   assert(profile_params.AreValid());
 
+  RhsFunction compute_rhs = GetRhsFun(profile_params.ptype);
+  RhsJacobianFunction compute_rhs_jacobian =
+      GetJacobianFun(profile_params.ptype);
+
+  assert(compute_rhs != nullptr);
+  assert(compute_rhs_jacobian != nullptr);
+
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
@@ -116,8 +167,8 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
 
   auto objective_fun = [xdim, worker_id, &eta_step, &state_offset,
                         &field_offset, &profile_params, &state_grid,
-                        this](const vector<double> &state,
-                              vector<double> &residual) {
+                        compute_rhs, this](const vector<double> &state,
+                                           vector<double> &residual) {
     // U^{n+1} - U^{n} = R(U^{n+1})
     compute_rhs(state, 0, field_grid, field_offset, residual, profile_params);
     for (int idx = 0; idx < xdim; idx++) {
@@ -139,7 +190,7 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
   };
 
   auto jacobian_fun = [xdim, &eta_step, &state_offset, &field_offset,
-                       &profile_params,
+                       &profile_params, compute_rhs_jacobian,
                        this](const vector<double> &state, DenseMatrix &matrix) {
     vector<double> &matrix_data = matrix.GetData();
 
@@ -707,6 +758,7 @@ int FlatPlate::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
  *  3. edge properties wrt xi
  */
 void FlatPlate::ComputeLS(const vector<double> &edge_field,
+                          ProfileParams &profile_params,
                           SearchParams &search_params,
                           vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
@@ -721,8 +773,7 @@ void FlatPlate::ComputeLS(const vector<double> &edge_field,
   assert(xi_dim == bl_state_grid.size());
 
   // Parameters
-  ProfileParams profile_params;
-  profile_params.SetDefault();
+  profile_params.ptype == ProfileType::LocallySimilar;
 
   SearchWindow search_window;
   search_window.SetDefault();
@@ -770,6 +821,7 @@ void FlatPlate::ComputeLS(const vector<double> &edge_field,
  *  3. edge properties wrt xi
  */
 void FlatPlate::ComputeDD(const vector<double> &edge_field,
+                          ProfileParams &profile_params,
                           SearchParams &search_params,
                           vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
@@ -784,8 +836,7 @@ void FlatPlate::ComputeDD(const vector<double> &edge_field,
   assert(xi_dim == bl_state_grid.size());
 
   // Parameters
-  ProfileParams profile_params;
-  profile_params.SetDefault();
+  profile_params.ptype = ProfileType::DifferenceDifferential;
 
   SearchWindow search_window;
   search_window.SetDefault();

@@ -25,11 +25,9 @@
  */
 
 #include "atmosphere.h"
-#include "flat_plate.h"
-#include "profile.h"
-#include "profile_lsim.h"
-#include "profile_search.h"
-#include "timers.h"
+#include "flat_plate_factory.h"
+#include "profile_struct.h"
+#include "search_struct.h"
 
 #include <vector>
 
@@ -57,9 +55,7 @@ int main(int argc, char *argv[]) {
   int eta_dim = profile_params.nb_steps;
 
   // Build class instance
-  FlatPlate flat_plate =
-      FlatPlate(eta_dim, compute_lsim_rhs_cpg, initialize_cpg,
-                compute_lsim_rhs_jacobian_cpg);
+  FlatPlate flat_plate = FlatPlateFactory(eta_dim, "cpg");
 
   // Compute 2D profile
   int xi_dim = 5;

@@ -1,8 +1,8 @@
 #ifndef FLAT_PLATE_H
 #define FLAT_PLATE_H
 
-#include "profile.h"
-#include "profile_search.h"
+#include "profile_struct.h"
+#include "search_struct.h"
 
 #include <vector>
 
@@ -11,11 +11,19 @@ using std::vector;
 class FlatPlate {
 public:
   FlatPlate(int max_nb_steps);
-  FlatPlate(int max_nb_steps, RhsFunction rhs_fun, InitializeFunction init_fun,
-            RhsJacobianFunction jacobian_fun);
+  FlatPlate(int max_nb_steps, InitializeFunction init_fun,
+            RhsFunction rhs_self_similar_fun,
+            RhsFunction rhs_locally_similar_fun, RhsFunction rhs_diff_diff_fun,
+            RhsJacobianFunction jacobian_self_similar_fun,
+            RhsJacobianFunction jacobian_locally_similar_fun,
+            RhsJacobianFunction jacobian_diff_diff_fun);
 
   //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
+
+  //
+  RhsFunction GetRhsFun(ProfileType ptype);
+  RhsJacobianFunction GetJacobianFun(ProfileType ptype);
 
   // ODE integration (eta)
   bool DevelopProfile(ProfileParams &profile_params, vector<double> &score,
@@ -37,9 +45,11 @@ public:
                                          vector<double> &best_guess);
 
   // 2D profile calculation
-  void ComputeLS(const vector<double> &edge_field, SearchParams &search_params,
+  void ComputeLS(const vector<double> &edge_field,
+                 ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
-  void ComputeDD(const vector<double> &edge_field, SearchParams &search_params,
+  void ComputeDD(const vector<double> &edge_field,
+                 ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
 
 private:
@@ -52,9 +62,11 @@ private:
 
   vector<double> field_grid;
 
-  RhsFunction compute_rhs;
-  RhsJacobianFunction compute_rhs_jacobian;
   InitializeFunction initialize;
+  RhsFunction compute_rhs_self_similar, compute_rhs_locally_similar,
+      compute_rhs_diff_diff;
+  RhsJacobianFunction compute_rhs_jacobian_self_similar,
+      compute_rhs_jacobian_locally_similar, compute_rhs_jacobian_diff_diff;
 };
 
 #endif

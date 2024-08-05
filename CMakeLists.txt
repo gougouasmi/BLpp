@@ -28,8 +28,8 @@ target_include_directories(utils_lib PUBLIC src/utils)
 
 # Profile functions
 add_library(profile_lib
-    src/profile.cpp
-    src/profile_lsim.cpp
+    src/profile_functions_default.cpp
+    src/profile_functions_cpg.cpp
 )
 target_include_directories(profile_lib PRIVATE src src/physics)
 target_link_libraries(profile_lib PRIVATE utils_lib)

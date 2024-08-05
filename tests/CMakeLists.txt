@@ -45,9 +45,8 @@ add_test(NAME TestNewtonSolver COMMAND test_newton_solve)
 # Test profile functions 
 add_executable(test_profile_functions
     profile_functions_test.cpp 
-    ../src/profile.cpp
-    ../src/profile_lsim.cpp
-    ../src/profile_full.cpp
+    ../src/profile_functions_default.cpp
+    ../src/profile_functions_cpg.cpp
 )
 #target_include_directories(test_profile_functions PRIVATE <include directories>)
 add_test(NAME TestProfileFunctions COMMAND test_profile_functions)

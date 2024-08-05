@@ -1,5 +1,5 @@
-#ifndef PROFILE_H
-#define PROFILE_H
+#ifndef PROFILE_STRUCT_H
+#define PROFILE_STRUCT_H
 
 #include <iostream>
 #include <vector>
@@ -16,6 +16,7 @@ constexpr int FIELD_RANK = 8;
 
 enum WallType { Wall, Adiabatic };
 enum TimeScheme { Explicit, Implicit };
+enum ProfileType { SelfSimilar, LocallySimilar, DifferenceDifferential };
 
 typedef struct ProfileParams {
   int nb_steps;
@@ -24,6 +25,8 @@ typedef struct ProfileParams {
   double fpp0;
   double gp0;
   double g0;
+
+  ProfileType ptype = ProfileType::SelfSimilar;
 
   TimeScheme scheme = TimeScheme::Explicit;
   double max_step;
@@ -111,28 +114,6 @@ typedef struct ProfileParams {
     }
   }
 } ProfileParams;
-
-double compute_rhs_default(const std::vector<double> &state, int state_offset,
-                           const std::vector<double> &field, int field_offset,
-                           std::vector<double> &rhs, ProfileParams &params);
-double compute_rhs_cpg(const std::vector<double> &state, int state_offset,
-                       const std::vector<double> &field, int field_offset,
-                       std::vector<double> &rhs, ProfileParams &params);
-
-void compute_rhs_jacobian_default(const std::vector<double> &state,
-                                  const std::vector<double> &field,
-                                  int field_offset,
-                                  std::vector<double> &matrix_data,
-                                  ProfileParams &params);
-void compute_rhs_jacobian_cpg(const std::vector<double> &state,
-                              const std::vector<double> &field,
-                              int field_offset,
-                              std::vector<double> &matrix_data,
-                              ProfileParams &params);
-
-void initialize_default(ProfileParams &profile_params,
-                        std::vector<double> &state);
-void initialize_cpg(ProfileParams &profile_params, std::vector<double> &state);
 
 typedef void (*InitializeFunction)(ProfileParams &profile_params,
                                    std::vector<double> &state);

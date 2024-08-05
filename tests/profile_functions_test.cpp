@@ -1,6 +1,6 @@
-#include "profile.h"
-#include "profile_full.h"
-#include "profile_lsim.h"
+#include "profile_functions_cpg.h"
+#include "profile_functions_default.h"
+#include "profile_struct.h"
 #include "testing_utils.h"
 #include <cassert>
 

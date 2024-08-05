@@ -2,7 +2,7 @@
 #define ATMOSPHERE_H
 
 #include "gas_model.h"
-#include "profile.h"
+#include "profile_struct.h"
 #include <cassert>
 #include <cmath>
 

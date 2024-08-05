@@ -5,7 +5,7 @@
 
 #include "atmosphere.h"
 #include "flat_plate_factory.h"
-#include "profile_search.h"
+#include "search_struct.h"
 #include "timers.h"
 
 /*
