@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "atmosphere.h"
-#include "flat_plate_factory.h"
+#include "boundary_layer_factory.h"
 #include "profile.h"
 
 /*
@@ -32,11 +32,12 @@ int main(int argc, char *argv[]) {
   printf("Entry conditions: altitude=%.2f km, mach_number=%.2f\n\n",
          altitude_km, mach_number);
 
-  // Build FlatPlate instance and develop profile
-  FlatPlate flat_plate = FlatPlateFactory(profile_params.nb_steps, "cpg");
+  // Build BoundaryLayer instance and develop profile
+  BoundaryLayer boundary_layer =
+      BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
   std::vector<double> score(2);
-  bool converged = flat_plate.DevelopProfile(profile_params, score);
+  bool converged = boundary_layer.DevelopProfile(profile_params, score);
 
   if (converged)
     printf("Profile converged, score: [%.5e, %.5e].\n", score[0], score[1]);

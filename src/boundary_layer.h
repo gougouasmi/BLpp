@@ -1,5 +1,5 @@
-#ifndef FLAT_PLATE_H
-#define FLAT_PLATE_H
+#ifndef BOUNDARY_LAYER_H
+#define BOUNDARY_LAYER_H
 
 #include "profile_struct.h"
 #include "search_struct.h"
@@ -8,15 +8,16 @@
 
 using std::vector;
 
-class FlatPlate {
+class BoundaryLayer {
 public:
-  FlatPlate(int max_nb_steps);
-  FlatPlate(int max_nb_steps, InitializeFunction init_fun,
-            RhsFunction rhs_self_similar_fun,
-            RhsFunction rhs_locally_similar_fun, RhsFunction rhs_diff_diff_fun,
-            RhsJacobianFunction jacobian_self_similar_fun,
-            RhsJacobianFunction jacobian_locally_similar_fun,
-            RhsJacobianFunction jacobian_diff_diff_fun);
+  BoundaryLayer(int max_nb_steps);
+  BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
+                RhsFunction rhs_self_similar_fun,
+                RhsFunction rhs_locally_similar_fun,
+                RhsFunction rhs_diff_diff_fun,
+                RhsJacobianFunction jacobian_self_similar_fun,
+                RhsJacobianFunction jacobian_locally_similar_fun,
+                RhsJacobianFunction jacobian_diff_diff_fun);
 
   //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
@@ -46,9 +47,11 @@ public:
 
   // 2D profile calculation
   void ComputeLS(const vector<double> &edge_field,
+                 const vector<double> &wall_field,
                  ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
   void ComputeDD(const vector<double> &edge_field,
+                 const vector<double> &wall_field,
                  ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
 

@@ -1,4 +1,4 @@
-#include "flat_plate.h"
+#include "boundary_layer.h"
 #include "newton_solver.h"
 #include "utils.h"
 
@@ -8,7 +8,7 @@
 #include <cassert>
 #include <tuple>
 
-FlatPlate::FlatPlate(int max_nb_steps)
+BoundaryLayer::BoundaryLayer(int max_nb_steps)
     : _max_nb_steps(max_nb_steps), initialize(initialize_default),
       compute_rhs_self_similar(compute_rhs_default),
       compute_rhs_locally_similar(compute_lsim_rhs_default),
@@ -17,18 +17,18 @@ FlatPlate::FlatPlate(int max_nb_steps)
       compute_rhs_jacobian_locally_similar(compute_lsim_rhs_jacobian_default),
       compute_rhs_jacobian_diff_diff(compute_full_rhs_jacobian_default),
       state_grids(_max_nb_workers,
-                  vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
+                  vector<double>(BL_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
       field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
-      rhs_vecs(_max_nb_workers, vector<double>(FLAT_PLATE_RANK)) {}
+      rhs_vecs(_max_nb_workers, vector<double>(BL_RANK)) {}
 
-FlatPlate::FlatPlate(int max_nb_steps, InitializeFunction init_fun,
-                     RhsFunction rhs_self_similar_fun,
-                     RhsFunction rhs_locally_similar_fun,
-                     RhsFunction rhs_diff_diff_fun,
-                     RhsJacobianFunction jacobian_self_similar_fun,
-                     RhsJacobianFunction jacobian_locally_similar_fun,
-                     RhsJacobianFunction jacobian_diff_diff_fun)
+BoundaryLayer::BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
+                             RhsFunction rhs_self_similar_fun,
+                             RhsFunction rhs_locally_similar_fun,
+                             RhsFunction rhs_diff_diff_fun,
+                             RhsJacobianFunction jacobian_self_similar_fun,
+                             RhsJacobianFunction jacobian_locally_similar_fun,
+                             RhsJacobianFunction jacobian_diff_diff_fun)
     : _max_nb_steps(max_nb_steps), initialize(init_fun),
       compute_rhs_self_similar(rhs_self_similar_fun),
       compute_rhs_locally_similar(rhs_locally_similar_fun),
@@ -37,16 +37,17 @@ FlatPlate::FlatPlate(int max_nb_steps, InitializeFunction init_fun,
       compute_rhs_jacobian_locally_similar(jacobian_locally_similar_fun),
       compute_rhs_jacobian_diff_diff(jacobian_diff_diff_fun),
       state_grids(_max_nb_workers,
-                  vector<double>(FLAT_PLATE_RANK * (1 + _max_nb_steps))),
+                  vector<double>(BL_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
       field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
-      rhs_vecs(_max_nb_workers, vector<double>(FLAT_PLATE_RANK)) {}
+      rhs_vecs(_max_nb_workers, vector<double>(BL_RANK)) {}
 
-void FlatPlate::InitializeState(ProfileParams &profile_params, int worker_id) {
+void BoundaryLayer::InitializeState(ProfileParams &profile_params,
+                                    int worker_id) {
   initialize(profile_params, state_grids[worker_id]);
 }
 
-RhsFunction FlatPlate::GetRhsFun(ProfileType ptype) {
+RhsFunction BoundaryLayer::GetRhsFun(ProfileType ptype) {
   if (ptype == ProfileType::SelfSimilar)
     return compute_rhs_self_similar;
 
@@ -59,7 +60,7 @@ RhsFunction FlatPlate::GetRhsFun(ProfileType ptype) {
   return nullptr;
 }
 
-RhsJacobianFunction FlatPlate::GetJacobianFun(ProfileType ptype) {
+RhsJacobianFunction BoundaryLayer::GetJacobianFun(ProfileType ptype) {
   if (ptype == ProfileType::SelfSimilar)
     return compute_rhs_jacobian_self_similar;
 
@@ -72,8 +73,8 @@ RhsJacobianFunction FlatPlate::GetJacobianFun(ProfileType ptype) {
   return nullptr;
 }
 
-bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
-                               vector<double> &score, int worker_id) {
+bool BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
+                                   vector<double> &score, int worker_id) {
   if (profile_params.scheme == TimeScheme::Explicit) {
     return DevelopProfileExplicit(profile_params, score, worker_id);
   } else if (profile_params.scheme == TimeScheme::Implicit) {
@@ -84,8 +85,9 @@ bool FlatPlate::DevelopProfile(ProfileParams &profile_params,
   }
 }
 
-bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
-                                       vector<double> &score, int worker_id) {
+bool BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
+                                           vector<double> &score,
+                                           int worker_id) {
   assert(profile_params.AreValid());
 
   RhsFunction compute_rhs = GetRhsFun(profile_params.ptype);
@@ -97,7 +99,7 @@ bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
 
   int nb_steps = eta_grid.size() - 1;
 
-  assert(state_grid.size() / (nb_steps + 1) == FLAT_PLATE_RANK);
+  assert(state_grid.size() / (nb_steps + 1) == BL_RANK);
 
   InitializeState(profile_params, worker_id);
   double max_step = profile_params.max_step;
@@ -114,13 +116,13 @@ bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
 
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
-    for (int var_id = 0; var_id < FLAT_PLATE_RANK; ++var_id) {
-      state_grid[state_offset + FLAT_PLATE_RANK + var_id] =
+    for (int var_id = 0; var_id < BL_RANK; ++var_id) {
+      state_grid[state_offset + BL_RANK + var_id] =
           state_grid[state_offset + var_id] + eta_step * rhs[var_id];
     }
 
     // Update indexing
-    state_offset += FLAT_PLATE_RANK;
+    state_offset += BL_RANK;
     field_offset += FIELD_RANK;
     step_id += 1;
   }
@@ -136,8 +138,9 @@ bool FlatPlate::DevelopProfileExplicit(ProfileParams &profile_params,
   return converged;
 }
 
-bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
-                                       vector<double> &score, int worker_id) {
+bool BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
+                                           vector<double> &score,
+                                           int worker_id) {
   assert(profile_params.AreValid());
 
   RhsFunction compute_rhs = GetRhsFun(profile_params.ptype);
@@ -153,7 +156,7 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
 
   int nb_steps = eta_grid.size() - 1;
 
-  assert(state_grid.size() / (nb_steps + 1) == FLAT_PLATE_RANK);
+  assert(state_grid.size() / (nb_steps + 1) == BL_RANK);
 
   InitializeState(profile_params, worker_id);
   double eta_step = profile_params.max_step;
@@ -163,7 +166,7 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
   int field_offset = 0;
 
   // Setup nonlinear solver functions
-  int xdim = FLAT_PLATE_RANK;
+  int xdim = BL_RANK;
 
   auto objective_fun = [xdim, worker_id, &eta_step, &state_offset,
                         &field_offset, &profile_params, &state_grid,
@@ -238,13 +241,12 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
 
-    for (int var_id = 0; var_id < FLAT_PLATE_RANK; ++var_id) {
-      state_grid[state_offset + FLAT_PLATE_RANK + var_id] =
-          solution_buffer[var_id];
+    for (int var_id = 0; var_id < BL_RANK; ++var_id) {
+      state_grid[state_offset + BL_RANK + var_id] = solution_buffer[var_id];
     }
 
     // Update indexing
-    state_offset += FLAT_PLATE_RANK;
+    state_offset += BL_RANK;
     field_offset += FIELD_RANK;
 
     step_id += 1;
@@ -262,10 +264,10 @@ bool FlatPlate::DevelopProfileImplicit(ProfileParams &profile_params,
   return converged;
 }
 
-int FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
-                                SearchWindow &window,
-                                SearchParams &search_params,
-                                vector<double> &best_guess) {
+int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
+                                    SearchWindow &window,
+                                    SearchParams &search_params,
+                                    vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -384,10 +386,10 @@ int FlatPlate::BoxProfileSearch(ProfileParams &profile_params,
 #include <future>
 #include <thread>
 
-int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
-                                        SearchWindow &window,
-                                        SearchParams &search_params,
-                                        vector<double> &best_guess) {
+int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
+                                            SearchWindow &window,
+                                            SearchParams &search_params,
+                                            vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -543,10 +545,9 @@ int FlatPlate::BoxProfileSearchParallel(ProfileParams &profile_params,
 #include "message_queue.h"
 #include <memory>
 
-int FlatPlate::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
-                                                  SearchWindow &window,
-                                                  SearchParams &search_params,
-                                                  vector<double> &best_guess) {
+int BoundaryLayer::BoxProfileSearchParallelWithQueues(
+    ProfileParams &profile_params, SearchWindow &window,
+    SearchParams &search_params, vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -757,15 +758,16 @@ int FlatPlate::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void FlatPlate::ComputeLS(const vector<double> &edge_field,
-                          ProfileParams &profile_params,
-                          SearchParams &search_params,
-                          vector<vector<double>> &bl_state_grid) {
+void BoundaryLayer::ComputeLS(const vector<double> &edge_field,
+                              const vector<double> &wall_field,
+                              ProfileParams &profile_params,
+                              SearchParams &search_params,
+                              vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
   assert(bl_state_grid.size() >= 1);
   int eta_dim = eta_grids[0].size();
 
-  assert(FLAT_PLATE_RANK * eta_dim == state_grids[0].size());
+  assert(BL_RANK * eta_dim == state_grids[0].size());
   assert(bl_state_grid[0].size() == state_grids[0].size());
 
   // Checking edge_field has the correct dimensions
@@ -773,7 +775,7 @@ void FlatPlate::ComputeLS(const vector<double> &edge_field,
   assert(xi_dim == bl_state_grid.size());
 
   // Parameters
-  profile_params.ptype == ProfileType::LocallySimilar;
+  profile_params.ptype = ProfileType::LocallySimilar;
 
   SearchWindow search_window;
   search_window.SetDefault();
@@ -790,6 +792,9 @@ void FlatPlate::ComputeLS(const vector<double> &edge_field,
     profile_params.xi = edge_field[edge_offset + 3];
     profile_params.due_dxi = edge_field[edge_offset + 4];
     profile_params.dhe_dxi = edge_field[edge_offset + 5];
+
+    //
+    profile_params.g0 = wall_field[xi_id];
 
     // Call search method
     int worker_id = BoxProfileSearchParallel(profile_params, search_window,
@@ -820,15 +825,16 @@ void FlatPlate::ComputeLS(const vector<double> &edge_field,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void FlatPlate::ComputeDD(const vector<double> &edge_field,
-                          ProfileParams &profile_params,
-                          SearchParams &search_params,
-                          vector<vector<double>> &bl_state_grid) {
+void BoundaryLayer::ComputeDD(const vector<double> &edge_field,
+                              const vector<double> &wall_field,
+                              ProfileParams &profile_params,
+                              SearchParams &search_params,
+                              vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
   assert(bl_state_grid.size() >= 1);
   int eta_dim = eta_grids[0].size();
 
-  assert(FLAT_PLATE_RANK * eta_dim == state_grids[0].size());
+  assert(BL_RANK * eta_dim == state_grids[0].size());
   assert(bl_state_grid[0].size() == state_grids[0].size());
 
   // Checking edge_field has the correct dimensions
@@ -857,6 +863,9 @@ void FlatPlate::ComputeDD(const vector<double> &edge_field,
     profile_params.due_dxi = edge_field[edge_offset + 4];
     profile_params.dhe_dxi = edge_field[edge_offset + 5];
 
+    //
+    profile_params.g0 = wall_field[xi_id];
+
     // Compute field
     if (xi_id > 0) {
 
@@ -866,19 +875,13 @@ void FlatPlate::ComputeDD(const vector<double> &edge_field,
 
         for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
 
-          double fp_im1 =
-              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + FP_ID];
-          double f_im1 =
-              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + F_ID];
-          double g_im1 =
-              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + G_ID];
+          double fp_im1 = state_grids[xi_id - 1][eta_id * BL_RANK + FP_ID];
+          double f_im1 = state_grids[xi_id - 1][eta_id * BL_RANK + F_ID];
+          double g_im1 = state_grids[xi_id - 1][eta_id * BL_RANK + G_ID];
 
-          double fp_im2 =
-              state_grids[xi_id - 2][eta_id * FLAT_PLATE_RANK + FP_ID];
-          double f_im2 =
-              state_grids[xi_id - 2][eta_id * FLAT_PLATE_RANK + F_ID];
-          double g_im2 =
-              state_grids[xi_id - 2][eta_id * FLAT_PLATE_RANK + G_ID];
+          double fp_im2 = state_grids[xi_id - 2][eta_id * BL_RANK + FP_ID];
+          double f_im2 = state_grids[xi_id - 2][eta_id * BL_RANK + F_ID];
+          double g_im2 = state_grids[xi_id - 2][eta_id * BL_RANK + G_ID];
 
           field_grid[eta_offset + 0] = dxi1 * 3.; //
           field_grid[eta_offset + 1] = dxi1 * (-4. * fp_im1 + fp_im2);
@@ -896,12 +899,9 @@ void FlatPlate::ComputeDD(const vector<double> &edge_field,
       } else {
         // 1st order backward difference
         for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
-          double fp_im1 =
-              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + FP_ID];
-          double f_im1 =
-              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + F_ID];
-          double g_im1 =
-              state_grids[xi_id - 1][eta_id * FLAT_PLATE_RANK + G_ID];
+          double fp_im1 = state_grids[xi_id - 1][eta_id * BL_RANK + FP_ID];
+          double f_im1 = state_grids[xi_id - 1][eta_id * BL_RANK + F_ID];
+          double g_im1 = state_grids[xi_id - 1][eta_id * BL_RANK + G_ID];
 
           field_grid[eta_offset + 0] = dxi1;
           field_grid[eta_offset + 1] = -dxi1 * fp_im1;

@@ -42,13 +42,13 @@ add_library(linalg_lib
 target_include_directories(linalg_lib PRIVATE src/linalg)
 
 # Flat Plate functions
-add_library(flat_plate_lib
-    src/flat_plate.cpp
-    src/flat_plate_factory.cpp
+add_library(boundary_layer_lib
+    src/boundary_layer.cpp
+    src/boundary_layer_factory.cpp
 )
-target_include_directories(flat_plate_lib PRIVATE src src/physics src/solvers src/linalg)
-target_link_libraries(flat_plate_lib PRIVATE utils_lib)
-target_link_libraries(flat_plate_lib PRIVATE profile_lib)
+target_include_directories(boundary_layer_lib PRIVATE src src/physics src/solvers src/linalg)
+target_link_libraries(boundary_layer_lib PRIVATE utils_lib)
+target_link_libraries(boundary_layer_lib PRIVATE profile_lib)
 
 ###
 # Define executables
@@ -59,7 +59,7 @@ add_executable(devel_profile
     src/exec/develop_flat_plate.cpp
 )
 
-target_link_libraries(devel_profile PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
+target_link_libraries(devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
 target_include_directories(devel_profile PRIVATE src src/physics)
 
 # Search for the initial conditions that develop into the correct self-similar profile
@@ -67,7 +67,7 @@ add_executable(search_profile
     src/exec/search_flat_plate.cpp
 )
 
-target_link_libraries(search_profile PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
+target_link_libraries(search_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
 target_include_directories(search_profile PRIVATE src src/physics src/utils)
 
 # Compute 2D profile
@@ -75,7 +75,7 @@ add_executable(compute_profiles
     src/exec/compute_flat_plate_local_sim.cpp
 )
 
-target_link_libraries(compute_profiles PRIVATE flat_plate_lib profile_lib utils_lib linalg_lib)
+target_link_libraries(compute_profiles PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
 target_include_directories(compute_profiles PRIVATE src src/physics src/utils)
 
 ###

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-constexpr int FLAT_PLATE_RANK = 5;
+constexpr int BL_RANK = 5;
 
 constexpr int FPP_ID = 0;
 constexpr int GP_ID = 1;

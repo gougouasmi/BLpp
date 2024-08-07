@@ -17,13 +17,13 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
   ProfileParams profile_params;
   profile_params.SetDefault();
 
-  const int matrix_dim = FLAT_PLATE_RANK * FLAT_PLATE_RANK;
+  const int matrix_dim = BL_RANK * BL_RANK;
 
-  std::vector<double> state(FLAT_PLATE_RANK, 0.);
-  fillWithRandomData(state, FLAT_PLATE_RANK);
+  std::vector<double> state(BL_RANK, 0.);
+  fillWithRandomData(state, BL_RANK);
 
-  std::vector<double> zero_field(FLAT_PLATE_RANK, 0.);
-  std::vector<double> rhs_ref(FLAT_PLATE_RANK, 0.);
+  std::vector<double> zero_field(BL_RANK, 0.);
+  std::vector<double> rhs_ref(BL_RANK, 0.);
   std::vector<double> jacobian_ref(matrix_dim, 0.);
 
   rhs_fun(state, 0, zero_field, 0., rhs_ref, profile_params);
@@ -36,8 +36,8 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
   assert(jacobian_norm > 0);
 
   //
-  std::vector<double> state_buffer(FLAT_PLATE_RANK, 0.);
-  std::vector<double> rhs_buffer(FLAT_PLATE_RANK, 0.);
+  std::vector<double> state_buffer(BL_RANK, 0.);
+  std::vector<double> rhs_buffer(BL_RANK, 0.);
 
   std::vector<double> fd_steps(3, 0.);
   fd_steps[0] = 1e-1;
@@ -53,10 +53,10 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
     double eps = fd_steps[step_id];
 
     // Loop over Jacobian column indices
-    for (int col_id = 0; col_id < FLAT_PLATE_RANK; col_id++) {
+    for (int col_id = 0; col_id < BL_RANK; col_id++) {
 
       // Compute rhs evaluated at perturbed state
-      for (int row_id = 0; row_id < FLAT_PLATE_RANK; row_id++) {
+      for (int row_id = 0; row_id < BL_RANK; row_id++) {
         state_buffer[row_id] = state[row_id];
       }
       state_buffer[col_id] += eps;
@@ -64,9 +64,9 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
       rhs_fun(state_buffer, 0, zero_field, 0, rhs_buffer, profile_params);
 
       // Finite difference approximation
-      for (int row_id = 0; row_id < FLAT_PLATE_RANK; row_id++) {
-        jacobian_error[row_id * FLAT_PLATE_RANK + col_id] =
-            (jacobian_ref[row_id * FLAT_PLATE_RANK + col_id] -
+      for (int row_id = 0; row_id < BL_RANK; row_id++) {
+        jacobian_error[row_id * BL_RANK + col_id] =
+            (jacobian_ref[row_id * BL_RANK + col_id] -
              (rhs_buffer[row_id] - rhs_ref[row_id]) / eps);
       }
     }
@@ -89,22 +89,22 @@ void LocalSimilarityIsConsistent() {
   ProfileParams profile_params;
   profile_params.SetDefault();
 
-  std::vector<double> state(FLAT_PLATE_RANK, 0.);
-  fillWithRandomData(state, FLAT_PLATE_RANK);
+  std::vector<double> state(BL_RANK, 0.);
+  fillWithRandomData(state, BL_RANK);
 
   std::vector<double> zero_field(FIELD_RANK, 0.);
-  std::vector<double> rhs_self_sim(FLAT_PLATE_RANK, 0.);
-  std::vector<double> rhs_local_sim(FLAT_PLATE_RANK, 0.);
+  std::vector<double> rhs_self_sim(BL_RANK, 0.);
+  std::vector<double> rhs_local_sim(BL_RANK, 0.);
 
   compute_lsim_rhs_default(state, 0, zero_field, 0, rhs_local_sim,
                            profile_params);
   compute_rhs_default(state, 0, zero_field, 0, rhs_self_sim, profile_params);
 
-  assert(allClose(rhs_self_sim, rhs_local_sim, FLAT_PLATE_RANK));
+  assert(allClose(rhs_self_sim, rhs_local_sim, BL_RANK));
   assert(vector_norm(rhs_self_sim) > 0);
 
   // Jacobian functions should be the same
-  const int matrix_dim = FLAT_PLATE_RANK * FLAT_PLATE_RANK;
+  const int matrix_dim = BL_RANK * BL_RANK;
   std::vector<double> jacobian_lsim(matrix_dim, 0.);
   std::vector<double> jacobian_self_sim(matrix_dim, 0.);
 
@@ -125,7 +125,7 @@ void LocalSimilarityIsConsistent() {
                            profile_params);
   compute_rhs_default(state, 0, zero_field, 0, rhs_self_sim, profile_params);
 
-  assert(!allClose(rhs_local_sim, rhs_self_sim, FLAT_PLATE_RANK));
+  assert(!allClose(rhs_local_sim, rhs_self_sim, BL_RANK));
   assert(rhs_local_sim[FPP_ID] != rhs_self_sim[FPP_ID]);
   assert(rhs_local_sim[GP_ID] != rhs_self_sim[GP_ID]);
 
@@ -147,22 +147,22 @@ void DifferenceDifferentialIsConsistent() {
   profile_params.due_dxi = 0.9;
   profile_params.dhe_dxi = -0.4;
 
-  std::vector<double> state(FLAT_PLATE_RANK, 0.);
-  fillWithRandomData(state, FLAT_PLATE_RANK);
+  std::vector<double> state(BL_RANK, 0.);
+  fillWithRandomData(state, BL_RANK);
 
   std::vector<double> zero_field(FIELD_RANK, 0.);
-  std::vector<double> rhs_full(FLAT_PLATE_RANK, 0.);
-  std::vector<double> rhs_local_sim(FLAT_PLATE_RANK, 0.);
+  std::vector<double> rhs_full(BL_RANK, 0.);
+  std::vector<double> rhs_local_sim(BL_RANK, 0.);
 
   compute_lsim_rhs_default(state, 0, zero_field, 0, rhs_local_sim,
                            profile_params);
   compute_full_rhs_default(state, 0, zero_field, 0, rhs_full, profile_params);
 
-  assert(allClose(rhs_full, rhs_local_sim, FLAT_PLATE_RANK));
+  assert(allClose(rhs_full, rhs_local_sim, BL_RANK));
   assert(vector_norm(rhs_full) > 0);
 
   // Jacobian functions should be the same
-  const int matrix_dim = FLAT_PLATE_RANK * FLAT_PLATE_RANK;
+  const int matrix_dim = BL_RANK * BL_RANK;
   std::vector<double> jacobian_lsim(matrix_dim, 0.);
   std::vector<double> jacobian_full(matrix_dim, 0.);
 
@@ -183,7 +183,7 @@ void DifferenceDifferentialIsConsistent() {
   compute_full_rhs_default(state, 0, non_zero_field, 0, rhs_full,
                            profile_params);
 
-  assert(!allClose(rhs_local_sim, rhs_full, FLAT_PLATE_RANK));
+  assert(!allClose(rhs_local_sim, rhs_full, BL_RANK));
   assert(rhs_local_sim[FPP_ID] != rhs_full[FPP_ID]);
   assert(rhs_local_sim[GP_ID] != rhs_full[GP_ID]);
 

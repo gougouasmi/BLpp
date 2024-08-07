@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "atmosphere.h"
-#include "flat_plate_factory.h"
+#include "boundary_layer_factory.h"
 #include "search_struct.h"
 #include "timers.h"
 
@@ -43,15 +43,16 @@ int main(int argc, char *argv[]) {
   printf("Entry conditions: altitude=%.2f km, mach_number=%.2f\n\n",
          altitude_km, mach_number);
 
-  FlatPlate flat_plate = FlatPlateFactory(profile_params.nb_steps, "cpg");
+  BoundaryLayer boundary_layer =
+      BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
   // Serial solution
   std::vector<double> best_guess(2, 0.0);
 
   auto serial_task = [&profile_params, &search_window, &search_params,
-                      &best_guess, &flat_plate]() {
-    flat_plate.BoxProfileSearch(profile_params, search_window, search_params,
-                                best_guess);
+                      &best_guess, &boundary_layer]() {
+    boundary_layer.BoxProfileSearch(profile_params, search_window,
+                                    search_params, best_guess);
   };
 
   double avg_duration = timeit(serial_task, 1);
@@ -65,9 +66,9 @@ int main(int argc, char *argv[]) {
   std::vector<double> parallel_best_guess(2, 0.0);
 
   auto parallel_task = [&profile_params, &search_window, &search_params,
-                        &parallel_best_guess, &flat_plate]() {
-    flat_plate.BoxProfileSearchParallel(profile_params, search_window,
-                                        search_params, parallel_best_guess);
+                        &parallel_best_guess, &boundary_layer]() {
+    boundary_layer.BoxProfileSearchParallel(profile_params, search_window,
+                                            search_params, parallel_best_guess);
   };
 
   avg_duration = timeit(parallel_task, 1);
@@ -81,10 +82,10 @@ int main(int argc, char *argv[]) {
   std::vector<double> parallel_queues_best_guess(2, 0.0);
 
   auto parallel_queues_task = [&profile_params, &search_window, &search_params,
-                               &parallel_queues_best_guess, &flat_plate]() {
-    flat_plate.BoxProfileSearchParallelWithQueues(profile_params, search_window,
-                                                  search_params,
-                                                  parallel_queues_best_guess);
+                               &parallel_queues_best_guess, &boundary_layer]() {
+    boundary_layer.BoxProfileSearchParallelWithQueues(
+        profile_params, search_window, search_params,
+        parallel_queues_best_guess);
   };
 
   avg_duration = timeit(parallel_queues_task, 1);

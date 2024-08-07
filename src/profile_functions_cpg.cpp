@@ -210,7 +210,7 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
                               int field_offset,
                               std::vector<double> &matrix_data,
                               ProfileParams &params) {
-  assert(matrix_data.size() == FLAT_PLATE_RANK * FLAT_PLATE_RANK);
+  assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double fp = state[FP_ID];
   double g = state[G_ID];
@@ -259,7 +259,7 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
   int offset;
 
   // rhs[FPP_ID] = -f * fpp;
-  offset = FPP_ID * FLAT_PLATE_RANK;
+  offset = FPP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -f * dfpp_dfpp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = -fpp;
@@ -267,7 +267,7 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = -f * dfpp_dg;
 
   // rhs[FP_ID] = fpp;
-  offset = FP_ID * FLAT_PLATE_RANK;
+  offset = FP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = dfpp_dfpp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
@@ -275,7 +275,7 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = dfpp_dg;
 
   // rhs[F_ID] = fp;
-  offset = F_ID * FLAT_PLATE_RANK;
+  offset = F_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0;
   matrix_data[offset + FP_ID] = 1.;
   matrix_data[offset + F_ID] = 0.;
@@ -283,7 +283,7 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = 0.;
 
   // rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp);
-  offset = GP_ID * FLAT_PLATE_RANK;
+  offset = GP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = -gp;
@@ -292,7 +292,7 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
       f * dgp_dg + eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp));
 
   // rhs[G_ID] = gp;
-  offset = G_ID * FLAT_PLATE_RANK;
+  offset = G_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0.;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
@@ -305,7 +305,7 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
                                    int field_offset,
                                    std::vector<double> &matrix_data,
                                    ProfileParams &params) {
-  assert(matrix_data.size() == FLAT_PLATE_RANK * FLAT_PLATE_RANK);
+  assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double fp = state[FP_ID];
   double g = state[G_ID];
@@ -359,7 +359,7 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
   int offset;
 
   // rhs[FPP_ID] = -f * fpp + 2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi;
-  offset = FPP_ID * FLAT_PLATE_RANK;
+  offset = FPP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -f * dfpp_dfpp;
   matrix_data[offset + FP_ID] = 4. * (xi / ue) * fp * due_dxi;
   matrix_data[offset + F_ID] = -fpp;
@@ -368,7 +368,7 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
       -f * dfpp_dg + 2. * (xi / ue) * (roe * dro_dg / (ro * ro)) * due_dxi;
 
   // rhs[FP_ID] = fpp;
-  offset = FP_ID * FLAT_PLATE_RANK;
+  offset = FP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = dfpp_dfpp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
@@ -376,7 +376,7 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = dfpp_dg;
 
   // rhs[F_ID] = fp;
-  offset = F_ID * FLAT_PLATE_RANK;
+  offset = F_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0;
   matrix_data[offset + FP_ID] = 1.;
   matrix_data[offset + F_ID] = 0.;
@@ -387,7 +387,7 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
   //   -(f * gp + romu * eckert * fpp * fpp) +
   //   2. * xi * fp * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi);
   //
-  offset = GP_ID * FLAT_PLATE_RANK;
+  offset = GP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
   matrix_data[offset + FP_ID] =
       2. * xi * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi);
@@ -400,7 +400,7 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
           (dhe_dxi / he - dro_dg * (roe * ue) / (ro * ro * he) * due_dxi);
 
   // rhs[G_ID] = gp;
-  offset = G_ID * FLAT_PLATE_RANK;
+  offset = G_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0.;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
@@ -413,7 +413,7 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
                                    int field_offset,
                                    std::vector<double> &matrix_data,
                                    ProfileParams &params) {
-  assert(matrix_data.size() == FLAT_PLATE_RANK * FLAT_PLATE_RANK);
+  assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double fp = state[FP_ID];
   double g = state[G_ID];
@@ -482,7 +482,7 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
   //     -f * fpp +
   //     2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi +
   //     2. * xi * (m00 * fp * fp + m01 * fp + (m10 * f + m11) * fpp);
-  mat_offset = FPP_ID * FLAT_PLATE_RANK;
+  mat_offset = FPP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] =
       -f * dfpp_dfpp + 2. * xi * (m10 * f + m11) * dfpp_dfpp;
   matrix_data[mat_offset + FP_ID] =
@@ -494,7 +494,7 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
       2. * xi * (m10 * f + m11) * dfpp_dg;
 
   // rhs[FP_ID] = fpp;
-  mat_offset = FP_ID * FLAT_PLATE_RANK;
+  mat_offset = FP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = dfpp_dfpp;
   matrix_data[mat_offset + FP_ID] = 0.;
   matrix_data[mat_offset + F_ID] = 0.;
@@ -502,7 +502,7 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[mat_offset + G_ID] = dfpp_dg;
 
   // rhs[F_ID] = fp;
-  mat_offset = F_ID * FLAT_PLATE_RANK;
+  mat_offset = F_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = 0;
   matrix_data[mat_offset + FP_ID] = 1.;
   matrix_data[mat_offset + F_ID] = 0.;
@@ -513,7 +513,7 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
   //   -(f * gp + romu * eckert * fpp * fpp) +
   //   2. * xi * fp * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi) +
   //   2. * xi * ((e00 * g + e01) * fp + (e10 * f + e11) * gp);
-  mat_offset = GP_ID * FLAT_PLATE_RANK;
+  mat_offset = GP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
   matrix_data[mat_offset + FP_ID] =
       2. * xi * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi) +
@@ -529,7 +529,7 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
       2. * xi * (e00 * fp + (e10 * f + e11) * dgp_dg);
 
   // rhs[G_ID] = gp;
-  mat_offset = G_ID * FLAT_PLATE_RANK;
+  mat_offset = G_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = 0.;
   matrix_data[mat_offset + FP_ID] = 0.;
   matrix_data[mat_offset + F_ID] = 0.;

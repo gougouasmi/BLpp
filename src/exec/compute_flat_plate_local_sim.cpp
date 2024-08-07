@@ -1,7 +1,7 @@
 #include <iostream>
 
 /*
- * ./compute_flat_plate -flag1 flag1_args ... -flagN flagN_args where
+ * ./compute_boundary_layer -flag1 flag1_args ... -flagN flagN_args where
  *
  * Flow configuration parameters:
  *   flag: altitude, flag_args(1) altitude_km
@@ -25,7 +25,7 @@
  */
 
 #include "atmosphere.h"
-#include "flat_plate_factory.h"
+#include "boundary_layer_factory.h"
 #include "profile_struct.h"
 #include "search_struct.h"
 
@@ -55,14 +55,12 @@ int main(int argc, char *argv[]) {
   int eta_dim = profile_params.nb_steps;
 
   // Build class instance
-  FlatPlate flat_plate = FlatPlateFactory(eta_dim, "cpg");
+  BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
   int xi_dim = 5;
 
   std::vector<double> edge_field(xi_dim * 6, 0.);
-  std::vector<std::vector<double>> bl_state_grid(
-      xi_dim, std::vector<double>(FLAT_PLATE_RANK * (eta_dim + 1), 0.));
 
   for (int xid = 0; xid < xi_dim; xid++) {
 
@@ -75,5 +73,9 @@ int main(int argc, char *argv[]) {
     edge_field[6 * xid + 5] = 0.;                // dhe_dxi
   }
 
-  flat_plate.ComputeLS(edge_field, search_params, bl_state_grid);
+  std::vector<std::vector<double>> bl_state_grid(
+      xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
+
+  boundary_layer.ComputeLS(edge_field, profile_params, search_params,
+                           bl_state_grid);
 }
