@@ -26,6 +26,7 @@
 
 #include "atmosphere.h"
 #include "boundary_layer_factory.h"
+#include "case_functions.h"
 #include "profile_struct.h"
 #include "search_struct.h"
 
@@ -60,22 +61,13 @@ int main(int argc, char *argv[]) {
   // Compute 2D profile
   int xi_dim = 5;
 
-  std::vector<double> edge_field(xi_dim * 6, 0.);
-
-  for (int xid = 0; xid < xi_dim; xid++) {
-
-    edge_field[6 * xid + 0] = profile_params.ue; // ue
-    edge_field[6 * xid + 1] = profile_params.he; // he
-    edge_field[6 * xid + 2] = profile_params.pe; // pe
-
-    edge_field[6 * xid + 3] = (double)xid / 10.; // xi
-    edge_field[6 * xid + 4] = 0.;                // due_dxi
-    edge_field[6 * xid + 5] = 0.;                // dhe_dxi
-  }
+  BoundaryData boundary_data =
+      GenFlatPlateConstant(profile_params.ue, profile_params.he,
+                           profile_params.pe, profile_params.g0, xi_dim);
 
   std::vector<std::vector<double>> bl_state_grid(
       xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
 
-  boundary_layer.ComputeLS(edge_field, profile_params, search_params,
-                           bl_state_grid);
+  boundary_layer.ComputeLS(boundary_data.edge_field, boundary_data.wall_field,
+                           profile_params, search_params, bl_state_grid);
 }
