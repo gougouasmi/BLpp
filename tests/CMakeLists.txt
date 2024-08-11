@@ -50,3 +50,9 @@ add_executable(test_profile_functions
 )
 #target_include_directories(test_profile_functions PRIVATE <include directories>)
 add_test(NAME TestProfileFunctions COMMAND test_profile_functions)
+
+# Test shock calculator
+add_executable(test_shock_functions
+  shock_test.cpp
+)
+add_test(NAME TestShockFunctions COMMAND test_shock_functions)
