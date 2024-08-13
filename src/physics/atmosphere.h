@@ -6,12 +6,8 @@
 #include <cassert>
 #include <cmath>
 
-void inline SetEntryConditions(double altitude_km, double mach_number,
-                               ProfileParams &profile_params) {
-  assert(altitude_km > 0);
-
-  double temperature, pressure;
-
+void inline EarthPT(const double altitude_km, double &temperature,
+                    double &pressure) {
   if (altitude_km > 25) { // Upper Stratosphere
     temperature = -131.21 + .00299 * (altitude_km * 1e3) + 273.15;
     pressure = 2.488e3 * pow(temperature / 216.6, -11.388);
@@ -22,6 +18,15 @@ void inline SetEntryConditions(double altitude_km, double mach_number,
     temperature = 15.04 - 0.00649 * (altitude_km * 1e3) + 273.15;
     pressure = 101.29e3 * pow(temperature / 288.08, 5.256);
   }
+}
+
+void inline SetEntryConditions(double altitude_km, double mach_number,
+                               ProfileParams &profile_params) {
+  assert(altitude_km > 0);
+
+  double temperature, pressure;
+
+  EarthPT(altitude_km, temperature, pressure);
 
   double speed_of_sound = sqrt(GAM * R_AIR * temperature);
 
@@ -30,8 +35,8 @@ void inline SetEntryConditions(double altitude_km, double mach_number,
   profile_params.he = CP_AIR * temperature;
 }
 
-void ParseEntryParams(int argc, char *argv[], double &altitude_km,
-                      double &mach_number) {
+void inline ParseEntryParams(int argc, char *argv[], double &altitude_km,
+                             double &mach_number) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "-mach") {

@@ -56,3 +56,7 @@ add_executable(test_shock_functions
   shock_test.cpp
 )
 add_test(NAME TestShockFunctions COMMAND test_shock_functions)
+
+# Test stagnation ratio calculator
+add_executable(test_stagnation stagnation_test.cpp)
+add_test(NAME TestStagnation COMMAND test_stagnation)

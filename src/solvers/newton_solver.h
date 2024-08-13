@@ -46,8 +46,10 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
 
   double res_norm = vector_norm(residual);
 
-  if (verbose)
-    printf("\n** START: res_norm=%.2e **\n", res_norm);
+  if (verbose) {
+    printf("\n\n*************************************\n");
+    printf("** NEWTON START: res_norm=%.2e **\n", res_norm);
+  }
 
   int iter = 0;
   while (iter < max_iter) {
@@ -97,7 +99,7 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
     }
 
     if (verbose)
-      printf("**  Iter#%d, ||x|| = %.2e, ||dx|| = %.2e, a = "
+      printf("**  NEWTON Iter#%d, ||x|| = %.2e, ||dx|| = %.2e, a = "
              "%.2e, ||R|| = %.2e\n",
              iter + 1, vector_norm(state), vector_norm(state_varn), alpha,
              res_norm);
@@ -112,8 +114,10 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
     jacobian_fun(state, jacobian_matrix);
   }
 
-  if (verbose)
-    printf("** END: ||R|| = %.2e **\n\n", res_norm);
+  if (verbose) {
+    printf("\n** NEWTON END: ||R|| = %.2e **\n", res_norm);
+    printf("**********************************\n\n");
+  }
 
   return (res_norm < rtol);
 }

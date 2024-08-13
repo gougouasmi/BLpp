@@ -23,6 +23,7 @@ endif()
 # Helper functions
 add_library(utils_lib
     src/utils/utils.cpp
+    src/utils/file_io.cpp
 )
 target_include_directories(utils_lib PUBLIC src/utils)
 
@@ -50,6 +51,11 @@ target_include_directories(boundary_layer_lib PRIVATE src src/physics src/solver
 target_link_libraries(boundary_layer_lib PRIVATE utils_lib)
 target_link_libraries(boundary_layer_lib PRIVATE profile_lib)
 
+# Case setup functions
+add_library(cases_lib src/cases/case_functions.cpp)
+target_include_directories(cases_lib PRIVATE src/ src/physics src/solvers /src/linalg)
+target_link_libraries(cases_lib PRIVATE utils_lib)
+
 ###
 # Define executables
 #
@@ -75,8 +81,8 @@ add_executable(compute_profiles
     src/exec/compute_flat_plate_local_sim.cpp
 )
 
-target_link_libraries(compute_profiles PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(compute_profiles PRIVATE src src/physics src/utils)
+target_link_libraries(compute_profiles PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
+target_include_directories(compute_profiles PRIVATE src src/physics src/utils src/cases)
 
 ###
 # Tests
