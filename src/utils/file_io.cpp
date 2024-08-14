@@ -8,6 +8,9 @@
 
 void GetDimsCSV(const string &file_path, int &nb_rows, int &nb_cols) {
   std::ifstream file(file_path);
+
+  assert(file.is_open());
+
   string line, cell;
 
   nb_rows = 0;

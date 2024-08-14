@@ -84,6 +84,12 @@ add_executable(compute_profiles
 target_link_libraries(compute_profiles PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
 target_include_directories(compute_profiles PRIVATE src src/physics src/utils src/cases)
 
+# Compute edge flow from pressure
+add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solvers.cpp)
+
+target_link_libraries(edge_solve PRIVATE utils_lib linalg_lib)
+target_include_directories(edge_solve PRIVATE src src/utils src/solvers src/data src/linalg)
+
 ###
 # Tests
 #

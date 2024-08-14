@@ -36,10 +36,17 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
 
   double dx = 1. / (double)(nb_points - 1);
 
+  const double sound_speed = 340.;
+  const double roe = 1.;
+
   const double gam = 1.4;
-  const double ue = mach;
-  const double pe = 1. / 1.4;
-  const double he = 1. / (gam - 1);
+  const double ue = mach * sound_speed;
+  const double he = sound_speed * sound_speed / (gam - 1);
+  const double pe = roe * sound_speed * sound_speed / gam;
+
+  const double mue = AIR_VISC(pe / (R_AIR * roe));
+
+  const double dxi_dx = roe * ue * mue;
 
   const double recovery = sqrt(prandtl);
   const double gaw = 1 + 0.5 * recovery * (gam - 1) * mach * mach;
@@ -49,7 +56,7 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
     edge_field[6 * xid + 1] = he; // he
     edge_field[6 * xid + 2] = pe; // pe
 
-    const double xval = xid * dx;
+    double xval = dxi_dx * (xid * dx);
 
     edge_field[6 * xid + 3] = xval; // xi
     edge_field[6 * xid + 4] = 0.;   // due_dxi
