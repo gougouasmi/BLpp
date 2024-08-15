@@ -62,7 +62,7 @@ target_link_libraries(cases_lib PRIVATE utils_lib)
 
 # Develop a self-similar profile for set initial conditions
 add_executable(devel_profile
-    src/exec/develop_flat_plate.cpp
+    src/exec/develop_profile.cpp
 )
 
 target_link_libraries(devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
@@ -70,19 +70,19 @@ target_include_directories(devel_profile PRIVATE src src/physics)
 
 # Search for the initial conditions that develop into the correct self-similar profile
 add_executable(search_profile
-    src/exec/search_flat_plate.cpp
+    src/exec/search_profile.cpp
 )
 
 target_link_libraries(search_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
 target_include_directories(search_profile PRIVATE src src/physics src/utils)
 
-# Compute 2D profile
-add_executable(compute_profiles
-    src/exec/compute_flat_plate_local_sim.cpp
+# Compute 2D profile (local-similarity)
+add_executable(compute_2d_profile
+    src/exec/compute_2d_profile.cpp
 )
 
-target_link_libraries(compute_profiles PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
-target_include_directories(compute_profiles PRIVATE src src/physics src/utils src/cases)
+target_link_libraries(compute_2d_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
+target_include_directories(compute_2d_profile PRIVATE src src/physics src/utils src/cases)
 
 # Compute edge flow from pressure
 add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solvers.cpp)

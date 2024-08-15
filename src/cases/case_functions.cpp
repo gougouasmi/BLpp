@@ -56,23 +56,32 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
     edge_field[6 * xid + 1] = he; // he
     edge_field[6 * xid + 2] = pe; // pe
 
-    double xval = dxi_dx * (xid * dx);
+    double xval = (xid * dx);
 
-    edge_field[6 * xid + 3] = xval; // xi
-    edge_field[6 * xid + 4] = 0.;   // due_dxi
-    edge_field[6 * xid + 5] = 0.;   // dhe_dxi
+    edge_field[6 * xid + 3] = xval * dxi_dx; // xi
+    edge_field[6 * xid + 4] = 0.;            // due_dxi
+    edge_field[6 * xid + 5] = 0.;            // dhe_dxi
 
     wall_field[xid] = gaw * (1 + 0.25 - 0.83 * xval + 0.33 * xval * xval); // gw
+
+    printf("boundary data at station #%d: xi=%.2e, ue=%.2e, he=%.2e, "
+           "pe=%.2e, gw=%.2e.\n",
+           xid, xval * dxi_dx, ue, he, pe, wall_field[xid]);
   }
+
+  printf("\n");
 
   return BoundaryData(edge_field, wall_field);
 }
+
+const std::string FLAT_NOSED_PATH =
+    "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/flat_nosed_flow.csv";
 
 BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
   assert(mach > 1);
   assert(altitude_km > 0);
 
-  double gamma = 1.;
+  double gamma = 1.4;
 
   // (1 / 5) Compute shock conditions
   double pre_pressure, pre_temperature;
@@ -102,15 +111,17 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
   ComputeStagnationRatios(post_mach, 1.4, stag_enthalpy, stag_density,
                           stag_pressure);
 
+  printf("Enthalpy ratio %.2e, Post-shock enthalpy: %.2e, \n\n", stag_enthalpy,
+         post_enthalpy);
+
   stag_enthalpy *= post_enthalpy;
   stag_density *= post_density;
   stag_pressure *= post_pressure;
 
-  double v_scale = stag_pressure / stag_density;
+  double v_scale = sqrt(stag_pressure / stag_density);
 
   // (3 / 5) Fetch flow along body eddge
-  vector<vector<double>> csv_data =
-      ReadCSV("../data/flat_nosed_flow_distribution.csv");
+  vector<vector<double>> csv_data = ReadCSV(FLAT_NOSED_PATH);
 
   vector<double> &body_grid = csv_data[0];
   vector<double> &pressure_field = csv_data[1];
@@ -121,7 +132,7 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
 
   // (5 / 5) Finish pre-processing
   std::vector<double> edge_field(grid_size * 6, 0.);
-  std::vector<double> wall_field(grid_size, 0.);
+  std::vector<double> wall_field(grid_size, 0.2);
 
   //
   edge_field[6 * 0 + 0] = 0;
@@ -148,13 +159,16 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
     edge_field[6 * xid + 1] = he; // he
     edge_field[6 * xid + 2] = pe; // pe
 
-    // TODO
+    //
     edge_field[6 * xid + 3] = edge_field[6 * (xid - 1) + 3] + dx * dxi_dx; // xi
     edge_field[6 * xid + 4] = due_dx / dxi_dx; // due_dxi
     edge_field[6 * xid + 5] = dhe_dx / dxi_dx; // dhe_dxi
 
-    wall_field[xid] = 0.; // gw
+    printf("%d: %.2e, %.2e, %.2e, %.2e, %.2e, %.2e \n", xid, dx, roe, ue, he,
+           pe, dxi_dx);
   }
+
+  printf("\n");
 
   return BoundaryData(edge_field, wall_field);
 }

@@ -1,5 +1,5 @@
-#ifndef PROFILE_SEARCH_H
-#define PROFILE_SEARCH_H
+#ifndef SEARCH_STRUCT_H
+#define SEARCH_STRUCT_H
 
 #include <cassert>
 #include <iostream>

@@ -59,15 +59,20 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  int xi_dim = 5;
+  int xi_dim = 100;
 
-  BoundaryData boundary_data =
-      GenFlatPlateConstant(profile_params.ue, profile_params.he,
-                           profile_params.pe, profile_params.g0, xi_dim);
+  // BoundaryData boundary_data = GenChapmannRubesinFlatPlate(0.5, xi_dim,
+  // 0.72);
+  //  BoundaryData boundary_data =
+  //       GenFlatPlateConstant(profile_params.ue, profile_params.he,
+  //                            profile_params.pe, profile_params.g0, xi_dim);
+  BoundaryData boundary_data = GetFlatNosedCylinder(50, 2.);
+
+  xi_dim = boundary_data.xi_dim;
 
   std::vector<std::vector<double>> bl_state_grid(
       xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
 
-  boundary_layer.ComputeLS(boundary_data.edge_field, boundary_data.wall_field,
-                           profile_params, search_params, bl_state_grid);
+  boundary_layer.Compute(boundary_data.edge_field, boundary_data.wall_field,
+                         profile_params, search_params, bl_state_grid);
 }

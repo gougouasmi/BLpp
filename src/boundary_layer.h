@@ -23,8 +23,8 @@ public:
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
 
   //
-  RhsFunction GetRhsFun(ProfileType ptype);
-  RhsJacobianFunction GetJacobianFun(ProfileType ptype);
+  RhsFunction GetRhsFun(SolveType solve_type);
+  RhsJacobianFunction GetJacobianFun(SolveType solve_type);
 
   // ODE integration (eta)
   bool DevelopProfile(ProfileParams &profile_params, vector<double> &score,
@@ -46,6 +46,10 @@ public:
                                          vector<double> &best_guess);
 
   // 2D profile calculation
+  void Compute(const vector<double> &edge_field,
+               const vector<double> &wall_field, ProfileParams &profile_params,
+               SearchParams &search_params,
+               vector<vector<double>> &bl_state_grid);
   void ComputeLS(const vector<double> &edge_field,
                  const vector<double> &wall_field,
                  ProfileParams &profile_params, SearchParams &search_params,

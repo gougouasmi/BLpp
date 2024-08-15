@@ -11,8 +11,8 @@ typedef struct ShockRatios {
       : pressure(p_ratio), velocity(u_ratio), density(ro_ratio){};
 } ShockRatios;
 
-ShockRatios ComputeShockRatiosCPG(double mach, double gamma = 1.4,
-                                  double beta = 0.5 * M_PI) {
+ShockRatios inline ComputeShockRatiosCPG(double mach, double gamma = 1.4,
+                                         double beta = 0.5 * M_PI) {
 
   double gamp1 = gamma + 1;
   double gamm1 = gamma - 1;

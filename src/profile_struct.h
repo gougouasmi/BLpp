@@ -16,7 +16,7 @@ constexpr int FIELD_RANK = 8;
 
 enum WallType { Wall, Adiabatic };
 enum TimeScheme { Explicit, Implicit };
-enum ProfileType { SelfSimilar, LocallySimilar, DifferenceDifferential };
+enum SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
 
 typedef struct ProfileParams {
   int nb_steps;
@@ -26,7 +26,7 @@ typedef struct ProfileParams {
   double gp0;
   double g0;
 
-  ProfileType ptype = ProfileType::SelfSimilar;
+  SolveType solve_type = SolveType::SelfSimilar;
 
   TimeScheme scheme = TimeScheme::Explicit;
   double max_step;
@@ -45,7 +45,30 @@ typedef struct ProfileParams {
   double eckert = 1.;
 
   bool AreValid() const {
-    return (nb_steps >= 1) && (fpp0 >= 0.) && (gp0 >= 0.) && (max_step > 0);
+    if ((wall_type == WallType::Adiabatic) && (gp0 != 0.)) {
+      printf("Adiabatic wall yet g'(0) != 0.\n");
+      return false;
+    }
+
+    if (solve_type == SolveType::LocallySimilar ||
+        solve_type == SolveType::DifferenceDifferential) {
+      if (ue == 0) {
+        printf("ue = 0 singularity.\n");
+        return false;
+      }
+    }
+
+    if (he <= 0) {
+      printf("h_{e} cannot be <=0 (CPG).\n");
+      return false;
+    }
+
+    if (g0 <= 0) {
+      printf("g(0) = h/h_{e} cannot be <= 0.\n");
+      return false;
+    }
+
+    return (nb_steps > 1) && (fpp0 >= 0.) && (max_step > 0);
   }
 
   void SetDefault() {
@@ -110,6 +133,10 @@ typedef struct ProfileParams {
         wall_type = WallType::Adiabatic;
       } else if (arg == "-implicit") {
         scheme = TimeScheme::Implicit;
+      } else if (arg == "-local_sim") {
+        solve_type = SolveType::LocallySimilar;
+      } else if (arg == "-diff_diff") {
+        solve_type = SolveType::DifferenceDifferential;
       }
     }
   }
