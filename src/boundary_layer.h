@@ -1,6 +1,7 @@
 #ifndef BOUNDARY_LAYER_H
 #define BOUNDARY_LAYER_H
 
+#include "boundary_data_struct.h"
 #include "profile_struct.h"
 #include "search_struct.h"
 
@@ -35,27 +36,26 @@ public:
                               vector<double> &score, int worker_id = 0);
 
   // Shooting algorithm implementations
-  int BoxProfileSearch(ProfileParams &profile_params, SearchWindow &window,
-                       SearchParams &params, vector<double> &best_guess);
+  int ProfileSearch(ProfileParams &profile_params, SearchParams &search_params,
+                    vector<double> &best_guess);
+  int BoxProfileSearch(ProfileParams &profile_params,
+                       SearchParams &search_params, vector<double> &best_guess);
   int BoxProfileSearchParallel(ProfileParams &profile_params,
-                               SearchWindow &window, SearchParams &params,
+
+                               SearchParams &search_params,
                                vector<double> &best_guess);
   int BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
-                                         SearchWindow &window,
-                                         SearchParams &params,
+                                         SearchParams &search_params,
                                          vector<double> &best_guess);
 
   // 2D profile calculation
-  void Compute(const vector<double> &edge_field,
-               const vector<double> &wall_field, ProfileParams &profile_params,
+  void Compute(const BoundaryData &boundary_data, ProfileParams &profile_params,
                SearchParams &search_params,
                vector<vector<double>> &bl_state_grid);
-  void ComputeLS(const vector<double> &edge_field,
-                 const vector<double> &wall_field,
+  void ComputeLS(const BoundaryData &boundary_data,
                  ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
-  void ComputeDD(const vector<double> &edge_field,
-                 const vector<double> &wall_field,
+  void ComputeDD(const BoundaryData &boundary_data,
                  ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
 

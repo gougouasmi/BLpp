@@ -24,10 +24,6 @@
 
 int main(int argc, char *argv[]) {
 
-  SearchWindow search_window;
-  search_window.SetDefault();
-  search_window.ParseCmdInputs(argc, argv);
-
   SearchParams search_params;
   search_params.SetDefault();
   search_params.ParseCmdInputs(argc, argv);
@@ -49,10 +45,9 @@ int main(int argc, char *argv[]) {
   // Serial solution
   std::vector<double> best_guess(2, 0.0);
 
-  auto serial_task = [&profile_params, &search_window, &search_params,
-                      &best_guess, &boundary_layer]() {
-    boundary_layer.BoxProfileSearch(profile_params, search_window,
-                                    search_params, best_guess);
+  auto serial_task = [&profile_params, &search_params, &best_guess,
+                      &boundary_layer]() {
+    boundary_layer.BoxProfileSearch(profile_params, search_params, best_guess);
   };
 
   double avg_duration = timeit(serial_task, 1);
@@ -65,10 +60,10 @@ int main(int argc, char *argv[]) {
   // Parallel solution
   std::vector<double> parallel_best_guess(2, 0.0);
 
-  auto parallel_task = [&profile_params, &search_window, &search_params,
-                        &parallel_best_guess, &boundary_layer]() {
-    boundary_layer.BoxProfileSearchParallel(profile_params, search_window,
-                                            search_params, parallel_best_guess);
+  auto parallel_task = [&profile_params, &search_params, &parallel_best_guess,
+                        &boundary_layer]() {
+    boundary_layer.BoxProfileSearchParallel(profile_params, search_params,
+                                            parallel_best_guess);
   };
 
   avg_duration = timeit(parallel_task, 1);
@@ -81,11 +76,10 @@ int main(int argc, char *argv[]) {
   // Parallel solution with queues
   std::vector<double> parallel_queues_best_guess(2, 0.0);
 
-  auto parallel_queues_task = [&profile_params, &search_window, &search_params,
+  auto parallel_queues_task = [&profile_params, &search_params,
                                &parallel_queues_best_guess, &boundary_layer]() {
     boundary_layer.BoxProfileSearchParallelWithQueues(
-        profile_params, search_window, search_params,
-        parallel_queues_best_guess);
+        profile_params, search_params, parallel_queues_best_guess);
   };
 
   avg_duration = timeit(parallel_queues_task, 1);

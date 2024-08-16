@@ -34,10 +34,6 @@
 
 int main(int argc, char *argv[]) {
 
-  SearchWindow search_window;
-  search_window.SetDefault();
-  search_window.ParseCmdInputs(argc, argv);
-
   SearchParams search_params;
   search_params.SetDefault();
   search_params.ParseCmdInputs(argc, argv);
@@ -73,6 +69,6 @@ int main(int argc, char *argv[]) {
   std::vector<std::vector<double>> bl_state_grid(
       xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
 
-  boundary_layer.Compute(boundary_data.edge_field, boundary_data.wall_field,
-                         profile_params, search_params, bl_state_grid);
+  boundary_layer.Compute(boundary_data, profile_params, search_params,
+                         bl_state_grid);
 }

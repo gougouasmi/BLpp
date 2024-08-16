@@ -121,6 +121,24 @@ bool BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
           state_grid[state_offset + var_id] + eta_step * rhs[var_id];
     }
 
+    if (isnan(state_grid[state_offset + BL_RANK + G_ID])) {
+      printf("g^{%d+1} = nan!, step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = "
+             "%.2e.\n",
+             step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
+      print_state(rhs, 0);
+      print_state(state_grid, state_offset);
+      assert(false);
+    }
+
+    if ((state_grid[state_offset + BL_RANK + G_ID]) < 0) {
+      printf(
+          "g^{%d+1} < 0! step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = %.2e.\n",
+          step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
+      print_state(rhs, 0);
+      print_state(state_grid, state_offset);
+      assert(false);
+    }
+
     // Update indexing
     state_offset += BL_RANK;
     field_offset += FIELD_RANK;
@@ -264,8 +282,28 @@ bool BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   return converged;
 }
 
+int BoundaryLayer::ProfileSearch(ProfileParams &profile_params,
+                                 SearchParams &search_params,
+                                 vector<double> &best_guess) {
+  SearchMethod method = search_params.method;
+
+  if (method == SearchMethod::BoxSerial) {
+    return BoxProfileSearch(profile_params, search_params, best_guess);
+  }
+
+  if (method == SearchMethod::BoxParallel) {
+    return BoxProfileSearchParallel(profile_params, search_params, best_guess);
+  }
+
+  if (method == SearchMethod::BoxParallelQueue) {
+    return BoxProfileSearchParallelWithQueues(profile_params, search_params,
+                                              best_guess);
+  }
+
+  return -1;
+}
+
 int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
-                                    SearchWindow &window,
                                     SearchParams &search_params,
                                     vector<double> &best_guess) {
   // Fetch search parameters
@@ -274,6 +312,7 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
   bool verbose = search_params.verbose;
 
   // Fetch search window parameters
+  SearchWindow &window = search_params.window;
   int xdim = window.xdim;
   int ydim = window.ydim;
 
@@ -300,7 +339,7 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
     double fpp0 = fpp_min;
     double gp0 = gp_min;
 
-    min_res_norm = 1e3;
+    min_res_norm = 1e30;
 
     int min_fid = 0;
     int min_gid = 0;
@@ -328,7 +367,9 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
             min_gid = gid;
 
             if (res_norm < rtol) {
-              printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", fpp0, gp0);
+              if (verbose) {
+                printf("Solution found: f''(0)=%.2e, g'(0)=%.2e.\n", fpp0, gp0);
+              }
               best_guess[0] = fpp0;
               best_guess[1] = gp0;
               return 0;
@@ -375,10 +416,12 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
       }
     }
 
-    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next "
-           "window "
-           "=[[%.3f, %.3f], [%.3f, %.3f]\n",
-           iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
+    if (verbose) {
+      printf("Iter %d - score=%.2e, f''(0)=%.2e, g'(0)=%.2e, next "
+             "window "
+             "=[[%.2e, %.2e], [%.2e, %.2e]\n",
+             iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
+    }
   }
 
   if (min_res_norm > rtol) {
@@ -392,7 +435,6 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
 #include <thread>
 
 int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
-                                            SearchWindow &window,
                                             SearchParams &search_params,
                                             vector<double> &best_guess) {
   // Fetch search parameters
@@ -401,6 +443,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
   bool verbose = search_params.verbose;
 
   // Fetch search window parameters
+  SearchWindow &window = search_params.window;
   int xdim = window.xdim;
   int ydim = window.ydim;
 
@@ -504,7 +547,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
       best_guess[1] = gp_min + min_gid * delta_gp;
 
       if (verbose) {
-        printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", best_guess[0],
+        printf("Solution found: f''(0)=%.2e, g'(0)=%.2e.\n", best_guess[0],
                best_guess[1]);
       }
 
@@ -532,7 +575,8 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
     double ys = gp_min + delta_gp * min_gid;
 
     if (min_gid == 0) {
-      gp_min -= 0.5 * (y1 - y0);
+      gp_min = 0.5 * y0;
+      // gp_min -= 0.5 * (y1 - y0);
       gp_max = 0.5 * (y0 + y1);
     } else {
       if (min_gid == ydim - 1) {
@@ -545,9 +589,9 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
     }
 
     if (verbose) {
-      printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next "
+      printf("Iter %d - score=%.2e, f''(0)=%.2e, g'(0)=%.2e, next "
              "window "
-             "=[[%.3f, %.3f], [%.3f, %.3f]\n",
+             "=[[%.2e, %.2e], [%.2e, %.2e]\n",
              iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
     }
   }
@@ -563,14 +607,15 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
 #include <memory>
 
 int BoundaryLayer::BoxProfileSearchParallelWithQueues(
-    ProfileParams &profile_params, SearchWindow &window,
-    SearchParams &search_params, vector<double> &best_guess) {
+    ProfileParams &profile_params, SearchParams &search_params,
+    vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
 
   // Fetch search window parameters
+  SearchWindow &window = search_params.window;
   int xdim = window.xdim;
   int ydim = window.ydim;
 
@@ -713,8 +758,10 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
     if (min_res_norm < rtol) {
       best_guess[0] = fpp_min + min_fid * delta_fpp;
       best_guess[1] = gp_min + min_gid * delta_gp;
-      printf("Solution found: f''(0)=%.6f, g'(0)=%.6f.\n", best_guess[0],
-             best_guess[1]);
+      if (verbose) {
+        printf("Solution found: f''(0)=%.2e, g'(0)=%.2e.\n", best_guess[0],
+               best_guess[1]);
+      }
       work_queue->stop();
       return best_worker_id;
     }
@@ -752,10 +799,12 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
       }
     }
 
-    printf("Iter %d - score=%.2e, f''(0)=%.3f, g'(0)=%.3f, next "
-           "window "
-           "=[[%.3f, %.3f], [%.3f, %.3f]\n",
-           iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
+    if (verbose) {
+      printf("Iter %d - score=%.2e, f''(0)=%.2e, g'(0)=%.2e, next "
+             "window "
+             "=[[%.2e, %.2e], [%.2e, %.2e]\n",
+             iter + 1, min_res_norm, xs, ys, fpp_min, fpp_max, gp_min, gp_max);
+    }
   }
 
   work_queue->stop();
@@ -770,22 +819,19 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
   return best_worker_id;
 }
 
-void BoundaryLayer::Compute(const vector<double> &edge_field,
-                            const vector<double> &wall_field,
+void BoundaryLayer::Compute(const BoundaryData &boundary_data,
                             ProfileParams &profile_params,
                             SearchParams &search_params,
                             vector<vector<double>> &bl_state_grid) {
   SolveType solve_type = profile_params.solve_type;
 
   if (solve_type == SolveType::LocallySimilar) {
-    ComputeLS(edge_field, wall_field, profile_params, search_params,
-              bl_state_grid);
+    ComputeLS(boundary_data, profile_params, search_params, bl_state_grid);
     return;
   }
 
   if (solve_type == SolveType::DifferenceDifferential) {
-    ComputeDD(edge_field, wall_field, profile_params, search_params,
-              bl_state_grid);
+    ComputeDD(boundary_data, profile_params, search_params, bl_state_grid);
     return;
   }
 
@@ -802,8 +848,7 @@ void BoundaryLayer::Compute(const vector<double> &edge_field,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void BoundaryLayer::ComputeLS(const vector<double> &edge_field,
-                              const vector<double> &wall_field,
+void BoundaryLayer::ComputeLS(const BoundaryData &boundary_data,
                               ProfileParams &profile_params,
                               SearchParams &search_params,
                               vector<vector<double>> &bl_state_grid) {
@@ -815,13 +860,15 @@ void BoundaryLayer::ComputeLS(const vector<double> &edge_field,
   assert(bl_state_grid[0].size() == state_grids[0].size());
 
   // Checking edge_field has the correct dimensions
+  const vector<double> &edge_field = boundary_data.edge_field;
+  const vector<double> &wall_field = boundary_data.wall_field;
+
   const int EDGE_FIELD_RANK = 6;
   const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
   assert(xi_dim == bl_state_grid.size());
 
   // Parameters
-  SearchWindow search_window;
-  search_window.SetDefault();
+  SearchWindow &window = search_params.window;
 
   //
   vector<double> best_guess(2, 0.5);
@@ -851,15 +898,18 @@ void BoundaryLayer::ComputeLS(const vector<double> &edge_field,
     if (!profile_params.AreValid()) {
       printf("Invalid edge conditions. Abort\n");
       break;
+    } else {
+      profile_params.PrintEdgeValues();
+      profile_params.PrintODEFactors();
     }
+    printf("\n");
 
     // Call search method
-    int worker_id = BoxProfileSearchParallel(profile_params, search_window,
-                                             search_params, best_guess);
+    int worker_id = ProfileSearch(profile_params, search_params, best_guess);
 
     if (worker_id < 0) {
       printf("# station #%d: Unsuccessful search.\n", xi_id);
-      continue;
+      break;
     } else {
       printf("# station #%d: Successful search.\n", xi_id);
     }
@@ -868,10 +918,10 @@ void BoundaryLayer::ComputeLS(const vector<double> &edge_field,
     bl_state_grid[xi_id] = state_grids[worker_id];
 
     // Define search window for next iterations
-    search_window.fpp_min = 0.8 * best_guess[0];
-    search_window.fpp_max = 1.2 * best_guess[0];
-    search_window.gp_min = 0.8 * best_guess[1];
-    search_window.gp_max = 1.2 * best_guess[1];
+    window.fpp_min = 0.8 * best_guess[0];
+    window.fpp_max = 1.2 * best_guess[0];
+    window.gp_min = 0.8 * best_guess[1];
+    window.gp_max = 1.2 * best_guess[1];
 
     //
     if (xi_id == 0) {
@@ -894,8 +944,7 @@ void BoundaryLayer::ComputeLS(const vector<double> &edge_field,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void BoundaryLayer::ComputeDD(const vector<double> &edge_field,
-                              const vector<double> &wall_field,
+void BoundaryLayer::ComputeDD(const BoundaryData &boundary_data,
                               ProfileParams &profile_params,
                               SearchParams &search_params,
                               vector<vector<double>> &bl_state_grid) {
@@ -907,6 +956,9 @@ void BoundaryLayer::ComputeDD(const vector<double> &edge_field,
   assert(bl_state_grid[0].size() == state_grids[0].size());
 
   // Checking edge_field has the correct dimensions
+  const vector<double> &edge_field = boundary_data.edge_field;
+  const vector<double> &wall_field = boundary_data.wall_field;
+
   const int EDGE_FIELD_RANK = 6;
   const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
   assert(xi_dim == bl_state_grid.size());
@@ -916,8 +968,7 @@ void BoundaryLayer::ComputeDD(const vector<double> &edge_field,
   printf("# Difference-Differential Solve (START) #\n\n");
 
   // Parameters
-  SearchWindow search_window;
-  search_window.SetDefault();
+  SearchWindow &window = search_params.window;
 
   double dxi1 = 1. / (edge_field[EDGE_FIELD_RANK + 3] - edge_field[0]);
 
@@ -998,8 +1049,7 @@ void BoundaryLayer::ComputeDD(const vector<double> &edge_field,
     }
 
     // Call search method
-    int worker_id = BoxProfileSearchParallel(profile_params, search_window,
-                                             search_params, best_guess);
+    int worker_id = ProfileSearch(profile_params, search_params, best_guess);
 
     if (worker_id < 0) {
       printf("# Station #%d: Unsuccessful search.\n", xi_id);
@@ -1013,10 +1063,10 @@ void BoundaryLayer::ComputeDD(const vector<double> &edge_field,
     bl_state_grid[xi_id] = state_grids[worker_id];
 
     // Define search window for next iterations
-    search_window.fpp_min = 0.8 * best_guess[0];
-    search_window.fpp_max = 1.2 * best_guess[0];
-    search_window.gp_min = 0.8 * best_guess[1];
-    search_window.gp_max = 1.2 * best_guess[1];
+    window.fpp_min = 0.8 * best_guess[0];
+    window.fpp_max = 1.2 * best_guess[0];
+    window.gp_min = 0.8 * best_guess[1];
+    window.gp_max = 1.2 * best_guess[1];
 
     //
     if (xi_id == 0) {

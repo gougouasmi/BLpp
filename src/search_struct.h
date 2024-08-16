@@ -60,15 +60,21 @@ typedef struct SearchWindow {
 
 } SearchWindow;
 
+enum SearchMethod { BoxSerial, BoxParallel, BoxParallelQueue };
+
 typedef struct SearchParams {
   int max_iter;
   bool verbose;
   double rtol;
 
+  SearchWindow window;
+  SearchMethod method = SearchMethod::BoxSerial;
+
   void SetDefault() {
     max_iter = 20;
     rtol = 1e-3;
     verbose = false;
+    window.SetDefault();
   }
 
   void ParseCmdInputs(int argc, char *argv[]) {
@@ -86,8 +92,15 @@ typedef struct SearchParams {
         }
       } else if (arg == "-v") {
         verbose = true;
+      } else if (arg == "-box_search") {
+        method = SearchMethod::BoxSerial;
+      } else if (arg == "-box_search_parallel") {
+        method = SearchMethod::BoxParallel;
+      } else if (arg == "-box_search_parallel_queue") {
+        method = SearchMethod::BoxParallelQueue;
       }
     }
+    window.ParseCmdInputs(argc, argv);
   }
 
 } SearchParams;

@@ -47,13 +47,13 @@ add_library(boundary_layer_lib
     src/boundary_layer.cpp
     src/boundary_layer_factory.cpp
 )
-target_include_directories(boundary_layer_lib PRIVATE src src/physics src/solvers src/linalg)
+target_include_directories(boundary_layer_lib PRIVATE src src/physics src/solvers src/linalg src/data)
 target_link_libraries(boundary_layer_lib PRIVATE utils_lib)
 target_link_libraries(boundary_layer_lib PRIVATE profile_lib)
 
 # Case setup functions
 add_library(cases_lib src/cases/case_functions.cpp)
-target_include_directories(cases_lib PRIVATE src/ src/physics src/solvers /src/linalg)
+target_include_directories(cases_lib PRIVATE src/ src/physics src/solvers src/linalg src/data)
 target_link_libraries(cases_lib PRIVATE utils_lib)
 
 ###
@@ -66,7 +66,7 @@ add_executable(devel_profile
 )
 
 target_link_libraries(devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(devel_profile PRIVATE src src/physics)
+target_include_directories(devel_profile PRIVATE src src/physics src/data)
 
 # Search for the initial conditions that develop into the correct self-similar profile
 add_executable(search_profile
@@ -74,7 +74,7 @@ add_executable(search_profile
 )
 
 target_link_libraries(search_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(search_profile PRIVATE src src/physics src/utils)
+target_include_directories(search_profile PRIVATE src src/physics src/utils src/data)
 
 # Compute 2D profile (local-similarity)
 add_executable(compute_2d_profile
@@ -82,7 +82,7 @@ add_executable(compute_2d_profile
 )
 
 target_link_libraries(compute_2d_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
-target_include_directories(compute_2d_profile PRIVATE src src/physics src/utils src/cases)
+target_include_directories(compute_2d_profile PRIVATE src src/physics src/utils src/cases src/data)
 
 # Compute edge flow from pressure
 add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solvers.cpp)

@@ -84,7 +84,7 @@ double compute_rhs_cpg(const std::vector<double> &state, int state_offset,
   rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp);
   rhs[G_ID] = gp;
 
-  double limit_step = 0.2 * state[G_ID] / abs(rhs[G_ID] + 1e-20);
+  double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
 
   return limit_step;
 }
@@ -134,7 +134,7 @@ double compute_lsim_rhs_cpg(const std::vector<double> &state, int state_offset,
       2. * xi * (fp * g * dhe_dxi / he + (roe * ue) / (ro * he) * fp * due_dxi);
   rhs[G_ID] = gp;
 
-  double limit_step = 0.2 * state[G_ID] / abs(rhs[G_ID] + 1e-20);
+  double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
 
   return limit_step;
 }
@@ -200,7 +200,7 @@ double compute_full_rhs_cpg(const std::vector<double> &state, int state_offset,
       2. * xi * (e00 * fp * g + e01 * fp + e10 * gp * f + e11 * gp);
   rhs[G_ID] = gp;
 
-  double limit_step = 0.2 * state[G_ID] / abs(rhs[G_ID] + 1e-20);
+  double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
 
   return limit_step;
 }

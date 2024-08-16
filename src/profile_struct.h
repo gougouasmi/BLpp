@@ -44,6 +44,20 @@ typedef struct ProfileParams {
 
   double eckert = 1.;
 
+  void PrintEdgeValues() const {
+    printf("Profile parameters: -ue=%.2e, -he=%.2e, -pe=%.2e, -xi=%.2e, "
+           "-due_dxi=%.2e, -dhe_dxi=%.2e, -eckert=%.2e.\n",
+           ue, he, pe, xi, due_dxi, dhe_dxi, eckert);
+  }
+
+  void PrintODEFactors() const {
+    printf("Profile ODE factors: eckert = %.2e, (xi / ue) * due_dxi = %.2e, xi "
+           "* dhe_dxi / he "
+           "= %.2e, xi * (ue / he) * due_dxi = %.2e.\n",
+           eckert, (xi / ue) * due_dxi, xi * dhe_dxi / he,
+           xi * (ue / he) * due_dxi);
+  }
+
   bool AreValid() const {
     if ((wall_type == WallType::Adiabatic) && (gp0 != 0.)) {
       printf("Adiabatic wall yet g'(0) != 0.\n");

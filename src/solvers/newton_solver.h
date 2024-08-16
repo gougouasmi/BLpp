@@ -64,7 +64,8 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
     // Line Search
     double alpha = limit_update_fun(state, state_varn);
     if (alpha == 0) {
-      printf("** ERROR : Initial line search coeff is zero.\n");
+      if (verbose)
+        printf("** ERROR : Initial line search coeff is zero.\n");
       break;
     }
 
