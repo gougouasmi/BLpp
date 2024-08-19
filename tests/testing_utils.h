@@ -32,7 +32,7 @@ bool inline allClose(const std::vector<double> &vec1,
   return error <= rel_tol * std::fmax(vec1_norm, vec2_norm);
 }
 
-void fillWithRandomData(std::vector<double> &data, int size) {
+void inline fillWithRandomData(std::vector<double> &data, int size) {
   double denom = 1. / static_cast<double>(RAND_MAX);
   for (int i = 0; i < size; ++i) {
     int random_val = rand();
@@ -40,13 +40,14 @@ void fillWithRandomData(std::vector<double> &data, int size) {
   }
 }
 
-void print_matrix(std::vector<double> &matrix_data, int xdim) {
+void inline print_matrix_column_major(std::vector<double> &matrix_data,
+                                      int xdim, int ydim) {
   int offset = 0;
   std::cout << "[\n";
-  for (int row_id = 0; row_id < xdim; row_id++) {
+  for (int col_id = 0; col_id < ydim; col_id++) {
     std::cout << " [";
-    for (int col_id = 0; col_id < xdim; col_id++) {
-      std::cout << matrix_data[offset + col_id] << ", ";
+    for (int row_id = 0; row_id < xdim; row_id++) {
+      std::cout << matrix_data[offset + row_id] << ", ";
     }
     std::cout << "],\n";
     offset += xdim;
@@ -54,7 +55,22 @@ void print_matrix(std::vector<double> &matrix_data, int xdim) {
   std::cout << "].\n";
 }
 
-void print_vec(std::vector<double> &vec, int size) {
+void inline print_matrix_row_major(std::vector<double> &matrix_data, int xdim,
+                                   int ydim) {
+  int offset = 0;
+  std::cout << "[\n";
+  for (int row_id = 0; row_id < xdim; row_id++) {
+    std::cout << " [";
+    for (int col_id = 0; col_id < ydim; col_id++) {
+      std::cout << matrix_data[offset + col_id] << ", ";
+    }
+    std::cout << "],\n";
+    offset += ydim;
+  }
+  std::cout << "].\n";
+}
+
+void inline print_vec(std::vector<double> &vec, int size) {
   std::cout << "[";
   for (const double &val : vec) {
     std::cout << val << ", ";

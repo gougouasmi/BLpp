@@ -133,6 +133,7 @@ void UpperSolve(const std::vector<double> &upper_data, std::vector<double> &rhs,
 void LUSolve(const std::vector<double> &matrix_data, std::vector<double> &rhs,
              int xdim) {
   assert(xdim > 1);
+  assert(matrix_data.size() == xdim * xdim);
 
   int lower_size = xdim * (xdim - 1) / 2;
   int upper_size = lower_size + xdim;
@@ -157,5 +158,94 @@ void Multiply(const std::vector<double> &matrix_data,
       output[i] += matrix_data[offset + j] * input_vector[j];
     }
     offset += xdim;
+  }
+}
+
+/////
+// Matrix-matrix
+//
+
+void LUMatrixSolve(const std::vector<double> &matrix_data,
+                   std::vector<double> &rhs_matrix_cm, int xdim, int zdim) {
+  assert(xdim > 1);
+  assert(matrix_data.size() == xdim * xdim);
+  assert(rhs_matrix_cm.size() == xdim * zdim);
+
+  int lower_size = xdim * (xdim - 1) / 2;
+  int upper_size = lower_size + xdim;
+
+  std::vector<double> lower_data(lower_size, 0.);
+  std::vector<double> upper_data(upper_size, 0.);
+
+  ReadLowerUpper(matrix_data, lower_data, upper_data, xdim);
+
+  FactorizeLU(lower_data, upper_data, xdim);
+
+  LowerMatrixSolve(lower_data, rhs_matrix_cm, xdim, zdim);
+  UpperMatrixSolve(upper_data, rhs_matrix_cm, xdim, zdim);
+}
+
+void LowerMatrixSolve(const std::vector<double> &lower_data,
+                      std::vector<double> &rhs_matrix_cm, int xdim, int zdim) {
+  int nb_rows = xdim;
+  int cm_offset = 0;
+
+  for (int k = 0; k < zdim; k++) {
+    int offset = 0;
+    for (int i = 0; i < nb_rows; i++) {
+      for (int j = 0; j < i; j++) {
+        rhs_matrix_cm[cm_offset + i] -=
+            lower_data[offset + j] * rhs_matrix_cm[cm_offset + j];
+      }
+      offset += i;
+    }
+    cm_offset += xdim;
+  }
+}
+
+void UpperMatrixSolve(const std::vector<double> &upper_data,
+                      std::vector<double> &rhs_matrix_cm, int xdim, int zdim) {
+  int nb_rows = xdim;
+  int last_row_id = nb_rows - 1;
+
+  int cm_offset = 0;
+
+  for (int k = 0; k < zdim; k++) {
+    int offset = nb_rows * (nb_rows + 1) / 2 - 1;
+
+    for (int i = 0; i < nb_rows; i++) {
+
+      int row_id = last_row_id - i;
+      double pivot1 = 1. / upper_data[offset];
+
+      for (int j = 1; j < i + 1; j++) {
+        rhs_matrix_cm[cm_offset + row_id] -=
+            upper_data[offset + j] * rhs_matrix_cm[cm_offset + row_id + j];
+      }
+      rhs_matrix_cm[cm_offset + row_id] *= pivot1;
+
+      offset -= (i + 2);
+    }
+    cm_offset += xdim;
+  }
+}
+
+void MatrixMultiply(const std::vector<double> &matrix_data,
+                    const std::vector<double> &input_matrix_cm,
+                    std::vector<double> &output_matrix_cm, int xdim, int zdim) {
+  assert(input_matrix_cm.size() == xdim * zdim);
+
+  int cm_offset = 0;
+  for (int k = 0; k < zdim; k++) {
+    int offset = 0;
+    for (int i = 0; i < xdim; i++) {
+      for (int j = 0; j < xdim; j++) {
+        output_matrix_cm[cm_offset + i] +=
+            matrix_data[offset + j] * input_matrix_cm[cm_offset + j];
+      }
+      offset += xdim;
+    }
+
+    cm_offset += xdim;
   }
 }

@@ -138,9 +138,145 @@ void TestLUSolve() {
   assert(allClose(rhs, out, xdim));
 }
 
+void TestLowerMatrixSolve() {
+  int xdim = 5;
+  int zdim = 3;
+
+  int lower_size = xdim * (xdim - 1) / 2;
+
+  // Problem setup. Random matrix and rhs
+  std::vector<double> lower_data(lower_size, 0.);
+  fillWithRandomData(lower_data, lower_size);
+
+  std::vector<double> rhs_matrix(xdim * zdim, 0.);
+  fillWithRandomData(rhs_matrix, xdim * zdim);
+
+  // Matrix solution
+  std::vector<double> matrix_solution = rhs_matrix;
+  LowerMatrixSolve(lower_data, matrix_solution, xdim, zdim);
+
+  // Sequential solution (column-by-column solve)
+  std::vector<double> seq_solution(xdim * zdim, 0.);
+  std::vector<double> solution_buffer(xdim, 0.);
+
+  int cm_offset = 0;
+  for (int k = 0; k < zdim; k++) {
+
+    //
+    for (int i = 0; i < xdim; i++) {
+      solution_buffer[i] = rhs_matrix[cm_offset + i];
+    }
+
+    //
+    LowerSolve(lower_data, solution_buffer, xdim);
+
+    //
+    for (int i = 0; i < xdim; i++) {
+      seq_solution[cm_offset + i] = solution_buffer[i];
+    }
+
+    //
+    cm_offset += xdim;
+  }
+
+  assert(allClose(matrix_solution, seq_solution, xdim * zdim));
+}
+
+void TestUpperMatrixSolve() {
+  int xdim = 5;
+  int zdim = 3;
+
+  int upper_size = xdim * (xdim + 1) / 2;
+
+  // Problem setup. Random matrix and rhs
+  std::vector<double> upper_data(upper_size, 0.);
+  fillWithRandomData(upper_data, upper_size);
+
+  std::vector<double> rhs_matrix(xdim * zdim, 0.);
+  fillWithRandomData(rhs_matrix, xdim * zdim);
+
+  // Matrix solution
+  std::vector<double> matrix_solution = rhs_matrix;
+  UpperMatrixSolve(upper_data, matrix_solution, xdim, zdim);
+
+  // Sequential solution (column-by-column solve)
+  std::vector<double> seq_solution(xdim * zdim, 0.);
+  std::vector<double> solution_buffer(xdim, 0.);
+
+  int cm_offset = 0;
+  for (int k = 0; k < zdim; k++) {
+
+    //
+    for (int i = 0; i < xdim; i++) {
+      solution_buffer[i] = rhs_matrix[cm_offset + i];
+    }
+
+    //
+    UpperSolve(upper_data, solution_buffer, xdim);
+
+    //
+    for (int i = 0; i < xdim; i++) {
+      seq_solution[cm_offset + i] = solution_buffer[i];
+    }
+
+    //
+    cm_offset += xdim;
+  }
+
+  assert(allClose(matrix_solution, seq_solution, xdim * zdim));
+}
+
+void TestLUMatrixSolve() {
+  int xdim = 5;
+  int zdim = 3;
+
+  int mat_size = xdim * xdim;
+
+  // Problem setup. Random matrix and rhs
+  std::vector<double> matrix_data(mat_size, 0.);
+  fillWithRandomData(matrix_data, mat_size);
+
+  std::vector<double> rhs_matrix(xdim * zdim, 0.);
+  fillWithRandomData(rhs_matrix, xdim * zdim);
+
+  // Matrix solution
+  std::vector<double> matrix_solution = rhs_matrix;
+  LUMatrixSolve(matrix_data, matrix_solution, xdim, zdim);
+
+  // Sequential solution (column-by-column solve)
+  std::vector<double> seq_solution(xdim * zdim, 0.);
+  std::vector<double> solution_buffer(xdim, 0.);
+
+  int cm_offset = 0;
+  for (int k = 0; k < zdim; k++) {
+
+    //
+    for (int i = 0; i < xdim; i++) {
+      solution_buffer[i] = rhs_matrix[cm_offset + i];
+    }
+
+    //
+    LUSolve(matrix_data, solution_buffer, xdim);
+
+    //
+    for (int i = 0; i < xdim; i++) {
+      seq_solution[cm_offset + i] = solution_buffer[i];
+    }
+
+    //
+    cm_offset += xdim;
+  }
+
+  assert(allClose(matrix_solution, seq_solution, xdim * zdim));
+}
+
 int main(int argc, char *argv[]) {
   TestReadLowerUpper();
   TestLowerSolve();
   TestUpperSolve();
   TestLUSolve();
+
+  TestLowerMatrixSolve();
+  TestUpperMatrixSolve();
+  TestLUMatrixSolve();
 }
