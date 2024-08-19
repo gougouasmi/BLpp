@@ -268,6 +268,12 @@ void TestLUMatrixSolve() {
   }
 
   assert(allClose(matrix_solution, seq_solution, xdim * zdim));
+
+  //
+  std::vector<double> matrix_out(xdim * zdim, 0.);
+  MatrixMultiply(matrix_data, matrix_solution, matrix_out, xdim, zdim);
+
+  assert(allClose(rhs_matrix, matrix_out, xdim * zdim));
 }
 
 int main(int argc, char *argv[]) {
