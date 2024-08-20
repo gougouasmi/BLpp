@@ -29,6 +29,7 @@ add_test(NAME TestAtmosphere COMMAND test_atmosphere)
 add_executable(test_dense_solve
     dense_linear_solve_test.cpp
     ../src/linalg/dense_direct_solver.cpp
+    ../src/linalg/dense_linalg.cpp
 )
 target_include_directories(test_dense_solve PRIVATE ../src/linalg)
 add_test(NAME TestDenseSolver COMMAND test_dense_solve)

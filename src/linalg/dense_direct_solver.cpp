@@ -149,18 +149,6 @@ void LUSolve(const std::vector<double> &matrix_data, std::vector<double> &rhs,
   UpperSolve(upper_data, rhs, xdim);
 }
 
-void Multiply(const std::vector<double> &matrix_data,
-              const std::vector<double> &input_vector,
-              std::vector<double> &output, int xdim) {
-  int offset = 0;
-  for (int i = 0; i < xdim; i++) {
-    for (int j = 0; j < xdim; j++) {
-      output[i] += matrix_data[offset + j] * input_vector[j];
-    }
-    offset += xdim;
-  }
-}
-
 /////
 // Matrix-matrix
 //
@@ -226,26 +214,6 @@ void UpperMatrixSolve(const std::vector<double> &upper_data,
 
       offset -= (i + 2);
     }
-    cm_offset += xdim;
-  }
-}
-
-void MatrixMultiply(const std::vector<double> &matrix_data,
-                    const std::vector<double> &input_matrix_cm,
-                    std::vector<double> &output_matrix_cm, int xdim, int zdim) {
-  assert(input_matrix_cm.size() == xdim * zdim);
-
-  int cm_offset = 0;
-  for (int k = 0; k < zdim; k++) {
-    int offset = 0;
-    for (int i = 0; i < xdim; i++) {
-      for (int j = 0; j < xdim; j++) {
-        output_matrix_cm[cm_offset + i] +=
-            matrix_data[offset + j] * input_matrix_cm[cm_offset + j];
-      }
-      offset += xdim;
-    }
-
     cm_offset += xdim;
   }
 }

@@ -27,7 +27,7 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
   std::vector<double> jacobian_ref(matrix_dim, 0.);
 
   rhs_fun(state, 0, zero_field, 0., rhs_ref, profile_params);
-  jacobian_fun(state, zero_field, 0, jacobian_ref, profile_params);
+  jacobian_fun(state, 0, zero_field, 0, jacobian_ref, profile_params);
 
   double rhs_norm = vector_norm(rhs_ref);
   double jacobian_norm = vector_norm(jacobian_ref);
@@ -108,9 +108,9 @@ void LocalSimilarityIsConsistent() {
   std::vector<double> jacobian_lsim(matrix_dim, 0.);
   std::vector<double> jacobian_self_sim(matrix_dim, 0.);
 
-  compute_lsim_rhs_jacobian_default(state, zero_field, 0, jacobian_lsim,
+  compute_lsim_rhs_jacobian_default(state, 0, zero_field, 0, jacobian_lsim,
                                     profile_params);
-  compute_rhs_jacobian_default(state, zero_field, 0, jacobian_self_sim,
+  compute_rhs_jacobian_default(state, 0, zero_field, 0, jacobian_self_sim,
                                profile_params);
 
   assert(allClose(jacobian_self_sim, jacobian_lsim, matrix_dim));
@@ -166,9 +166,9 @@ void DifferenceDifferentialIsConsistent() {
   std::vector<double> jacobian_lsim(matrix_dim, 0.);
   std::vector<double> jacobian_full(matrix_dim, 0.);
 
-  compute_lsim_rhs_jacobian_default(state, zero_field, 0, jacobian_lsim,
+  compute_lsim_rhs_jacobian_default(state, 0, zero_field, 0, jacobian_lsim,
                                     profile_params);
-  compute_full_rhs_jacobian_default(state, zero_field, 0, jacobian_full,
+  compute_full_rhs_jacobian_default(state, 0, zero_field, 0, jacobian_full,
                                     profile_params);
 
   assert(allClose(jacobian_lsim, jacobian_full, matrix_dim));

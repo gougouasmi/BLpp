@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "dense_direct_solver.h"
+#include "dense_linalg.h"
 #include "testing_utils.h"
 
 #include <iostream>
@@ -133,7 +134,7 @@ void TestLUSolve() {
   LUSolve(matrix_data, solution, xdim);
 
   std::vector<double> out(xdim, 0.);
-  Multiply(matrix_data, solution, out, xdim);
+  DenseMatrixMultiply(matrix_data, solution, out, xdim);
 
   assert(allClose(rhs, out, xdim));
 }
@@ -271,7 +272,8 @@ void TestLUMatrixSolve() {
 
   //
   std::vector<double> matrix_out(xdim * zdim, 0.);
-  MatrixMultiply(matrix_data, matrix_solution, matrix_out, xdim, zdim);
+  DenseMatrixMatrixMultiply(matrix_data, matrix_solution, matrix_out, xdim,
+                            zdim);
 
   assert(allClose(rhs_matrix, matrix_out, xdim * zdim));
 }
