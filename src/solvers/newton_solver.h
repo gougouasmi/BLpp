@@ -14,7 +14,7 @@ struct NewtonParams {
   bool verbose = false;
 };
 
-double vector_norm(const std::vector<double> &x) {
+double inline vector_norm(const std::vector<double> &x) {
   double out = 0.;
   for (int idx = 0; idx < x.size(); idx++) {
     out += x[idx] * x[idx];
@@ -45,10 +45,12 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
   jacobian_fun(state, jacobian_matrix);
 
   double res_norm = vector_norm(residual);
+  double jac_norm = vector_norm(jacobian_matrix.GetData());
 
   if (verbose) {
-    printf("\n\n*************************************\n");
-    printf("** NEWTON START: res_norm=%.2e **\n", res_norm);
+    printf("\n*************************************\n");
+    printf("** NEWTON START: res_norm=%.2e, jac_norm=%.2e **\n", res_norm,
+           jac_norm);
   }
 
   int iter = 0;
@@ -61,11 +63,15 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
       state_varn[idx] *= -1;
     };
 
+    double magn_varn = vector_norm(state_varn);
+
     // Line Search
     double alpha = limit_update_fun(state, state_varn);
     if (alpha == 0) {
       if (verbose)
-        printf("** ERROR : Initial line search coeff is zero.\n");
+        printf("** ERROR : Initial line search coeff is zero, "
+               "||state_varn||=%.2e.\n",
+               magn_varn);
       break;
     }
 

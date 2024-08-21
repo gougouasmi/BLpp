@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+enum SearchMethod { BoxSerial, BoxParallel, BoxParallelQueue, GradientSerial };
+
 typedef struct SearchWindow {
   double fpp_min;
   double fpp_max;
@@ -14,7 +16,7 @@ typedef struct SearchWindow {
   int ydim;
 
   void SetDefault() {
-    fpp_min = 0.01;
+    fpp_min = 0.1;
     fpp_max = 10.0;
     gp_min = 0.1;
     gp_max = 10.0;
@@ -60,15 +62,13 @@ typedef struct SearchWindow {
 
 } SearchWindow;
 
-enum SearchMethod { BoxSerial, BoxParallel, BoxParallelQueue };
-
 typedef struct SearchParams {
   int max_iter;
   bool verbose;
   double rtol;
 
   SearchWindow window;
-  SearchMethod method = SearchMethod::BoxSerial;
+  SearchMethod method = SearchMethod::GradientSerial;
 
   void SetDefault() {
     max_iter = 20;
@@ -98,11 +98,12 @@ typedef struct SearchParams {
         method = SearchMethod::BoxParallel;
       } else if (arg == "-box_search_parallel_queue") {
         method = SearchMethod::BoxParallelQueue;
+      } else if (arg == "-gradient_search") {
+        method = SearchMethod::GradientSerial;
       }
     }
     window.ParseCmdInputs(argc, argv);
   }
-
 } SearchParams;
 
 struct SearchInput {

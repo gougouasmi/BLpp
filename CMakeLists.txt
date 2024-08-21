@@ -38,6 +38,7 @@ target_link_libraries(profile_lib PRIVATE utils_lib)
 # Linear algebra functions
 add_library(linalg_lib
     src/linalg/dense_matrix.cpp
+    src/linalg/dense_linalg.cpp
     src/linalg/dense_direct_solver.cpp
 )
 target_include_directories(linalg_lib PRIVATE src/linalg)
@@ -89,6 +90,12 @@ add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solv
 
 target_link_libraries(edge_solve PRIVATE utils_lib linalg_lib)
 target_include_directories(edge_solve PRIVATE src src/utils src/solvers src/data src/linalg)
+
+# (DEBUGGING) Develop profile for specific boundary stations
+add_executable(debug_devel_profile src/exec/debug_develop_profile.cpp)
+
+target_link_libraries(debug_devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
+target_include_directories(debug_devel_profile PRIVATE src src/physics src/utils src/cases src/data)
 
 ###
 # Tests

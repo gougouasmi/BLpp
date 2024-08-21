@@ -13,6 +13,7 @@ class BoundaryLayer {
 public:
   BoundaryLayer(int max_nb_steps);
   BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
+                InitializeSensitivityFunction init_sensitivity_fun,
                 RhsFunction rhs_self_similar_fun,
                 RhsFunction rhs_locally_similar_fun,
                 RhsFunction rhs_diff_diff_fun,
@@ -28,12 +29,12 @@ public:
   RhsJacobianFunction GetJacobianFun(SolveType solve_type);
 
   // ODE integration (eta)
-  bool DevelopProfile(ProfileParams &profile_params, vector<double> &score,
-                      int worker_id = 0);
-  bool DevelopProfileExplicit(ProfileParams &profile_params,
-                              vector<double> &score, int worker_id = 0);
-  bool DevelopProfileImplicit(ProfileParams &profile_params,
-                              vector<double> &score, int worker_id = 0);
+  int DevelopProfile(ProfileParams &profile_params, vector<double> &score,
+                     int worker_id = 0);
+  int DevelopProfileExplicit(ProfileParams &profile_params,
+                             vector<double> &score, int worker_id = 0);
+  int DevelopProfileImplicit(ProfileParams &profile_params,
+                             vector<double> &score, int worker_id = 0);
 
   // Shooting algorithm implementations
   int ProfileSearch(ProfileParams &profile_params, SearchParams &search_params,
@@ -47,6 +48,9 @@ public:
   int BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
                                          SearchParams &search_params,
                                          vector<double> &best_guess);
+  int GradientProfileSearch(ProfileParams &profile_params,
+                            SearchParams &search_params,
+                            vector<double> &best_guess);
 
   // 2D profile calculation
   void Compute(const BoundaryData &boundary_data, ProfileParams &profile_params,
@@ -67,9 +71,13 @@ private:
   vector<vector<double>> eta_grids;
   vector<vector<double>> rhs_vecs;
 
+  vector<vector<double>> sensitivity_matrices;
+  vector<vector<double>> matrix_buffers;
+
   vector<double> field_grid;
 
   InitializeFunction initialize;
+  InitializeSensitivityFunction initialize_sensitivity;
   RhsFunction compute_rhs_self_similar, compute_rhs_locally_similar,
       compute_rhs_diff_diff;
   RhsJacobianFunction compute_rhs_jacobian_self_similar,

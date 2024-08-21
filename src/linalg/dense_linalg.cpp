@@ -17,7 +17,8 @@ void DenseMatrixMatrixMultiply(const std::vector<double> &matrix_data_rm,
                                const std::vector<double> &input_matrix_cm,
                                std::vector<double> &output_matrix_cm, int xdim,
                                int zdim) {
-  assert(input_matrix_cm.size() == xdim * zdim);
+  assert(input_matrix_cm.size() >= xdim * zdim);
+  assert(output_matrix_cm.size() >= xdim * zdim);
 
   int cm_offset = 0;
   for (int k = 0; k < zdim; k++) {

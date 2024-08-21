@@ -39,9 +39,11 @@ int main(int argc, char *argv[]) {
   std::vector<double> score(2);
   bool converged = boundary_layer.DevelopProfile(profile_params, score);
 
-  if (converged)
-    printf("Profile converged, score: [%.5e, %.5e].\n", score[0], score[1]);
-  else
+  if (converged) {
+    double snorm = pow(score[0] * score[0] + score[1] * score[1], 0.5);
+    printf("Profile converged, score: [%.5e, %.5e], norm = %.5e.\n", score[0],
+           score[1], snorm);
+  } else
     printf("Profile did not converge.\n");
 
   return 0;

@@ -7,6 +7,7 @@ BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points);
 BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
                                          double prandtl = 0.72);
-BoundaryData GetFlatNosedCylinder(double altitude, double mach);
+BoundaryData GetFlatNosedCylinder(double altitude, double mach,
+                                  bool verbose = false);
 
 #endif

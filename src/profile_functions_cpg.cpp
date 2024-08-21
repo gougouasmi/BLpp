@@ -47,6 +47,82 @@ void initialize_cpg(ProfileParams &profile_params, std::vector<double> &state) {
   }
 }
 
+void initialize_sensitivity_cpg(ProfileParams &profile_params,
+                                std::vector<double> &state_sensitivity_cm) {
+  double fpp0 = profile_params.fpp0;
+  double gp0 = profile_params.gp0;
+  double g0 = profile_params.g0;
+
+  double edge_pressure = profile_params.pe;
+  double edge_enthalpy = profile_params.he;
+
+  double edge_density = AIR_CPG_RO(edge_enthalpy, edge_pressure);
+  double edge_temperature = edge_pressure / (edge_density * R_AIR);
+
+  double edge_visc = AIR_VISC(edge_temperature);
+
+  profile_params.roe = edge_density;
+  profile_params.mue = edge_visc;
+  profile_params.eckert = pow(profile_params.ue, 2) / profile_params.he;
+
+  //
+  double density = AIR_CPG_RO(g0 * edge_enthalpy, edge_pressure);
+  double cp = AIR_CPG_CP(g0 * edge_enthalpy, edge_pressure);
+  double temperature = edge_pressure / (density * R_AIR);
+
+  double visc = AIR_VISC(temperature);
+  double cond = AIR_COND(temperature);
+
+  double romu0 = (density * visc) / (edge_density * edge_visc);
+  double prandtl0 = visc * cp / cond;
+
+  // Gradient with respect to g0
+  double density_grad =
+      AIR_CPG_DRO_DH(g0 * edge_enthalpy, edge_pressure) * edge_enthalpy;
+
+  double temperature_grad =
+      -edge_pressure * density_grad / (density * density * R_AIR);
+
+  double visc_grad = AIR_VISC_GRAD(temperature) * temperature_grad;
+
+  double romu_gradient =
+      (density_grad * visc + density * visc_grad) / (edge_density * edge_visc);
+
+  //
+
+  std::fill(state_sensitivity_cm.begin(), state_sensitivity_cm.end(), 0.);
+
+  switch (profile_params.wall_type) {
+  case WallType::Wall:
+    // state[FPP_ID] = romu0 * fpp0;
+    // state[FP_ID] = 0.0;
+    // state[F_ID] = 0.0;
+    // state[GP_ID] = (romu0 / prandtl0) * gp0;
+    // state[G_ID] = g0;
+
+    // Sensitivities wrt f''(0)
+    state_sensitivity_cm[FPP_ID] = romu0;
+
+    // Sensitivities wrt g'(0)
+    state_sensitivity_cm[BL_RANK + GP_ID] = romu0 / prandtl0;
+
+    break;
+  case WallType::Adiabatic:
+    // state[FPP_ID] = romu0 * fpp0;
+    // state[FP_ID] = 0.0;
+    // state[F_ID] = 0.0;
+    // state[GP_ID] = 0.0;
+    // state[G_ID] = g0;
+
+    // Sensitivities wrt f''(0)
+    state_sensitivity_cm[FPP_ID] = romu0;
+
+    // Sensitivities wrt g(0)
+    state_sensitivity_cm[BL_RANK + FPP_ID] = romu_gradient * fpp0;
+    state_sensitivity_cm[BL_RANK + G_ID] = 1.;
+  }
+}
+
 double compute_rhs_cpg(const std::vector<double> &state, int state_offset,
                        const std::vector<double> &field, int field_offset,
                        std::vector<double> &rhs, ProfileParams &params) {
@@ -125,13 +201,18 @@ double compute_lsim_rhs_cpg(const std::vector<double> &state, int state_offset,
   double f = state[state_offset + F_ID];
   double gp = state[state_offset + GP_ID] / romu * prandtl;
 
-  rhs[FPP_ID] = -f * fpp + 2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi;
+  double c1 = 2. * (xi / ue) * due_dxi;
+  double c2 = 2. * xi * dhe_dxi / he;
+  double c3 = 2. * xi * ue * due_dxi / he;
+
+  // printf("c1 = %.2e, c2 = %.2e, c3 = %.2e.\n", c1, c2, c3);
+
+  rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - roe / ro);
   rhs[FP_ID] = fpp;
   rhs[F_ID] = fp;
 
   rhs[GP_ID] =
-      -(f * gp + romu * eckert * fpp * fpp) +
-      2. * xi * (fp * g * dhe_dxi / he + (roe * ue) / (ro * he) * fp * due_dxi);
+      -(f * gp + romu * eckert * fpp * fpp) + fp * (c2 * g + c3 * (roe / ro));
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -206,14 +287,15 @@ double compute_full_rhs_cpg(const std::vector<double> &state, int state_offset,
 }
 
 void compute_rhs_jacobian_cpg(const std::vector<double> &state,
+                              int state_offset,
                               const std::vector<double> &field,
                               int field_offset,
                               std::vector<double> &matrix_data,
                               ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
-  double fp = state[FP_ID];
-  double g = state[G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
   double pe = params.pe;
   double he = params.he;
@@ -245,16 +327,16 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
 
   double eckert = params.eckert;
 
-  double fpp = state[FPP_ID] / romu;
+  double fpp = state[state_offset + FPP_ID] / romu;
   double dfpp_dfpp = 1. / romu;
   double dfpp_dg = -dromu_dg * fpp / romu;
 
-  double f = state[F_ID];
+  double f = state[state_offset + F_ID];
 
-  double gp = state[GP_ID] / romu * prandtl;
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
   double dgp_dgp = prandtl / romu;
-  double dgp_dg =
-      state[GP_ID] * (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
+  double dgp_dg = state[state_offset + GP_ID] *
+                  (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
 
   int offset;
 
@@ -301,14 +383,15 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
 }
 
 void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
+                                   int state_offset,
                                    const std::vector<double> &field,
                                    int field_offset,
                                    std::vector<double> &matrix_data,
                                    ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
-  double fp = state[FP_ID];
-  double g = state[G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
   double pe = params.pe;
   double he = params.he;
@@ -345,27 +428,30 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
 
   double eckert = params.eckert;
 
-  double fpp = state[FPP_ID] / romu;
+  double fpp = state[state_offset + FPP_ID] / romu;
   double dfpp_dfpp = 1. / romu;
   double dfpp_dg = -dromu_dg * fpp / romu;
 
-  double f = state[F_ID];
+  double f = state[state_offset + F_ID];
 
-  double gp = state[GP_ID] / romu * prandtl;
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
   double dgp_dgp = prandtl / romu;
-  double dgp_dg =
-      state[GP_ID] * (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
+  double dgp_dg = state[state_offset + GP_ID] *
+                  (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
+
+  double c1 = 2. * (xi / ue) * due_dxi;
+  double c2 = 2. * xi * dhe_dxi / he;
+  double c3 = 2. * xi * ue * due_dxi / he;
 
   int offset;
 
-  // rhs[FPP_ID] = -f * fpp + 2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi;
+  // rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - roe / ro);
   offset = FPP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -f * dfpp_dfpp;
-  matrix_data[offset + FP_ID] = 4. * (xi / ue) * fp * due_dxi;
+  matrix_data[offset + FP_ID] = 2. * c1 * fp;
   matrix_data[offset + F_ID] = -fpp;
   matrix_data[offset + GP_ID] = 0.;
-  matrix_data[offset + G_ID] =
-      -f * dfpp_dg + 2. * (xi / ue) * (roe * dro_dg / (ro * ro)) * due_dxi;
+  matrix_data[offset + G_ID] = -f * dfpp_dg + c1 * (roe * dro_dg / (ro * ro));
 
   // rhs[FP_ID] = fpp;
   offset = FP_ID * BL_RANK;
@@ -384,20 +470,18 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = 0.;
 
   // rhs[GP_ID] =
-  //   -(f * gp + romu * eckert * fpp * fpp) +
-  //   2. * xi * fp * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi);
+  //   -(f * gp + eckert * romu * fpp * fpp) +
+  //   fp * (c2 * g + c3 * (roe / ro));
   //
   offset = GP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
-  matrix_data[offset + FP_ID] =
-      2. * xi * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi);
+  matrix_data[offset + FP_ID] = (c2 * g + c3 * (roe / ro));
   matrix_data[offset + F_ID] = -gp;
   matrix_data[offset + GP_ID] = -f * dgp_dgp;
   matrix_data[offset + G_ID] =
       -(f * dgp_dg +
         eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp)) +
-      2. * xi * fp *
-          (dhe_dxi / he - dro_dg * (roe * ue) / (ro * ro * he) * due_dxi);
+      fp * (c2 - c3 * dro_dg * roe / (ro * ro));
 
   // rhs[G_ID] = gp;
   offset = G_ID * BL_RANK;
@@ -409,14 +493,15 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
 }
 
 void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
+                                   int state_offset,
                                    const std::vector<double> &field,
                                    int field_offset,
                                    std::vector<double> &matrix_data,
                                    ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
-  double fp = state[FP_ID];
-  double g = state[G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
   double pe = params.pe;
   double he = params.he;
@@ -453,16 +538,16 @@ void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
 
   double eckert = params.eckert;
 
-  double fpp = state[FPP_ID] / romu;
+  double fpp = state[state_offset + FPP_ID] / romu;
   double dfpp_dfpp = 1. / romu;
   double dfpp_dg = -dromu_dg * fpp / romu;
 
-  double f = state[F_ID];
+  double f = state[state_offset + F_ID];
 
-  double gp = state[GP_ID] / romu * prandtl;
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
   double dgp_dgp = prandtl / romu;
-  double dgp_dg =
-      state[GP_ID] * (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
+  double dgp_dg = state[state_offset + GP_ID] *
+                  (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
 
   // momemtum equation coefficients
   double m00 = field[field_offset + 0];

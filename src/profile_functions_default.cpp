@@ -28,6 +28,35 @@ void initialize_default(ProfileParams &profile_params,
   }
 }
 
+void initialize_sensitivity_default(ProfileParams &profile_params,
+                                    std::vector<double> &state_sensitivity_cm) {
+  double fpp0 = profile_params.fpp0;
+  double gp0 = profile_params.gp0;
+  double g0 = profile_params.g0;
+
+  double romu0 = 1.;
+  double prandtl0 = 1.;
+
+  std::fill(state_sensitivity_cm.begin(), state_sensitivity_cm.end(), 0.);
+
+  switch (profile_params.wall_type) {
+  case WallType::Wall:
+    // Sensitivities wrt f''(0)
+    state_sensitivity_cm[FPP_ID] = romu0;
+
+    // Sensitivities wrt g'(0)
+    state_sensitivity_cm[BL_RANK + GP_ID] = romu0 / prandtl0;
+    break;
+  case WallType::Adiabatic:
+    // Sensitivities wrt f''(0)
+    state_sensitivity_cm[FPP_ID] = romu0;
+
+    // Sensitivities wrt g(0)
+    state_sensitivity_cm[BL_RANK + G_ID] = 1.;
+    break;
+  }
+}
+
 double compute_rhs_default(const std::vector<double> &state, int state_offset,
                            const std::vector<double> &field, int field_offset,
                            std::vector<double> &rhs, ProfileParams &params) {
@@ -143,6 +172,7 @@ double compute_full_rhs_default(const std::vector<double> &state,
 }
 
 void compute_rhs_jacobian_default(const std::vector<double> &state,
+                                  int state_offset,
                                   const std::vector<double> &field,
                                   int field_offset,
                                   std::vector<double> &matrix_data,
@@ -153,12 +183,12 @@ void compute_rhs_jacobian_default(const std::vector<double> &state,
   double prandtl = 1.0;
   double eckert = 1.0;
 
-  double fp = state[FP_ID];
-  double g = state[G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
-  double fpp = state[FPP_ID] / romu;
-  double f = state[F_ID];
-  double gp = state[GP_ID] / romu * prandtl;
+  double fpp = state[state_offset + FPP_ID] / romu;
+  double f = state[state_offset + F_ID];
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
 
   int offset;
 
@@ -204,6 +234,7 @@ void compute_rhs_jacobian_default(const std::vector<double> &state,
 }
 
 void compute_lsim_rhs_jacobian_default(const std::vector<double> &state,
+                                       int state_offset,
                                        const std::vector<double> &field,
                                        int field_offset,
                                        std::vector<double> &matrix_data,
@@ -214,12 +245,12 @@ void compute_lsim_rhs_jacobian_default(const std::vector<double> &state,
   double prandtl = 1.0;
   double eckert = 1.0;
 
-  double fp = state[FP_ID];
-  double g = state[G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
-  double fpp = state[FPP_ID] / romu;
-  double f = state[F_ID];
-  double gp = state[GP_ID] / romu * prandtl;
+  double fpp = state[state_offset + FPP_ID] / romu;
+  double f = state[state_offset + F_ID];
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
 
   double xi = params.xi;
   double ue = params.ue;
@@ -276,6 +307,7 @@ void compute_lsim_rhs_jacobian_default(const std::vector<double> &state,
 }
 
 void compute_full_rhs_jacobian_default(const std::vector<double> &state,
+                                       int state_offset,
                                        const std::vector<double> &field,
                                        int field_offset,
                                        std::vector<double> &matrix_data,
@@ -286,12 +318,12 @@ void compute_full_rhs_jacobian_default(const std::vector<double> &state,
   double prandtl = 1.0;
   double eckert = 1.0;
 
-  double fp = state[FP_ID];
-  double g = state[G_ID];
+  double fp = state[state_offset + FP_ID];
+  double g = state[state_offset + G_ID];
 
-  double fpp = state[FPP_ID] / romu;
-  double f = state[F_ID];
-  double gp = state[GP_ID] / romu * prandtl;
+  double fpp = state[state_offset + FPP_ID] / romu;
+  double f = state[state_offset + F_ID];
+  double gp = state[state_offset + GP_ID] / romu * prandtl;
 
   double xi = params.xi;
   double ue = params.ue;

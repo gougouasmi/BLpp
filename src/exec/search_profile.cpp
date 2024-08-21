@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer =
       BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
-  // Serial solution
+  // Serial solution (box)
   std::vector<double> best_guess(2, 0.0);
 
   auto serial_task = [&profile_params, &search_params, &best_guess,
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
   printf("\n");
 
-  // Parallel solution
+  // Parallel solution (box)
   std::vector<double> parallel_best_guess(2, 0.0);
 
   auto parallel_task = [&profile_params, &search_params, &parallel_best_guess,
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
   printf("\n");
 
-  // Parallel solution with queues
+  // Parallel solution with queues (box)
   std::vector<double> parallel_queues_best_guess(2, 0.0);
 
   auto parallel_queues_task = [&profile_params, &search_params,
@@ -86,6 +86,20 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Parallel search with queues took " << avg_duration
             << " seconds." << std::endl;
+
+  // Serial solution (gradient)
+  std::vector<double> gradient_best_guess(2, 0.5);
+
+  auto gradient_task = [&profile_params, &search_params, &gradient_best_guess,
+                        &boundary_layer]() {
+    boundary_layer.GradientProfileSearch(profile_params, search_params,
+                                         gradient_best_guess);
+  };
+
+  avg_duration = timeit(gradient_task, 1);
+
+  std::cout << "Serial gradient search took " << avg_duration << " seconds."
+            << std::endl;
 
   return 0;
 }

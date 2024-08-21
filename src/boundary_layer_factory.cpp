@@ -8,8 +8,8 @@ BoundaryLayer BoundaryLayerFactory(const int grid_size,
     return BoundaryLayer(grid_size);
   } else if (type == "cpg") {
     return BoundaryLayer(
-        grid_size, initialize_cpg, compute_rhs_cpg, compute_lsim_rhs_cpg,
-        compute_full_rhs_cpg, compute_rhs_jacobian_cpg,
+        grid_size, initialize_cpg, initialize_sensitivity_cpg, compute_rhs_cpg,
+        compute_lsim_rhs_cpg, compute_full_rhs_cpg, compute_rhs_jacobian_cpg,
         compute_lsim_rhs_jacobian_cpg, compute_full_rhs_jacobian_cpg);
   } else {
     printf("BoundaryLayerFactory: invalid type argument.");

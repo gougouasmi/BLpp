@@ -51,11 +51,19 @@ typedef struct ProfileParams {
   }
 
   void PrintODEFactors() const {
-    printf("Profile ODE factors: eckert = %.2e, (xi / ue) * due_dxi = %.2e, xi "
-           "* dhe_dxi / he "
-           "= %.2e, xi * (ue / he) * due_dxi = %.2e.\n",
-           eckert, (xi / ue) * due_dxi, xi * dhe_dxi / he,
-           xi * (ue / he) * due_dxi);
+
+    if (solve_type == SolveType::SelfSimilar) {
+      printf("Profile ODE factors (self-similar): eckert = %.2e.\n", eckert);
+    }
+
+    if (solve_type == SolveType::LocallySimilar) {
+      printf("Profile ODE factors (locally-similar): eckert = %.2e, (xi / ue) "
+             "* due_dxi = %.2e, xi "
+             "* dhe_dxi / he "
+             "= %.2e, xi * (ue / he) * due_dxi = %.2e.\n",
+             eckert, (xi / ue) * due_dxi, xi * dhe_dxi / he,
+             xi * (ue / he) * due_dxi);
+    }
   }
 
   bool AreValid() const {
@@ -122,18 +130,21 @@ typedef struct ProfileParams {
       } else if (arg == "-fpp0") {
         if (i + 1 < argc) {
           fpp0 = std::stod(argv[++i]);
+          printf("f''(0) set to %.2e.\n", fpp0);
         } else {
           printf("profile f''(0) spec is incomplete.\n");
         }
       } else if (arg == "-gp0") {
         if (i + 1 < argc) {
           gp0 = std::stod(argv[++i]);
+          printf("g'(0) set to %.2e.\n", gp0);
         } else {
           printf("profile g'(0) spec is incomplete.\n");
         }
       } else if (arg == "-g0") {
         if (i + 1 < argc) {
           g0 = std::stod(argv[++i]);
+          printf("g(0) set to %.2e.\n", g0);
         } else {
           printf("profile g(0) spec is incomplete.\n");
         }
@@ -159,12 +170,16 @@ typedef struct ProfileParams {
 typedef void (*InitializeFunction)(ProfileParams &profile_params,
                                    std::vector<double> &state);
 
+typedef void (*InitializeSensitivityFunction)(
+    ProfileParams &profile_params, std::vector<double> &state_sensitivity);
+
 typedef double (*RhsFunction)(const std::vector<double> &state,
                               int state_offset,
                               const std::vector<double> &field,
                               int field_offset, std::vector<double> &rhs,
                               ProfileParams &profile_params);
 typedef void (*RhsJacobianFunction)(const std::vector<double> &state,
+                                    int state_offset,
                                     const std::vector<double> &field,
                                     int field_offset,
                                     std::vector<double> &matrix_data,

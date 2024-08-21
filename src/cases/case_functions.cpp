@@ -77,7 +77,8 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
 const std::string FLAT_NOSED_PATH =
     "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/flat_nosed_flow.csv";
 
-BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
+BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
+                                  bool verbose) {
   assert(mach > 1);
   assert(altitude_km > 0);
 
@@ -111,8 +112,9 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
   ComputeStagnationRatios(post_mach, 1.4, stag_enthalpy, stag_density,
                           stag_pressure);
 
-  printf("Enthalpy ratio %.2e, Post-shock enthalpy: %.2e, \n\n", stag_enthalpy,
-         post_enthalpy);
+  if (verbose)
+    printf("Enthalpy ratio %.2e, Post-shock enthalpy: %.2e, \n\n",
+           stag_enthalpy, post_enthalpy);
 
   stag_enthalpy *= post_enthalpy;
   stag_density *= post_density;
@@ -155,17 +157,30 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach) {
     double mue = AIR_VISC(pe / (roe * R_AIR));
     double dxi_dx = roe * ue * mue;
 
+    //
+    double ue_m1 = edge_field[6 * (xid - 1) + 0];
+    double he_m1 = edge_field[6 * (xid - 1) + 1];
+    double pe_m1 = edge_field[6 * (xid - 1) + 2];
+
+    double roe_m1 = AIR_CPG_RO(he_m1, pe_m1);
+    double mue_m1 = AIR_VISC(pe_m1 / (R_AIR * roe_m1));
+
+    double dxi_dx_m1 = roe_m1 * ue_m1 * mue_m1;
+    double mean_dxi_dx = 0.5 * (dxi_dx + dxi_dx_m1);
+
     edge_field[6 * xid + 0] = ue; // ue
     edge_field[6 * xid + 1] = he; // he
     edge_field[6 * xid + 2] = pe; // pe
 
     //
-    edge_field[6 * xid + 3] = edge_field[6 * (xid - 1) + 3] + dx * dxi_dx; // xi
-    edge_field[6 * xid + 4] = due_dx / dxi_dx; // due_dxi
-    edge_field[6 * xid + 5] = dhe_dx / dxi_dx; // dhe_dxi
+    edge_field[6 * xid + 3] =
+        edge_field[6 * (xid - 1) + 3] + dx * mean_dxi_dx; // xi
+    edge_field[6 * xid + 4] = due_dx / dxi_dx;            // due_dxi
+    edge_field[6 * xid + 5] = dhe_dx / dxi_dx;            // dhe_dxi
 
-    printf("%d: %.2e, %.2e, %.2e, %.2e, %.2e, %.2e \n", xid, dx, roe, ue, he,
-           pe, dxi_dx);
+    if (verbose)
+      printf("%d: %.2e, %.2e, %.2e, %.2e, %.2e, %.2e \n", xid, dx, roe, ue, he,
+             pe, dxi_dx);
   }
 
   printf("\n");
