@@ -27,6 +27,7 @@ void ParseStationId(int argc, char *argv[], int &station_id) {
     if (arg == "-station") {
       if (i + 1 < argc) {
         station_id = std::stoi(argv[++i]);
+        printf("station id set to %d.\n", station_id);
       } else {
         printf("profile nb_steps spec is incomplete.\n");
       }
@@ -39,6 +40,10 @@ int main(int argc, char *argv[]) {
   // Parse Profile parameters
   ProfileParams profile_params;
   profile_params.SetDefault();
+
+  profile_params.solve_type = SolveType::LocallySimilar;
+  profile_params.scheme = TimeScheme::Implicit;
+
   profile_params.ParseCmdInputs(argc, argv);
 
   // Build BoundaryLayer instance and develop profile
@@ -52,9 +57,6 @@ int main(int argc, char *argv[]) {
   int station_id = 1;
   ParseStationId(argc, argv, station_id);
 
-  profile_params.solve_type = SolveType::LocallySimilar;
-  profile_params.scheme = TimeScheme::Implicit;
-
   int offset = 6 * station_id;
 
   profile_params.ue = boundary_data.edge_field[offset + 0];
@@ -67,21 +69,22 @@ int main(int argc, char *argv[]) {
   profile_params.g0 = boundary_data.wall_field[station_id];
 
   //
-  // std::vector<double> score(2);
-  // int profile_size = boundary_layer.DevelopProfile(profile_params, score);
+  std::vector<double> score(2);
+  int profile_size = boundary_layer.DevelopProfile(profile_params, score);
 
-  // printf("Profile evolved to eta_id=%d, score: [%.5e, %.5e].\n",
-  // profile_size,
-  //        score[0], score[1]);
+  double s0 = score[0], s1 = score[1];
+  double snorm = pow(s0 * s0 + s1 * s1, 0.5);
+  printf("Profile evolved to eta_id=%d, score: [%.5e, %.5e], norm=%.5e.\n",
+         profile_size, s0, s1, snorm);
 
   //
-  SearchParams search_params;
-  search_params.SetDefault();
+  // SearchParams search_params;
+  // search_params.SetDefault();
 
-  vector<double> guess(2, 0.5);
+  // vector<double> guess(2, 0.5);
 
-  int worker_id = boundary_layer.GradientProfileSearch(profile_params,
-                                                       search_params, guess);
+  // int worker_id = boundary_layer.GradientProfileSearch(profile_params,
+  //                                                      search_params, guess);
 
   return 0;
 }

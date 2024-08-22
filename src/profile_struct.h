@@ -15,7 +15,7 @@ constexpr int G_ID = 4;
 constexpr int FIELD_RANK = 8;
 
 enum WallType { Wall, Adiabatic };
-enum TimeScheme { Explicit, Implicit };
+enum TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
 enum SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
 
 typedef struct ProfileParams {
@@ -156,8 +156,12 @@ typedef struct ProfileParams {
         }
       } else if (arg == "-wadiab") {
         wall_type = WallType::Adiabatic;
+      } else if (arg == "-explicit") {
+        scheme = TimeScheme::Explicit;
       } else if (arg == "-implicit") {
         scheme = TimeScheme::Implicit;
+      } else if (arg == "-implicit_cn") {
+        scheme = TimeScheme::ImplicitCrankNicolson;
       } else if (arg == "-local_sim") {
         solve_type = SolveType::LocallySimilar;
       } else if (arg == "-diff_diff") {

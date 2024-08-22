@@ -39,10 +39,13 @@ int main(int argc, char *argv[]) {
   printf("Entry conditions: altitude=%.2f km, mach_number=%.2f\n\n",
          altitude_km, mach_number);
 
+  // Construct class instance
   BoundaryLayer boundary_layer =
       BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
-  // Serial solution (box)
+  // Compare search methods
+
+  // (1 / 4) Serial solution (box)
   std::vector<double> best_guess(2, 0.0);
 
   auto serial_task = [&profile_params, &search_params, &best_guess,
@@ -57,7 +60,7 @@ int main(int argc, char *argv[]) {
 
   printf("\n");
 
-  // Parallel solution (box)
+  // (2 / 4) Parallel solution (box)
   std::vector<double> parallel_best_guess(2, 0.0);
 
   auto parallel_task = [&profile_params, &search_params, &parallel_best_guess,
@@ -73,7 +76,7 @@ int main(int argc, char *argv[]) {
 
   printf("\n");
 
-  // Parallel solution with queues (box)
+  // (3 / 4) Parallel solution with queues (box)
   std::vector<double> parallel_queues_best_guess(2, 0.0);
 
   auto parallel_queues_task = [&profile_params, &search_params,
@@ -87,7 +90,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Parallel search with queues took " << avg_duration
             << " seconds." << std::endl;
 
-  // Serial solution (gradient)
+  // (4 / 4) Serial solution (gradient)
   std::vector<double> gradient_best_guess(2, 0.5);
 
   auto gradient_task = [&profile_params, &search_params, &gradient_best_guess,

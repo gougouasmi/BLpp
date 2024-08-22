@@ -35,6 +35,8 @@ public:
                              vector<double> &score, int worker_id = 0);
   int DevelopProfileImplicit(ProfileParams &profile_params,
                              vector<double> &score, int worker_id = 0);
+  int DevelopProfileImplicitCN(ProfileParams &profile_params,
+                               vector<double> &score, int worker_id = 0);
 
   // Shooting algorithm implementations
   int ProfileSearch(ProfileParams &profile_params, SearchParams &search_params,
@@ -42,12 +44,13 @@ public:
   int BoxProfileSearch(ProfileParams &profile_params,
                        SearchParams &search_params, vector<double> &best_guess);
   int BoxProfileSearchParallel(ProfileParams &profile_params,
-
                                SearchParams &search_params,
                                vector<double> &best_guess);
   int BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
                                          SearchParams &search_params,
                                          vector<double> &best_guess);
+
+  // Gradient Descent / Newton method
   int GradientProfileSearch(ProfileParams &profile_params,
                             SearchParams &search_params,
                             vector<double> &best_guess);
