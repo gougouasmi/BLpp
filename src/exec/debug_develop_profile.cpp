@@ -70,7 +70,8 @@ int main(int argc, char *argv[]) {
 
   //
   std::vector<double> score(2);
-  int profile_size = boundary_layer.DevelopProfile(profile_params, score);
+  int profile_size =
+      boundary_layer.DevelopProfile(profile_params, score, 0, true);
 
   double s0 = score[0], s1 = score[1];
   double snorm = pow(s0 * s0 + s1 * s1, 0.5);

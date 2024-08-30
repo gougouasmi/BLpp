@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   //  BoundaryData boundary_data =
   //       GenFlatPlateConstant(profile_params.ue, profile_params.he,
   //                            profile_params.pe, profile_params.g0, xi_dim);
-  BoundaryData boundary_data = GetFlatNosedCylinder(50, 2.);
+  BoundaryData boundary_data = GetFlatNosedCylinder(50, 2., true);
 
   xi_dim = boundary_data.xi_dim;
 

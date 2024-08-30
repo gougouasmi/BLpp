@@ -10,6 +10,13 @@
 #include "shock_relations.h"
 #include "stagnation.h"
 
+const std::string FLAT_NOSED_PATH =
+    "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/flat_nosed_flow.csv";
+
+const std::string FLAT_NOSED_CONSTANT_RO_PATH =
+    "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/"
+    "flat_nosed_flow_constant_density.csv";
+
 BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points) {
   std::vector<double> edge_field(nb_points * 6, 0.);
@@ -74,9 +81,6 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
   return BoundaryData(edge_field, wall_field);
 }
 
-const std::string FLAT_NOSED_PATH =
-    "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/flat_nosed_flow.csv";
-
 BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
                                   bool verbose) {
   assert(mach > 1);
@@ -120,10 +124,15 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
   stag_density *= post_density;
   stag_pressure *= post_pressure;
 
+  // Consistency check : h_s = (gamma) / (gamma-1) * (p_s / ro_s)
+  double assert_ratio =
+      stag_enthalpy * stag_density / stag_pressure * (gamma - 1) / gamma;
+  assert(fabs(assert_ratio - 1.) <= 1e-4);
+
   double v_scale = sqrt(stag_pressure / stag_density);
 
   // (3 / 5) Fetch flow along body eddge
-  vector<vector<double>> csv_data = ReadCSV(FLAT_NOSED_PATH);
+  vector<vector<double>> csv_data = ReadCSV(FLAT_NOSED_CONSTANT_RO_PATH);
 
   vector<double> &body_grid = csv_data[0];
   vector<double> &pressure_field = csv_data[1];

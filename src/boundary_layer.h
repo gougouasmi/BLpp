@@ -30,13 +30,16 @@ public:
 
   // ODE integration (eta)
   int DevelopProfile(ProfileParams &profile_params, vector<double> &score,
-                     int worker_id = 0);
+                     int worker_id = 0, bool advise = false);
   int DevelopProfileExplicit(ProfileParams &profile_params,
-                             vector<double> &score, int worker_id = 0);
+                             vector<double> &score, int worker_id = 0,
+                             bool advise = false);
   int DevelopProfileImplicit(ProfileParams &profile_params,
-                             vector<double> &score, int worker_id = 0);
+                             vector<double> &score, int worker_id = 0,
+                             bool advise = false);
   int DevelopProfileImplicitCN(ProfileParams &profile_params,
-                               vector<double> &score, int worker_id = 0);
+                               vector<double> &score, int worker_id = 0,
+                               bool advise = false);
 
   // Shooting algorithm implementations
   int ProfileSearch(ProfileParams &profile_params, SearchParams &search_params,

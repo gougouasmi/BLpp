@@ -90,7 +90,12 @@ typedef struct ProfileParams {
       return false;
     }
 
-    return (nb_steps > 1) && (fpp0 >= 0.) && (max_step > 0);
+    if ((fpp0 < 0.) || (isnan(fpp0))) {
+      printf("f''(0) either negative or nan.\n");
+      return false;
+    }
+
+    return (nb_steps > 1) && (max_step > 0);
   }
 
   void SetDefault() {
