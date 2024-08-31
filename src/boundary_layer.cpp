@@ -86,6 +86,15 @@ RhsJacobianFunction BoundaryLayer::GetJacobianFun(SolveType solve_type) {
   return nullptr;
 }
 
+vector<double> BoundaryLayer::GetEtaGrid() {
+  vector<double> &eta_grid0 = eta_grids[0];
+  vector<double> eta_grid_copy(eta_grid0.size());
+
+  std::copy(eta_grid0.begin(), eta_grid0.end(), eta_grid_copy.begin());
+
+  return std::move(eta_grid_copy);
+}
+
 int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
                                   vector<double> &score, int worker_id,
                                   bool advise) {
@@ -1365,7 +1374,6 @@ void BoundaryLayer::ComputeLS(const BoundaryData &boundary_data,
   const vector<double> &edge_field = boundary_data.edge_field;
   const vector<double> &wall_field = boundary_data.wall_field;
 
-  const int EDGE_FIELD_RANK = 6;
   const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
   assert(xi_dim == bl_state_grid.size());
 
@@ -1386,12 +1394,12 @@ void BoundaryLayer::ComputeLS(const BoundaryData &boundary_data,
     int edge_offset = EDGE_FIELD_RANK * xi_id;
 
     // Set local profile settings
-    profile_params.ue = edge_field[edge_offset + 0];
-    profile_params.he = edge_field[edge_offset + 1];
-    profile_params.pe = edge_field[edge_offset + 2];
-    profile_params.xi = edge_field[edge_offset + 3];
-    profile_params.due_dxi = edge_field[edge_offset + 4];
-    profile_params.dhe_dxi = edge_field[edge_offset + 5];
+    profile_params.ue = edge_field[edge_offset + EDGE_U_ID];
+    profile_params.he = edge_field[edge_offset + EDGE_H_ID];
+    profile_params.pe = edge_field[edge_offset + EDGE_P_ID];
+    profile_params.xi = edge_field[edge_offset + EDGE_XI_ID];
+    profile_params.due_dxi = edge_field[edge_offset + EDGE_DU_DXI_ID];
+    profile_params.dhe_dxi = edge_field[edge_offset + EDGE_DH_DXI_ID];
 
     //
     profile_params.g0 = wall_field[xi_id];
@@ -1458,7 +1466,6 @@ void BoundaryLayer::ComputeDD(const BoundaryData &boundary_data,
   const vector<double> &edge_field = boundary_data.edge_field;
   const vector<double> &wall_field = boundary_data.wall_field;
 
-  const int EDGE_FIELD_RANK = 6;
   const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
   assert(xi_dim == bl_state_grid.size());
 
@@ -1481,12 +1488,12 @@ void BoundaryLayer::ComputeDD(const BoundaryData &boundary_data,
     int edge_offset = EDGE_FIELD_RANK * xi_id;
 
     // Set local profile settings
-    profile_params.ue = edge_field[edge_offset + 0];
-    profile_params.he = edge_field[edge_offset + 1];
-    profile_params.pe = edge_field[edge_offset + 2];
-    profile_params.xi = edge_field[edge_offset + 3];
-    profile_params.due_dxi = edge_field[edge_offset + 4];
-    profile_params.dhe_dxi = edge_field[edge_offset + 5];
+    profile_params.ue = edge_field[edge_offset + EDGE_U_ID];
+    profile_params.he = edge_field[edge_offset + EDGE_H_ID];
+    profile_params.pe = edge_field[edge_offset + EDGE_P_ID];
+    profile_params.xi = edge_field[edge_offset + EDGE_XI_ID];
+    profile_params.due_dxi = edge_field[edge_offset + EDGE_DU_DXI_ID];
+    profile_params.dhe_dxi = edge_field[edge_offset + EDGE_DH_DXI_ID];
 
     //
     profile_params.g0 = wall_field[xi_id];

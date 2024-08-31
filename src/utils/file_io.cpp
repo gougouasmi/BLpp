@@ -72,7 +72,7 @@ void WriteCSV(const string &file_path,
 
   assert(file.is_open());
 
-  int nb_cols = data_columns.size();
+  const int nb_cols = data_columns.size();
   assert(nb_cols > 0);
 
   int nb_rows = data_columns[0].size();
@@ -87,6 +87,61 @@ void WriteCSV(const string &file_path,
     }
     file << std::scientific << std::setprecision(6)
          << data_columns[nb_cols - 1][row_id] << "\n";
+  }
+
+  file.close();
+}
+
+void WriteCSV(const string &file_path, const vector<double> &data, int rank,
+              int nb_points) {
+  assert(data.size() >= rank * nb_points);
+
+  std::ofstream file(file_path);
+  assert(file.is_open());
+
+  const int nb_cols = rank;
+  assert(nb_cols > 0);
+
+  const int nb_rows = nb_points;
+
+  int offset = 0;
+  for (int row_id = 0; row_id < nb_rows; row_id++) {
+    for (int col_id = 0; col_id < nb_cols - 1; col_id++) {
+      file << std::scientific << std::setprecision(6) << data[offset + col_id]
+           << ", ";
+    }
+    file << std::scientific << std::setprecision(6)
+         << data[offset + nb_cols - 1] << "\n";
+
+    offset += rank;
+  }
+
+  file.close();
+}
+
+void WriteCSV(const string &file_path, const vector<double> &data, int rank,
+              int nb_points, const vector<int> &var_indices) {
+  assert(data.size() >= rank * nb_points);
+
+  const int nb_cols = var_indices.size();
+  assert(nb_cols > 0);
+  assert(nb_cols <= rank);
+
+  std::ofstream file(file_path);
+  assert(file.is_open());
+
+  const int nb_rows = nb_points;
+
+  int offset = 0;
+  for (int row_id = 0; row_id < nb_rows; row_id++) {
+    for (int col_id = 0; col_id < nb_cols - 1; col_id++) {
+      file << std::scientific << std::setprecision(6)
+           << data[offset + var_indices[col_id]] << ", ";
+    }
+    file << std::scientific << std::setprecision(6)
+         << data[offset + var_indices[nb_cols - 1]] << "\n";
+
+    offset += rank;
   }
 
   file.close();

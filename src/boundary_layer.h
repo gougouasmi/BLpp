@@ -69,6 +69,9 @@ public:
                  ProfileParams &profile_params, SearchParams &search_params,
                  vector<vector<double>> &bl_state_grid);
 
+  // Post-processing
+  vector<double> GetEtaGrid();
+
 private:
   const int _max_nb_workers = 8;
   int _max_nb_steps;

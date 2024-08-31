@@ -1,5 +1,15 @@
 #include <iostream>
 
+#include "atmosphere.h"
+#include "boundary_layer_factory.h"
+#include "case_functions.h"
+#include "file_io.h"
+#include "profile_struct.h"
+#include "search_struct.h"
+
+#include <sstream>
+#include <vector>
+
 /*
  * ./compute_boundary_layer -flag1 flag1_args ... -flagN flagN_args where
  *
@@ -23,14 +33,6 @@
  *   - loads (friction, thermal) along the wall.
  *   - the entire flow-field
  */
-
-#include "atmosphere.h"
-#include "boundary_layer_factory.h"
-#include "case_functions.h"
-#include "profile_struct.h"
-#include "search_struct.h"
-
-#include <vector>
 
 int main(int argc, char *argv[]) {
 
@@ -71,4 +73,20 @@ int main(int argc, char *argv[]) {
 
   boundary_layer.Compute(boundary_data, profile_params, search_params,
                          bl_state_grid);
+
+  //
+  bool write_profiles = true;
+  if (write_profiles) {
+    vector<double> eta_grid = boundary_layer.GetEtaGrid();
+    WriteCSV("eta_grid.csv", eta_grid, 1, eta_dim + 1);
+
+    WriteCSV("edge_grid.csv", boundary_data.edge_field, EDGE_FIELD_RANK,
+             xi_dim);
+
+    for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
+      std::string filename("station_" + std::to_string(xi_id) + ".csv");
+
+      WriteCSV(filename, bl_state_grid[xi_id], BL_RANK, eta_dim + 1);
+    }
+  }
 }

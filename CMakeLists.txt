@@ -17,6 +17,12 @@ if(ENABLE_DEBUG)
 endif()
 
 ###
+# 3rd party libraries
+#
+
+#find_package(HDF5 REQUIRED COMPONENTS CXX)
+
+###
 # Define libraries
 #
 

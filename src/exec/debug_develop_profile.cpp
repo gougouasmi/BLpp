@@ -57,14 +57,14 @@ int main(int argc, char *argv[]) {
   int station_id = 1;
   ParseStationId(argc, argv, station_id);
 
-  int offset = 6 * station_id;
+  int offset = EDGE_FIELD_RANK * station_id;
 
-  profile_params.ue = boundary_data.edge_field[offset + 0];
-  profile_params.he = boundary_data.edge_field[offset + 1];
-  profile_params.pe = boundary_data.edge_field[offset + 2];
-  profile_params.xi = boundary_data.edge_field[offset + 3];
-  profile_params.due_dxi = boundary_data.edge_field[offset + 4];
-  profile_params.dhe_dxi = boundary_data.edge_field[offset + 5];
+  profile_params.ue = boundary_data.edge_field[offset + EDGE_U_ID];
+  profile_params.he = boundary_data.edge_field[offset + EDGE_H_ID];
+  profile_params.pe = boundary_data.edge_field[offset + EDGE_P_ID];
+  profile_params.xi = boundary_data.edge_field[offset + EDGE_XI_ID];
+  profile_params.due_dxi = boundary_data.edge_field[offset + EDGE_DU_DXI_ID];
+  profile_params.dhe_dxi = boundary_data.edge_field[offset + EDGE_DH_DXI_ID];
 
   profile_params.g0 = boundary_data.wall_field[station_id];
 

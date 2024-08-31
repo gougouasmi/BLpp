@@ -19,18 +19,18 @@ const std::string FLAT_NOSED_CONSTANT_RO_PATH =
 
 BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points) {
-  std::vector<double> edge_field(nb_points * 6, 0.);
+  std::vector<double> edge_field(nb_points * EDGE_FIELD_RANK, 0.);
   std::vector<double> wall_field(nb_points, g0);
 
   for (int xid = 0; xid < nb_points; xid++) {
 
-    edge_field[6 * xid + 0] = ue; // ue
-    edge_field[6 * xid + 1] = he; // he
-    edge_field[6 * xid + 2] = pe; // pe
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_U_ID] = ue; // ue
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_H_ID] = he; // he
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_P_ID] = pe; // pe
 
-    edge_field[6 * xid + 3] = (double)xid / 10.; // xi
-    edge_field[6 * xid + 4] = 0.;                // due_dxi
-    edge_field[6 * xid + 5] = 0.;                // dhe_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_XI_ID] = (double)xid / 10.; // xi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DU_DXI_ID] = 0.; // due_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] = 0.; // dhe_dxi
   }
 
   return BoundaryData(edge_field, wall_field);
@@ -38,7 +38,7 @@ BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
 
 BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
                                          double prandtl) {
-  std::vector<double> edge_field(nb_points * 6, 0.);
+  std::vector<double> edge_field(nb_points * EDGE_FIELD_RANK, 0.);
   std::vector<double> wall_field(nb_points, 0.);
 
   double dx = 1. / (double)(nb_points - 1);
@@ -59,15 +59,16 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
   const double gaw = 1 + 0.5 * recovery * (gam - 1) * mach * mach;
 
   for (int xid = 0; xid < nb_points; xid++) {
-    edge_field[6 * xid + 0] = ue; // ue
-    edge_field[6 * xid + 1] = he; // he
-    edge_field[6 * xid + 2] = pe; // pe
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_U_ID] = ue; // ue
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_H_ID] = he; // he
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_P_ID] = pe; // pe
 
     double xval = (xid * dx);
 
-    edge_field[6 * xid + 3] = xval * dxi_dx; // xi
-    edge_field[6 * xid + 4] = 0.;            // due_dxi
-    edge_field[6 * xid + 5] = 0.;            // dhe_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_XI_ID] = xval * dxi_dx; // xi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_X_ID] = xval;
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DU_DXI_ID] = 0.; // due_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] = 0.; // dhe_dxi
 
     wall_field[xid] = gaw * (1 + 0.25 - 0.83 * xval + 0.33 * xval * xval); // gw
 
@@ -142,13 +143,13 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
   int grid_size = body_grid.size();
 
   // (5 / 5) Finish pre-processing
-  std::vector<double> edge_field(grid_size * 6, 0.);
+  std::vector<double> edge_field(grid_size * EDGE_FIELD_RANK, 0.);
   std::vector<double> wall_field(grid_size, 0.2);
 
   //
-  edge_field[6 * 0 + 0] = 0;
-  edge_field[6 * 0 + 1] = stag_enthalpy;
-  edge_field[6 * 0 + 2] = stag_pressure;
+  edge_field[EDGE_FIELD_RANK * 0 + EDGE_U_ID] = 0;
+  edge_field[EDGE_FIELD_RANK * 0 + EDGE_H_ID] = stag_enthalpy;
+  edge_field[EDGE_FIELD_RANK * 0 + EDGE_P_ID] = stag_pressure;
 
   for (int xid = 1; xid < grid_size; xid++) {
     //
@@ -167,9 +168,9 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
     double dxi_dx = roe * ue * mue;
 
     //
-    double ue_m1 = edge_field[6 * (xid - 1) + 0];
-    double he_m1 = edge_field[6 * (xid - 1) + 1];
-    double pe_m1 = edge_field[6 * (xid - 1) + 2];
+    double ue_m1 = edge_field[EDGE_FIELD_RANK * (xid - 1) + EDGE_U_ID];
+    double he_m1 = edge_field[EDGE_FIELD_RANK * (xid - 1) + EDGE_H_ID];
+    double pe_m1 = edge_field[EDGE_FIELD_RANK * (xid - 1) + EDGE_P_ID];
 
     double roe_m1 = AIR_CPG_RO(he_m1, pe_m1);
     double mue_m1 = AIR_VISC(pe_m1 / (R_AIR * roe_m1));
@@ -177,15 +178,18 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
     double dxi_dx_m1 = roe_m1 * ue_m1 * mue_m1;
     double mean_dxi_dx = 0.5 * (dxi_dx + dxi_dx_m1);
 
-    edge_field[6 * xid + 0] = ue; // ue
-    edge_field[6 * xid + 1] = he; // he
-    edge_field[6 * xid + 2] = pe; // pe
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_U_ID] = ue; // ue
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_H_ID] = he; // he
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_P_ID] = pe; // pe
 
     //
-    edge_field[6 * xid + 3] =
-        edge_field[6 * (xid - 1) + 3] + dx * mean_dxi_dx; // xi
-    edge_field[6 * xid + 4] = due_dx / dxi_dx;            // due_dxi
-    edge_field[6 * xid + 5] = dhe_dx / dxi_dx;            // dhe_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_XI_ID] =
+        edge_field[EDGE_FIELD_RANK * (xid - 1) + 3] + dx * mean_dxi_dx; // xi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_X_ID] = body_grid[xid];     // x
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DU_DXI_ID] =
+        due_dx / dxi_dx; // due_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] =
+        dhe_dx / dxi_dx; // dhe_dxi
 
     if (verbose)
       printf("%d: %.2e, %.2e, %.2e, %.2e, %.2e, %.2e \n", xid, dx, roe, ue, he,

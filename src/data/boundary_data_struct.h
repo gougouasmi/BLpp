@@ -6,11 +6,21 @@
 
 using std::vector;
 
+constexpr int EDGE_FIELD_RANK = 7;
+
+constexpr int EDGE_U_ID = 0;
+constexpr int EDGE_H_ID = 1;
+constexpr int EDGE_P_ID = 2;
+constexpr int EDGE_XI_ID = 3;
+constexpr int EDGE_X_ID = 4;
+constexpr int EDGE_DU_DXI_ID = 5;
+constexpr int EDGE_DH_DXI_ID = 6;
+
 typedef struct BoundaryData {
   BoundaryData(vector<double> edge_vals, vector<double> wall_vals)
       : edge_field(edge_vals), wall_field(wall_vals), xi_dim(wall_vals.size()) {
     assert(wall_field.size() > 0);
-    assert(wall_field.size() * 6 == edge_field.size());
+    assert(wall_field.size() * EDGE_FIELD_RANK == edge_field.size());
   };
   vector<double> edge_field;
   vector<double> wall_field;
