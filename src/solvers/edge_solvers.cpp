@@ -227,7 +227,7 @@ int ComputeFromPressureConstantDensity(const vector<double> &pressure_field,
     velocity_field[xid] = ue;
 
     if (ue > max_ue) {
-      printf("\n edge velocity above total enthalpy limit.\n", xid);
+      printf("\n edge velocity above total enthalpy limit.\n");
       return xid;
     }
   }

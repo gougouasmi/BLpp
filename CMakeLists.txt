@@ -23,6 +23,21 @@ endif()
 #find_package(HDF5 REQUIRED COMPONENTS CXX)
 
 ###
+# Configure files
+#
+
+# Manually find the individual CSV files
+find_file(FLAT_NOSED_PATH "flat_nosed_flow.csv" PATHS ${CMAKE_SOURCE_DIR}/src/data)
+find_file(FLAT_NOSED_PATH_RO "flat_nosed_flow_constant_density.csv" PATHS ${CMAKE_SOURCE_DIR}/src/data)
+
+# Configure the template file with all the CSV file paths at once
+configure_file(
+    ${CMAKE_SOURCE_DIR}/src/cases/case_functions.h.in
+    ${CMAKE_SOURCE_DIR}/src/cases/case_functions.h
+    @ONLY
+)
+
+###
 # Define libraries
 #
 

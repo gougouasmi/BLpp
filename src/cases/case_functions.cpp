@@ -10,13 +10,6 @@
 #include "shock_relations.h"
 #include "stagnation.h"
 
-const std::string FLAT_NOSED_PATH =
-    "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/flat_nosed_flow.csv";
-
-const std::string FLAT_NOSED_CONSTANT_RO_PATH =
-    "/Users/gouasmia/Documents/Work/Research/BLpp/src/data/"
-    "flat_nosed_flow_constant_density.csv";
-
 BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points) {
   std::vector<double> edge_field(nb_points * EDGE_FIELD_RANK, 0.);

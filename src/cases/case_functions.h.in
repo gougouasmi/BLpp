@@ -3,6 +3,9 @@
 
 #include "boundary_data_struct.h"
 
+static const char* FLAT_NOSED_PATH = "@FLAT_NOSED_PATH@";
+static const char* FLAT_NOSED_CONSTANT_RO_PATH = "@FLAT_NOSED_PATH_RO@";
+
 BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points);
 BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
