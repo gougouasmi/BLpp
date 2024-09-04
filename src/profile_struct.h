@@ -31,6 +31,7 @@ typedef struct ProfileParams {
   TimeScheme scheme = TimeScheme::Explicit;
   double max_step;
 
+  // Primary edge conditions
   double ue = 1.;
   double he = 1.;
   double pe = 1.;
@@ -39,6 +40,8 @@ typedef struct ProfileParams {
   double due_dxi = 0.;
   double dhe_dxi = 0.;
 
+  // Secondary edge conditions (which
+  // you can compute from primary)
   double roe = 1.;
   double mue = 1.;
 

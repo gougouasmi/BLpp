@@ -7,6 +7,8 @@
 
 #include "dense_matrix.h"
 
+using std::vector;
+
 struct NewtonParams {
   double rtol = 1e-6;
   int max_iter = 1000;
@@ -14,7 +16,7 @@ struct NewtonParams {
   bool verbose = false;
 };
 
-double inline vector_norm(const std::vector<double> &x) {
+double inline vector_norm(const vector<double> &x) {
   double out = 0.;
   for (int idx = 0; idx < x.size(); idx++) {
     out += x[idx] * x[idx];
@@ -23,7 +25,7 @@ double inline vector_norm(const std::vector<double> &x) {
 }
 
 template <typename ObjectiveFun, typename JacobianFun, typename LimitUpdateFun>
-bool NewtonSolveDirect(std::vector<double> &initial_guess,
+bool NewtonSolveDirect(vector<double> &initial_guess,
                        ObjectiveFun objective_fun, JacobianFun jacobian_fun,
                        LimitUpdateFun limit_update_fun,
                        const NewtonParams &newton_params) {
@@ -35,9 +37,9 @@ bool NewtonSolveDirect(std::vector<double> &initial_guess,
   int system_size = initial_guess.size();
   assert(system_size > 0);
 
-  std::vector<double> &state = initial_guess;
-  std::vector<double> residual(system_size, 0.);
-  std::vector<double> state_varn(system_size, 0.);
+  vector<double> &state = initial_guess;
+  vector<double> residual(system_size, 0.);
+  vector<double> state_varn(system_size, 0.);
 
   DenseMatrix jacobian_matrix(system_size, system_size);
 

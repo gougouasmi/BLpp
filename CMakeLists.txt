@@ -20,7 +20,9 @@ endif()
 # 3rd party libraries
 #
 
-#find_package(HDF5 REQUIRED COMPONENTS CXX)
+find_package(HDF5 REQUIRED COMPONENTS CXX)
+message("Don't forget to provide HDF5_INCLUDE_DIRS=${HDF5_INCLUDE_DIRS} to targets")
+message("Same for HDF5_LIBRARIES=${HDF5_LIBRARIES}\n")
 
 ###
 # Configure files
@@ -46,7 +48,8 @@ add_library(utils_lib
     src/utils/utils.cpp
     src/utils/file_io.cpp
 )
-target_include_directories(utils_lib PUBLIC src/utils)
+target_include_directories(utils_lib PUBLIC src/utils ${HDF5_INCLUDE_DIRS})
+target_link_libraries(utils_lib PRIVATE ${HDF5_LIBRARIES})
 
 # Profile functions
 add_library(profile_lib
@@ -88,7 +91,7 @@ add_executable(devel_profile
 )
 
 target_link_libraries(devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(devel_profile PRIVATE src src/physics src/data)
+target_include_directories(devel_profile PRIVATE src src/physics src/data src/linalg)
 
 # Search for the initial conditions that develop into the correct self-similar profile
 add_executable(search_profile

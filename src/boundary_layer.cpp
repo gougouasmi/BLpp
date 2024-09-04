@@ -236,7 +236,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    LUSolve(score_jacobian, delta, 2);
+    vector<vector<double>> lu_resources = AllocateLUResources(2);
+    LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
     print_matrix_column_major(delta, 2, 1);
@@ -263,6 +264,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
+
+  vector<vector<double>> resources_big = AllocateLUResources(BL_RANK);
 
   int nb_steps = eta_grid.size() - 1;
 
@@ -380,7 +383,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
       }
       offset += BL_RANK;
     }
-    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2);
+    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2, resources_big);
 
     // Update indexing
     state_offset += BL_RANK;
@@ -420,7 +423,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    LUSolve(score_jacobian, delta, 2);
+    vector<vector<double>> lu_resources = AllocateLUResources(2);
+    LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
     print_matrix_column_major(delta, 2, 1);
@@ -448,6 +452,8 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
   vector<double> &matrix_buffer_cm = matrix_buffers[2 * worker_id + 1];
+
+  vector<vector<double>> lu_resources = AllocateLUResources(BL_RANK);
 
   int nb_steps = eta_grid.size() - 1;
 
@@ -603,7 +609,7 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
     }
 
     //    (3 / 3) Solve for next sensitivity
-    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2);
+    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2, lu_resources);
 
     // Update indexing
     state_offset += BL_RANK;
@@ -643,7 +649,8 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    LUSolve(score_jacobian, delta, 2);
+    vector<vector<double>> lu_resources = AllocateLUResources(2);
+    LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
     print_matrix_column_major(delta, 2, 1);
@@ -1219,6 +1226,8 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
   vector<double> score(2, 0);
   vector<double> score_jacobian(4, 0.); // row_major
   vector<double> delta(2, 0);
+
+  vector<vector<double>> lu_resources = AllocateLUResources(2);
   double snorm;
 
   // Compute initial profile
@@ -1256,7 +1265,7 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    LUSolve(score_jacobian, delta, 2);
+    LUSolve(score_jacobian, delta, 2, lu_resources);
 
     if (verbose) {
       printf(" -> delta:\n");

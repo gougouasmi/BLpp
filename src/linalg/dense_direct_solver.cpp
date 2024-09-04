@@ -8,11 +8,11 @@
  *
  * Row-Major order.
  */
-void ReadLowerUpper(const std::vector<double> &matrix_data,
-                    std::vector<double> &lower_data,
-                    std::vector<double> &upper_data, int xdim) {
-  int nb_rows = xdim;
-  int nb_cols = nb_rows;
+void ReadLowerUpper(const vector<double> &matrix_data,
+                    vector<double> &lower_data, vector<double> &upper_data,
+                    const size_t xdim) {
+  const size_t nb_rows = xdim;
+  const size_t nb_cols = nb_rows;
 
   int upper_offset = 0;
   int lower_offset = 0;
@@ -38,10 +38,10 @@ void ReadLowerUpper(const std::vector<double> &matrix_data,
  * Perform dense LU factorization in-place.
  * Row-Major order.
  */
-void FactorizeLU(std::vector<double> &lower_data,
-                 std::vector<double> &upper_data, int xdim) {
-  int nb_rows = xdim;
-  int nb_cols = nb_rows;
+void FactorizeLU(vector<double> &lower_data, vector<double> &upper_data,
+                 const size_t xdim) {
+  const size_t nb_rows = xdim;
+  const size_t nb_cols = nb_rows;
 
   assert(2 * lower_data.size() == nb_rows * (nb_rows - 1));
   assert(upper_data.size() == lower_data.size() + nb_rows);
@@ -91,9 +91,9 @@ void FactorizeLU(std::vector<double> &lower_data,
  * Solve dense lower triangular system in-place.
  * Row-Major order.
  */
-void LowerSolve(const std::vector<double> &lower_data, std::vector<double> &rhs,
-                int xdim) {
-  int nb_rows = xdim;
+void LowerSolve(const vector<double> &lower_data, vector<double> &rhs,
+                const size_t xdim) {
+  const size_t nb_rows = xdim;
   int offset = 0;
   for (int i = 0; i < nb_rows; i++) {
     for (int j = 0; j < i; j++) {
@@ -107,10 +107,10 @@ void LowerSolve(const std::vector<double> &lower_data, std::vector<double> &rhs,
  * Solve dense upper triangular system in-place.
  * Row-Major order.
  */
-void UpperSolve(const std::vector<double> &upper_data, std::vector<double> &rhs,
-                int xdim) {
-  int nb_rows = xdim;
-  int last_row_id = nb_rows - 1;
+void UpperSolve(const vector<double> &upper_data, vector<double> &rhs,
+                const size_t xdim) {
+  const size_t nb_rows = xdim;
+  const size_t last_row_id = nb_rows - 1;
 
   int offset = nb_rows * (nb_rows + 1) / 2 - 1;
   for (int i = 0; i < nb_rows; i++) {
@@ -130,16 +130,19 @@ void UpperSolve(const std::vector<double> &upper_data, std::vector<double> &rhs,
 /*
  * Direct LU solver. Row-major order
  */
-void LUSolve(const std::vector<double> &matrix_data, std::vector<double> &rhs,
-             int xdim) {
+void LUSolve(const vector<double> &matrix_data, vector<double> &rhs,
+             const size_t xdim, vector<vector<double>> &resources) {
   assert(xdim > 1);
   assert(matrix_data.size() == xdim * xdim);
 
-  int lower_size = xdim * (xdim - 1) / 2;
-  int upper_size = lower_size + xdim;
+  const size_t lower_size = xdim * (xdim - 1) / 2;
+  const size_t upper_size = lower_size + xdim;
 
-  std::vector<double> lower_data(lower_size, 0.);
-  std::vector<double> upper_data(upper_size, 0.);
+  vector<double> &lower_data = resources[0];
+  vector<double> &upper_data = resources[1];
+
+  assert(lower_data.size() == lower_size);
+  assert(upper_data.size() == upper_size);
 
   ReadLowerUpper(matrix_data, lower_data, upper_data, xdim);
 
@@ -153,17 +156,21 @@ void LUSolve(const std::vector<double> &matrix_data, std::vector<double> &rhs,
 // Matrix-matrix
 //
 
-void LUMatrixSolve(const std::vector<double> &matrix_data,
-                   std::vector<double> &rhs_matrix_cm, int xdim, int zdim) {
+void LUMatrixSolve(const vector<double> &matrix_data,
+                   vector<double> &rhs_matrix_cm, const size_t xdim,
+                   const size_t zdim, vector<vector<double>> &resources) {
   assert(xdim > 1);
   assert(matrix_data.size() == xdim * xdim);
   assert(rhs_matrix_cm.size() == xdim * zdim);
 
-  int lower_size = xdim * (xdim - 1) / 2;
-  int upper_size = lower_size + xdim;
+  const size_t lower_size = xdim * (xdim - 1) / 2;
+  const size_t upper_size = lower_size + xdim;
 
-  std::vector<double> lower_data(lower_size, 0.);
-  std::vector<double> upper_data(upper_size, 0.);
+  vector<double> &lower_data = resources[0];
+  vector<double> &upper_data = resources[1];
+
+  assert(lower_data.size() == lower_size);
+  assert(upper_data.size() == upper_size);
 
   ReadLowerUpper(matrix_data, lower_data, upper_data, xdim);
 
@@ -173,9 +180,10 @@ void LUMatrixSolve(const std::vector<double> &matrix_data,
   UpperMatrixSolve(upper_data, rhs_matrix_cm, xdim, zdim);
 }
 
-void LowerMatrixSolve(const std::vector<double> &lower_data,
-                      std::vector<double> &rhs_matrix_cm, int xdim, int zdim) {
-  int nb_rows = xdim;
+void LowerMatrixSolve(const vector<double> &lower_data,
+                      vector<double> &rhs_matrix_cm, const size_t xdim,
+                      const size_t zdim) {
+  const size_t nb_rows = xdim;
   int cm_offset = 0;
 
   for (int k = 0; k < zdim; k++) {
@@ -191,10 +199,11 @@ void LowerMatrixSolve(const std::vector<double> &lower_data,
   }
 }
 
-void UpperMatrixSolve(const std::vector<double> &upper_data,
-                      std::vector<double> &rhs_matrix_cm, int xdim, int zdim) {
-  int nb_rows = xdim;
-  int last_row_id = nb_rows - 1;
+void UpperMatrixSolve(const vector<double> &upper_data,
+                      vector<double> &rhs_matrix_cm, const size_t xdim,
+                      const size_t zdim) {
+  const size_t nb_rows = xdim;
+  const size_t last_row_id = nb_rows - 1;
 
   int cm_offset = 0;
 
@@ -216,4 +225,14 @@ void UpperMatrixSolve(const std::vector<double> &upper_data,
     }
     cm_offset += xdim;
   }
+}
+
+// Resource allocation
+vector<vector<double>> AllocateLUResources(const size_t xdim) {
+  vector<vector<double>> resources;
+
+  resources.emplace_back(0.5 * xdim * (xdim - 1), 0.);
+  resources.emplace_back(0.5 * xdim * (xdim + 1), 0.);
+
+  return std::move(resources);
 }

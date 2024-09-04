@@ -57,36 +57,50 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  int xi_dim = 100;
-
-  // BoundaryData boundary_data = GenChapmannRubesinFlatPlate(0.5, xi_dim,
-  // 0.72);
-  //  BoundaryData boundary_data =
-  //       GenFlatPlateConstant(profile_params.ue, profile_params.he,
-  //                            profile_params.pe, profile_params.g0, xi_dim);
   BoundaryData boundary_data = GetFlatNosedCylinder(50, 2., true);
 
-  xi_dim = boundary_data.xi_dim;
+  const int xi_dim = boundary_data.xi_dim;
 
   std::vector<std::vector<double>> bl_state_grid(
       xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
 
+  // Solve for 2D profile
   boundary_layer.Compute(boundary_data, profile_params, search_params,
                          bl_state_grid);
 
+  // Post-process
+  //  constexpr int OUTPUT_RANK = 4;
+  //  std::vector<std::vector<double>> bl_output_grid(
+  //      xi_dim, std::vector<double>(OUTPUT_RANK * (eta_dim + 1), 0.));
   //
+  // boundary_layer.PostProcess(boundary_data, bl_state_grid, bl_output_grid);
+
+  // Write to file
   bool write_profiles = true;
   if (write_profiles) {
     vector<double> eta_grid = boundary_layer.GetEtaGrid();
-    WriteCSV("eta_grid.csv", eta_grid, 1, eta_dim + 1);
 
-    WriteCSV("edge_grid.csv", boundary_data.edge_field, EDGE_FIELD_RANK,
-             xi_dim);
+    // WriteCSV("eta_grid.csv", eta_grid, 1, eta_dim + 1);
+    // WriteCSV("edge_grid.csv", boundary_data.edge_field, EDGE_FIELD_RANK,
+    //          xi_dim);
+
+    WriteH5("eta_grid.h5", eta_grid, "eta_grid");
+    WriteH5("edge_grid.h5", boundary_data.edge_field, "edge_data", xi_dim,
+            EDGE_FIELD_RANK);
 
     for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
-      std::string filename("station_" + std::to_string(xi_id) + ".csv");
+      // std::string state_filename("station_" + std::to_string(xi_id) +
+      // ".csv"); WriteCSV(state_filename, bl_state_grid[xi_id], BL_RANK,
+      // eta_dim + 1);
 
-      WriteCSV(filename, bl_state_grid[xi_id], BL_RANK, eta_dim + 1);
+      std::string state_filename("station_" + std::to_string(xi_id) + ".h5");
+      WriteH5(state_filename, bl_state_grid[xi_id], "state_data", eta_dim + 1,
+              BL_RANK);
+
+      // std::string output_filename("station_" + std::to_string(xi_id) +
+      //                             "_outputs.csv");
+      // WriteCSV(output_filename, bl_output_grid[xi_id], OUTPUT_RANK,
+      //          eta_dim + 1);
     }
   }
 }

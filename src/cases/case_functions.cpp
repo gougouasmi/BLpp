@@ -24,6 +24,7 @@ BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
     edge_field[EDGE_FIELD_RANK * xid + EDGE_XI_ID] = (double)xid / 10.; // xi
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DU_DXI_ID] = 0.; // due_dxi
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] = 0.; // dhe_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = 0.; // dxi_dx
   }
 
   return BoundaryData(edge_field, wall_field);
@@ -62,6 +63,7 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
     edge_field[EDGE_FIELD_RANK * xid + EDGE_X_ID] = xval;
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DU_DXI_ID] = 0.; // due_dxi
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] = 0.; // dhe_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = 0.; // dxi_dx
 
     wall_field[xid] = gaw * (1 + 0.25 - 0.83 * xval + 0.33 * xval * xval); // gw
 
@@ -183,6 +185,7 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
         due_dx / dxi_dx; // due_dxi
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] =
         dhe_dx / dxi_dx; // dhe_dxi
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = dxi_dx;
 
     if (verbose)
       printf("%d: %.2e, %.2e, %.2e, %.2e, %.2e, %.2e \n", xid, dx, roe, ue, he,

@@ -146,3 +146,31 @@ void WriteCSV(const string &file_path, const vector<double> &data, int rank,
 
   file.close();
 }
+
+void WriteH5(const string &filepath, const vector<double> &data,
+             const string &data_label) {
+  H5::H5File file(filepath, H5F_ACC_TRUNC);
+
+  hsize_t dims[1] = {data.size()};
+  H5::DataSpace dataspace(1, dims); // 1D dataspace
+  H5::PredType datatype(H5::PredType::NATIVE_DOUBLE);
+
+  H5::DataSet dataset = file.createDataSet(data_label, datatype, dataspace);
+
+  dataset.write(data.data(), datatype);
+}
+
+void WriteH5(const string &filepath, const vector<double> &data,
+             const string &data_label, const size_t nb_points,
+             const size_t rank) {
+  assert(data.size() >= nb_points * rank);
+  H5::H5File file(filepath, H5F_ACC_TRUNC);
+
+  hsize_t dims[2] = {nb_points, rank};
+  H5::DataSpace dataspace(2, dims); // 2D dataspace
+  H5::PredType datatype(H5::PredType::NATIVE_DOUBLE);
+
+  H5::DataSet dataset = file.createDataSet(data_label, datatype, dataspace);
+
+  dataset.write(data.data(), datatype);
+}

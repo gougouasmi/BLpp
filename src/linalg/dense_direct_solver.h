@@ -3,25 +3,32 @@
 
 #include <vector>
 
-void ReadLowerUpper(const std::vector<double> &matrix_data,
-                    std::vector<double> &lower_data,
-                    std::vector<double> &upper_data, int xdim);
-void FactorizeLU(std::vector<double> &lower_data,
-                 std::vector<double> &upper_data, int xdim);
-void LowerSolve(const std::vector<double> &lower_data, std::vector<double> &rhs,
-                int xdim);
-void UpperSolve(const std::vector<double> &upper_data, std::vector<double> &rhs,
-                int xdim);
+using std::vector;
 
-void LUSolve(const std::vector<double> &matrix_data, std::vector<double> &rhs,
-             int xdim);
+void ReadLowerUpper(const vector<double> &matrix_data,
+                    vector<double> &lower_data, vector<double> &upper_data,
+                    const size_t xdim);
+void FactorizeLU(vector<double> &lower_data, vector<double> &upper_data,
+                 const size_t xdim);
+void LowerSolve(const vector<double> &lower_data, vector<double> &rhs,
+                const size_t xdim);
+void UpperSolve(const vector<double> &upper_data, vector<double> &rhs,
+                const size_t xdim);
+
+void LUSolve(const vector<double> &matrix_data, vector<double> &rhs,
+             const size_t xdim, vector<vector<double>> &resources);
 
 // Matrix-Matrix
-void LUMatrixSolve(const std::vector<double> &matrix_data,
-                   std::vector<double> &rhs_matrix_cm, int xdim, int zdim);
-void LowerMatrixSolve(const std::vector<double> &lower_data,
-                      std::vector<double> &rhs_matrix_cm, int xdim, int zdim);
-void UpperMatrixSolve(const std::vector<double> &upper_data,
-                      std::vector<double> &rhs_matrix_cm, int xdim, int zdim);
+void LUMatrixSolve(const vector<double> &matrix_data,
+                   vector<double> &rhs_matrix_cm, const size_t xdim,
+                   const size_t zdim, vector<vector<double>> &resources);
+void LowerMatrixSolve(const vector<double> &lower_data,
+                      vector<double> &rhs_matrix_cm, const size_t xdim,
+                      const size_t zdim);
+void UpperMatrixSolve(const vector<double> &upper_data,
+                      vector<double> &rhs_matrix_cm, const size_t xdim,
+                      const size_t zdim);
+
+vector<vector<double>> AllocateLUResources(const size_t xdim);
 
 #endif

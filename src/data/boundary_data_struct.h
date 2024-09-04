@@ -6,7 +6,7 @@
 
 using std::vector;
 
-constexpr int EDGE_FIELD_RANK = 7;
+constexpr int EDGE_FIELD_RANK = 8;
 
 constexpr int EDGE_U_ID = 0;
 constexpr int EDGE_H_ID = 1;
@@ -15,6 +15,7 @@ constexpr int EDGE_XI_ID = 3;
 constexpr int EDGE_X_ID = 4;
 constexpr int EDGE_DU_DXI_ID = 5;
 constexpr int EDGE_DH_DXI_ID = 6;
+constexpr int EDGE_DXI_DX_ID = 7;
 
 typedef struct BoundaryData {
   BoundaryData(vector<double> edge_vals, vector<double> wall_vals)
