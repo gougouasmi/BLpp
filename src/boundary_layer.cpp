@@ -343,6 +343,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   }
 
   NewtonParams newton_params;
+  NewtonResources newton_resources(xdim);
 
   // Time loop
   while (step_id < nb_steps) {
@@ -351,8 +352,9 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     //        eta_grid[step_id]);
 
     // Evolve state forward by solving the nonlinear system
-    bool pass = NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
-                                  limit_update_fun, newton_params);
+    bool pass =
+        NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
+                          limit_update_fun, newton_params, newton_resources);
     if (!pass) {
       // printf("unsuccessful solve. Score = [%.2e, %.2e]\n", score[0],
       // score[1]);
@@ -530,6 +532,7 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 
   vector<double> solution_buffer(xdim, 0.);
   NewtonParams newton_params;
+  NewtonResources newton_resources(xdim);
 
   // Time loop
   while (step_id < nb_steps) {
@@ -548,8 +551,9 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
                 profile_params);
 
     // Evolve state forward by solving the nonlinear system
-    bool pass = NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
-                                  limit_update_fun, newton_params);
+    bool pass =
+        NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
+                          limit_update_fun, newton_params, newton_resources);
     if (!pass) {
       // printf("unsuccessful solve. Score = [%.2e, %.2e]\n", score[0],
       // score[1]);

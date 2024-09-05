@@ -16,6 +16,16 @@ struct NewtonParams {
   bool verbose = false;
 };
 
+struct NewtonResources {
+  vector<double> residual;
+  vector<double> state_varn;
+  DenseMatrix matrix;
+
+  NewtonResources(int system_size)
+      : residual(system_size, 0.), state_varn(system_size, 0.),
+        matrix(system_size, system_size){};
+};
+
 double inline vector_norm(const vector<double> &x) {
   double out = 0.;
   for (int idx = 0; idx < x.size(); idx++) {
@@ -28,7 +38,8 @@ template <typename ObjectiveFun, typename JacobianFun, typename LimitUpdateFun>
 bool NewtonSolveDirect(vector<double> &initial_guess,
                        ObjectiveFun objective_fun, JacobianFun jacobian_fun,
                        LimitUpdateFun limit_update_fun,
-                       const NewtonParams &newton_params) {
+                       const NewtonParams &newton_params,
+                       NewtonResources &resources) {
   double rtol = newton_params.rtol;
   int max_iter = newton_params.max_iter;
   int max_ls_iter = newton_params.max_ls_iter;
@@ -38,10 +49,10 @@ bool NewtonSolveDirect(vector<double> &initial_guess,
   assert(system_size > 0);
 
   vector<double> &state = initial_guess;
-  vector<double> residual(system_size, 0.);
-  vector<double> state_varn(system_size, 0.);
+  vector<double> &residual = resources.residual;     //(system_size, 0.);
+  vector<double> &state_varn = resources.state_varn; //(system_size, 0.);
 
-  DenseMatrix jacobian_matrix(system_size, system_size);
+  DenseMatrix &jacobian_matrix = resources.matrix; //(system_size, system_size);
 
   objective_fun(state, residual);
   jacobian_fun(state, jacobian_matrix);

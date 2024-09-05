@@ -67,6 +67,8 @@ int ComputeFromPressureBE(const vector<double> &pressure_field,
   newton_params.rtol = 1e-6;
   newton_params.verbose = false;
 
+  NewtonResources newton_resources(2);
+
   delta_p = pressure_field[1] - pressure_field[0];
   roe = density_field[0];
   ue = velocity_field[0];
@@ -82,8 +84,9 @@ int ComputeFromPressureBE(const vector<double> &pressure_field,
     state_buffer[0] = roe;
     state_buffer[1] = ue == 0 ? sqrt(fabs(delta_p) / roe) : ue;
 
-    bool pass = NewtonSolveDirect(state_buffer, objective_fun, jacobian_fun,
-                                  limit_update_fun, newton_params);
+    bool pass =
+        NewtonSolveDirect(state_buffer, objective_fun, jacobian_fun,
+                          limit_update_fun, newton_params, newton_resources);
 
     if (!pass) {
       printf("\nLocal edge solve unsuccessfull at iter #%d, abort.\n", xid);
@@ -172,6 +175,8 @@ int ComputeFromPressureCN(const vector<double> &pressure_field,
   newton_params.rtol = 1e-6;
   newton_params.verbose = false;
 
+  NewtonResources newton_resources(2);
+
   delta_p = pressure_field[1] - pressure_field[0];
   roe = density_field[0];
   ue = velocity_field[0];
@@ -187,8 +192,9 @@ int ComputeFromPressureCN(const vector<double> &pressure_field,
     state_buffer[0] = roe;
     state_buffer[1] = ue == 0 ? sqrt(fabs(delta_p) / roe) : ue;
 
-    bool pass = NewtonSolveDirect(state_buffer, objective_fun, jacobian_fun,
-                                  limit_update_fun, newton_params);
+    bool pass =
+        NewtonSolveDirect(state_buffer, objective_fun, jacobian_fun,
+                          limit_update_fun, newton_params, newton_resources);
 
     if (!pass) {
       printf("\nLocal edge solve unsuccessfull at iter #%d, abort.\n", xid);

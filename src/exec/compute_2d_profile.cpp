@@ -80,19 +80,11 @@ int main(int argc, char *argv[]) {
   if (write_profiles) {
     vector<double> eta_grid = boundary_layer.GetEtaGrid();
 
-    // WriteCSV("eta_grid.csv", eta_grid, 1, eta_dim + 1);
-    // WriteCSV("edge_grid.csv", boundary_data.edge_field, EDGE_FIELD_RANK,
-    //          xi_dim);
-
     WriteH5("eta_grid.h5", eta_grid, "eta_grid");
     WriteH5("edge_grid.h5", boundary_data.edge_field, "edge_data", xi_dim,
             EDGE_FIELD_RANK);
 
     for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
-      // std::string state_filename("station_" + std::to_string(xi_id) +
-      // ".csv"); WriteCSV(state_filename, bl_state_grid[xi_id], BL_RANK,
-      // eta_dim + 1);
-
       std::string state_filename("station_" + std::to_string(xi_id) + ".h5");
       WriteH5(state_filename, bl_state_grid[xi_id], "state_data", eta_dim + 1,
               BL_RANK);
