@@ -8,10 +8,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CMAKE_CXX_STANDARD_REQUIRED True)
 
     # Include the src directory
-    include_directories(../src ../src/physics)
+    include_directories(../src/boundary_layer ../src/physics)
 else()
     # Include the src directory relative to the main project
-    include_directories(${CMAKE_SOURCE_DIR}/src)
+    include_directories(${CMAKE_SOURCE_DIR}/src/boundary_layer)
     include_directories(${CMAKE_SOURCE_DIR}/src/physics)
 endif()
 
@@ -46,8 +46,8 @@ add_test(NAME TestNewtonSolver COMMAND test_newton_solve)
 # Test profile functions 
 add_executable(test_profile_functions
     profile_functions_test.cpp 
-    ../src/profile_functions_default.cpp
-    ../src/profile_functions_cpg.cpp
+    ../src/boundary_layer/profile_functions_default.cpp
+    ../src/boundary_layer/profile_functions_cpg.cpp
 )
 #target_include_directories(test_profile_functions PRIVATE <include directories>)
 add_test(NAME TestProfileFunctions COMMAND test_profile_functions)

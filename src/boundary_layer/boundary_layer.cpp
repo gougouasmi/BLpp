@@ -265,7 +265,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
 
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
 
-  vector<vector<double>> resources_big = AllocateLUResources(BL_RANK);
+  vector<vector<double>> lu_resources = AllocateLUResources(BL_RANK);
 
   int nb_steps = eta_grid.size() - 1;
 
@@ -385,7 +385,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
       }
       offset += BL_RANK;
     }
-    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2, resources_big);
+    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2, lu_resources);
 
     // Update indexing
     state_offset += BL_RANK;
@@ -425,7 +425,6 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    vector<vector<double>> lu_resources = AllocateLUResources(2);
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
@@ -653,7 +652,6 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    vector<vector<double>> lu_resources = AllocateLUResources(2);
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
