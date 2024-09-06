@@ -31,15 +31,10 @@ public:
   // ODE integration (eta)
   int DevelopProfile(ProfileParams &profile_params, vector<double> &score,
                      int worker_id = 0, bool advise = false);
-  int DevelopProfileExplicit(ProfileParams &profile_params,
-                             vector<double> &score, int worker_id = 0,
-                             bool advise = false);
-  int DevelopProfileImplicit(ProfileParams &profile_params,
-                             vector<double> &score, int worker_id = 0,
-                             bool advise = false);
+  int DevelopProfileExplicit(ProfileParams &profile_params, int worker_id = 0);
+  int DevelopProfileImplicit(ProfileParams &profile_params, int worker_id = 0);
   int DevelopProfileImplicitCN(ProfileParams &profile_params,
-                               vector<double> &score, int worker_id = 0,
-                               bool advise = false);
+                               int worker_id = 0);
 
   // Shooting algorithm implementations
   int ProfileSearch(ProfileParams &profile_params, SearchParams &search_params,
@@ -70,7 +65,8 @@ public:
                  vector<vector<double>> &bl_state_grid);
 
   // Post-processing
-  vector<double> GetEtaGrid();
+  vector<double> &GetEtaGrid(int worker_id = 0);
+  vector<double> &GetStateGrid(int worker_id = 0);
 
 private:
   const int _max_nb_workers = 8;

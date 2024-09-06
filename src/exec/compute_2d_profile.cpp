@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   // Write to file
   bool write_profiles = true;
   if (write_profiles) {
-    vector<double> eta_grid = boundary_layer.GetEtaGrid();
+    vector<double> &eta_grid = boundary_layer.GetEtaGrid(0);
 
     WriteH5("eta_grid.h5", eta_grid, "eta_grid");
     WriteH5("edge_grid.h5", boundary_data.edge_field, "edge_data", xi_dim,

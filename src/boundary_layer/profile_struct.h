@@ -17,6 +17,7 @@ constexpr int FIELD_RANK = 8;
 enum WallType { Wall, Adiabatic };
 enum TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
 enum SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
+enum Scoring { Default };
 
 typedef struct ProfileParams {
   int nb_steps;
@@ -30,6 +31,8 @@ typedef struct ProfileParams {
 
   TimeScheme scheme = TimeScheme::Explicit;
   double max_step;
+
+  Scoring scoring = Scoring::Default;
 
   // Primary edge conditions
   double ue = 1.;

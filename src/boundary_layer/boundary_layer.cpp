@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include "profile_functions_default.h"
+#include "score_functions.h"
 
 #include <algorithm>
 #include <cassert>
@@ -86,33 +87,75 @@ RhsJacobianFunction BoundaryLayer::GetJacobianFun(SolveType solve_type) {
   return nullptr;
 }
 
-vector<double> BoundaryLayer::GetEtaGrid() {
-  vector<double> &eta_grid0 = eta_grids[0];
-  vector<double> eta_grid_copy(eta_grid0.size());
+vector<double> &BoundaryLayer::GetEtaGrid(int worker_id) {
+  return eta_grids[worker_id];
+}
 
-  std::copy(eta_grid0.begin(), eta_grid0.end(), eta_grid_copy.begin());
-
-  return std::move(eta_grid_copy);
+vector<double> &BoundaryLayer::GetStateGrid(int worker_id) {
+  return state_grids[worker_id];
 }
 
 int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
                                   vector<double> &score, int worker_id,
                                   bool advise) {
-  if (profile_params.scheme == TimeScheme::Explicit) {
-    return DevelopProfileExplicit(profile_params, score, worker_id, advise);
-  } else if (profile_params.scheme == TimeScheme::Implicit) {
-    return DevelopProfileImplicit(profile_params, score, worker_id, advise);
-  } else if (profile_params.scheme == TimeScheme::ImplicitCrankNicolson) {
-    return DevelopProfileImplicitCN(profile_params, score, worker_id, advise);
+  int profile_size = -1;
+  TimeScheme time_scheme = profile_params.scheme;
+
+  if (time_scheme == TimeScheme::Explicit) {
+    profile_size = DevelopProfileExplicit(profile_params, worker_id);
+  } else if (time_scheme == TimeScheme::Implicit) {
+    profile_size = DevelopProfileImplicit(profile_params, worker_id);
+  } else if (time_scheme == TimeScheme::ImplicitCrankNicolson) {
+    profile_size = DevelopProfileImplicitCN(profile_params, worker_id);
   } else {
     printf("Time Scheme not recognized!");
     return -1;
   }
+
+  // Terminate if you couldn't even move forward one step
+  if (profile_size < 0) {
+    return profile_size;
+  }
+
+  ////
+  // Compute score, score_jacobian, and advise if requested
+  //
+  int state_offset = BL_RANK * profile_size;
+
+  vector<double> &state_grid = state_grids[worker_id];
+
+  ComputeScore(profile_params.scoring, state_grid, state_offset, score);
+
+  if (advise) {
+    vector<double> &sensitivity = sensitivity_matrices[worker_id];
+
+    printf("Sensitivity matrix:\n");
+    print_matrix_column_major(sensitivity, BL_RANK, 2);
+
+    vector<double> score_jacobian(4, 0.); // row_major
+
+    ComputeScoreJacobian(profile_params.scoring, state_grid, state_offset,
+                         sensitivity, 0, score_jacobian);
+
+    printf("Score jacobian:\n");
+    print_matrix_row_major(score_jacobian, 2, 2);
+
+    vector<double> delta(2, 0);
+    delta[0] = -score[0];
+    delta[1] = -score[1];
+
+    vector<vector<double>> lu_resources = AllocateLUResources(2);
+    LUSolve(score_jacobian, delta, 2, lu_resources);
+
+    printf("Delta suggestion:\n");
+    print_matrix_column_major(delta, 2, 1);
+  }
+
+  return profile_size;
 }
 
 int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
-                                          vector<double> &score, int worker_id,
-                                          bool advise) {
+                                          int worker_id) {
   assert(profile_params.AreValid());
 
   RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
@@ -145,9 +188,6 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
   int state_offset = 0;
   int field_offset = 0;
   while (step_id < nb_steps) {
-
-    // printf("\n## step %d/%d, eta = %.4e ##\n\n", step_id, nb_steps,
-    //        eta_grid[step_id]);
 
     // Evolve state forward
     double eta_step =
@@ -209,46 +249,11 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
     step_id += 1;
   }
 
-  // Check convergence
-  // double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
-  // bool converged = rate < 1e-3;
-
-  // Compute score
-  score[0] = state_grid[state_offset + FP_ID] - 1.;
-  score[1] = state_grid[state_offset + G_ID] - 1;
-
-  if (advise) {
-    printf("Sensitivity matrix:\n");
-    print_matrix_column_major(sensitivity, BL_RANK, 2);
-
-    vector<double> score_jacobian(4, 0.); // row_major
-
-    score_jacobian[0] = sensitivity[0 + FP_ID];
-    score_jacobian[1] = sensitivity[BL_RANK + FP_ID];
-
-    score_jacobian[2 + 0] = sensitivity[0 + G_ID];
-    score_jacobian[2 + 1] = sensitivity[BL_RANK + G_ID];
-
-    printf("Score jacobian:\n");
-    print_matrix_row_major(score_jacobian, 2, 2);
-
-    vector<double> delta(2, 0);
-    delta[0] = -score[0];
-    delta[1] = -score[1];
-
-    vector<vector<double>> lu_resources = AllocateLUResources(2);
-    LUSolve(score_jacobian, delta, 2, lu_resources);
-
-    printf("Delta suggestion:\n");
-    print_matrix_column_major(delta, 2, 1);
-  }
-
   return step_id;
 }
 
 int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
-                                          vector<double> &score, int worker_id,
-                                          bool advise) {
+                                          int worker_id) {
   assert(profile_params.AreValid());
 
   RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
@@ -348,16 +353,11 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   // Time loop
   while (step_id < nb_steps) {
 
-    // printf("\n## step %d/%d, eta = %.4e ##\n\n", step_id, nb_steps,
-    //        eta_grid[step_id]);
-
     // Evolve state forward by solving the nonlinear system
     bool pass =
         NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
                           limit_update_fun, newton_params, newton_resources);
     if (!pass) {
-      // printf("unsuccessful solve. Score = [%.2e, %.2e]\n", score[0],
-      // score[1]);
       break;
     }
 
@@ -394,49 +394,11 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     step_id += 1;
   }
 
-  // compute_rhs(solution_buffer, 0, field_grid, field_offset, rhs,
-  //             profile_params);
-  //  double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
-  //  bool converged = rate < 1e-3;
-
-  // Compute score
-  score[0] = state_grid[state_offset + FP_ID] - 1.;
-  score[1] = state_grid[state_offset + G_ID] - 1;
-
-  // printf("completed run. Score = [%.2e, %.2e], rate = %.2e.\n", score[0],
-  //        score[1], rate);
-
-  if (advise) {
-    printf("Sensitivity matrix:\n");
-    print_matrix_column_major(sensitivity, BL_RANK, 2);
-
-    vector<double> score_jacobian(4, 0.); // row_major
-
-    score_jacobian[0] = sensitivity[0 + FP_ID];
-    score_jacobian[1] = sensitivity[BL_RANK + FP_ID];
-
-    score_jacobian[2 + 0] = sensitivity[0 + G_ID];
-    score_jacobian[2 + 1] = sensitivity[BL_RANK + G_ID];
-
-    printf("Score jacobian:\n");
-    print_matrix_row_major(score_jacobian, 2, 2);
-
-    vector<double> delta(2, 0);
-    delta[0] = -score[0];
-    delta[1] = -score[1];
-
-    LUSolve(score_jacobian, delta, 2, lu_resources);
-
-    printf("Delta suggestion:\n");
-    print_matrix_column_major(delta, 2, 1);
-  }
-
   return step_id;
 }
 
 int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
-                                            vector<double> &score,
-                                            int worker_id, bool advise) {
+                                            int worker_id) {
   assert(profile_params.AreValid());
 
   RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
@@ -536,9 +498,6 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   // Time loop
   while (step_id < nb_steps) {
 
-    // printf("\n## step %d/%d, eta = %.4e ##\n\n", step_id, nb_steps,
-    //        eta_grid[step_id]);
-
     // Prepare data for nonlinear solve
     //   - fill initial guess for next state
     for (int idx = 0; idx < xdim; idx++) {
@@ -619,43 +578,6 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
     field_offset += FIELD_RANK;
 
     step_id += 1;
-  }
-
-  // compute_rhs(solution_buffer, 0, field_grid, field_offset, rhs,
-  //             profile_params);
-  //  double rate = sqrt(rhs[FP_ID] * rhs[FP_ID] + rhs[G_ID] * rhs[G_ID]);
-  //  bool converged = rate < 1e-3;
-
-  // Compute score
-  score[0] = state_grid[state_offset + FP_ID] - 1.;
-  score[1] = state_grid[state_offset + G_ID] - 1;
-
-  // printf("completed run. Score = [%.2e, %.2e], rate = %.2e.\n", score[0],
-  //        score[1], rate);
-
-  if (advise) {
-    printf("Sensitivity matrix:\n");
-    print_matrix_column_major(sensitivity, BL_RANK, 2);
-
-    vector<double> score_jacobian(4, 0.); // row_major
-
-    score_jacobian[0] = sensitivity[0 + FP_ID];
-    score_jacobian[1] = sensitivity[BL_RANK + FP_ID];
-
-    score_jacobian[2 + 0] = sensitivity[0 + G_ID];
-    score_jacobian[2 + 1] = sensitivity[BL_RANK + G_ID];
-
-    printf("Score jacobian:\n");
-    print_matrix_row_major(score_jacobian, 2, 2);
-
-    vector<double> delta(2, 0);
-    delta[0] = -score[0];
-    delta[1] = -score[1];
-
-    LUSolve(score_jacobian, delta, 2, lu_resources);
-
-    printf("Delta suggestion:\n");
-    print_matrix_column_major(delta, 2, 1);
   }
 
   return step_id;
@@ -1252,11 +1174,9 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
     }
 
     // Assemble score jacobian
-    score_jacobian[0] = sensitivity[0 + FP_ID];
-    score_jacobian[1] = sensitivity[BL_RANK + FP_ID];
-
-    score_jacobian[2 + 0] = sensitivity[0 + G_ID];
-    score_jacobian[2 + 1] = sensitivity[BL_RANK + G_ID];
+    ComputeScoreJacobian(profile_params.scoring, state_grids[worker_id],
+                         profile_size * BL_RANK, sensitivity, 0,
+                         score_jacobian);
 
     if (verbose) {
       printf(" -> Score jacobian:\n");

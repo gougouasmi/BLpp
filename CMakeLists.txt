@@ -55,6 +55,7 @@ target_link_libraries(utils_lib PRIVATE ${HDF5_LIBRARIES})
 add_library(profile_lib
     src/boundary_layer/profile_functions_default.cpp
     src/boundary_layer/profile_functions_cpg.cpp
+    src/boundary_layer/score_functions.cpp
 )
 target_include_directories(profile_lib PRIVATE src/boundary_layer src/physics)
 target_link_libraries(profile_lib PRIVATE utils_lib)

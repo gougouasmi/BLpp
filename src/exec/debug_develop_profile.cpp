@@ -6,6 +6,7 @@
 #include "atmosphere.h"
 #include "boundary_layer_factory.h"
 #include "case_functions.h"
+#include "file_io.h"
 #include "profile.h"
 #include "search_struct.h"
 
@@ -18,6 +19,11 @@
  *    flag : gp0,   flag_args (1) : g'(0)
  *    flag : g0,    flag_args (1) : g(0)
  *    flag : wadiab flag_args (0)
+ *
+ *
+ *  alias run_debug = './debug_devel_profile -implicit -eta 1e-3 -n 2000
+ * -station 2 -verbose && python view_profile.py debug_profile.h5'
+ *
  *
  */
 
@@ -56,6 +62,9 @@ int main(int argc, char *argv[]) {
   // Set profile params
   int station_id = 1;
   ParseStationId(argc, argv, station_id);
+  if (station_id == 0) {
+    profile_params.solve_type = SolveType::SelfSimilar;
+  }
 
   int offset = EDGE_FIELD_RANK * station_id;
 
@@ -79,13 +88,21 @@ int main(int argc, char *argv[]) {
          profile_size, s0, s1, snorm);
 
   //
-  // SearchParams search_params;
-  // search_params.SetDefault();
+  SearchParams search_params;
+  search_params.SetDefault();
 
-  // vector<double> guess(2, 0.5);
+  vector<double> guess(2, 0.5);
 
-  // int worker_id = boundary_layer.GradientProfileSearch(profile_params,
-  //                                                      search_params, guess);
+  int worker_id = boundary_layer.GradientProfileSearch(profile_params,
+                                                       search_params, guess);
+
+  if (worker_id < 0) {
+    return 1;
+  }
+
+  WriteH5("eta_grid.h5", boundary_layer.GetEtaGrid(worker_id), "eta_grid");
+  WriteH5("debug_profile.h5", boundary_layer.GetStateGrid(worker_id),
+          "state_data", profile_params.nb_steps + 1, BL_RANK);
 
   return 0;
 }
