@@ -90,16 +90,18 @@ int main(int argc, char *argv[]) {
   //
   SearchParams search_params;
   search_params.SetDefault();
+  search_params.ParseCmdInputs(argc, argv);
 
   vector<double> guess(2, 0.5);
 
   int worker_id = boundary_layer.GradientProfileSearch(profile_params,
                                                        search_params, guess);
 
-  if (worker_id < 0) {
-    return 1;
-  }
+  // if (worker_id < 0) {
+  //   return 1;
+  // }
 
+  worker_id = 0;
   WriteH5("eta_grid.h5", boundary_layer.GetEtaGrid(worker_id), "eta_grid");
   WriteH5("debug_profile.h5", boundary_layer.GetStateGrid(worker_id),
           "state_data", profile_params.nb_steps + 1, BL_RANK);

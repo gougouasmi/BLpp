@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "search_struct.h"
+
 constexpr int BL_RANK = 5;
 
 constexpr int FPP_ID = 0;
@@ -17,7 +19,6 @@ constexpr int FIELD_RANK = 8;
 enum WallType { Wall, Adiabatic };
 enum TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
 enum SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
-enum Scoring { Default };
 
 typedef struct ProfileParams {
   int nb_steps;

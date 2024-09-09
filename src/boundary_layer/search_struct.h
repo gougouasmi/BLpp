@@ -6,6 +6,7 @@
 #include <vector>
 
 enum SearchMethod { BoxSerial, BoxParallel, BoxParallelQueue, GradientSerial };
+enum Scoring { Default, Square, SquareSteady, Exp };
 
 typedef struct SearchWindow {
   double fpp_min;
@@ -70,10 +71,13 @@ typedef struct SearchParams {
   SearchWindow window;
   SearchMethod method = SearchMethod::GradientSerial;
 
+  Scoring scoring;
+
   void SetDefault() {
     max_iter = 20;
     rtol = 1e-3;
     verbose = false;
+    scoring = Scoring::Default;
     window.SetDefault();
   }
 
@@ -100,6 +104,12 @@ typedef struct SearchParams {
         method = SearchMethod::BoxParallelQueue;
       } else if (arg == "-gradient_search") {
         method = SearchMethod::GradientSerial;
+      } else if (arg == "-score_square") {
+        scoring = Scoring::Square;
+      } else if (arg == "-score_square_steady") {
+        scoring = Scoring::SquareSteady;
+      } else if (arg == "-score_exp") {
+        scoring = Scoring::Exp;
       }
     }
     window.ParseCmdInputs(argc, argv);

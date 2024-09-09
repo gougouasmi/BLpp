@@ -101,6 +101,11 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
   int profile_size = -1;
   TimeScheme time_scheme = profile_params.scheme;
 
+  // Clear state grid vector
+  for (size_t nid = 0; nid < BL_RANK * (_max_nb_steps + 1); nid++) {
+    state_grids[worker_id][nid] = 0;
+  }
+
   if (time_scheme == TimeScheme::Explicit) {
     profile_size = DevelopProfileExplicit(profile_params, worker_id);
   } else if (time_scheme == TimeScheme::Implicit) {
@@ -620,6 +625,8 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
 
+  profile_params.scoring = search_params.scoring;
+
   // Fetch search window parameters
   SearchWindow &window = search_params.window;
   int xdim = window.xdim;
@@ -759,6 +766,8 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
+
+  profile_params.scoring = search_params.scoring;
 
   // Fetch search window parameters
   SearchWindow &window = search_params.window;
@@ -929,6 +938,8 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
+
+  profile_params.scoring = search_params.scoring;
 
   // Fetch search window parameters
   SearchWindow &window = search_params.window;
@@ -1142,6 +1153,8 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
+
+  profile_params.scoring = search_params.scoring;
 
   // Get worker id to fetch appropriate resources
   int worker_id = 0;

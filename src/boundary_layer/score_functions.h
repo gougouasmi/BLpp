@@ -21,4 +21,26 @@ void ComputeScoreJacobianDefault(const vector<double> &state, int state_offset,
                                  int sensitivity_offset,
                                  vector<double> &score_jacobian_rm);
 
+void ComputeScoreSquare(const vector<double> &state, int state_offset,
+                        vector<double> &score);
+void ComputeScoreJacobianSquare(const vector<double> &state, int state_offset,
+                                const vector<double> &sensitivity_cm,
+                                int sensitivity_offset,
+                                vector<double> &score_jacobian_rm);
+
+void ComputeScoreSquareSteady(const vector<double> &state, int state_offset,
+                              vector<double> &score);
+void ComputeScoreJacobianSquareSteady(const vector<double> &state,
+                                      int state_offset,
+                                      const vector<double> &sensitivity_cm,
+                                      int sensitivity_offset,
+                                      vector<double> &score_jacobian_rm);
+
+void ComputeScoreExp(const vector<double> &state, int state_offset,
+                     vector<double> &score);
+void ComputeScoreJacobianExp(const vector<double> &state, int state_offset,
+                             const vector<double> &sensitivity_cm,
+                             int sensitivity_offset,
+                             vector<double> &score_jacobian_rm);
+
 #endif
