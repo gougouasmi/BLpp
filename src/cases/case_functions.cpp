@@ -188,8 +188,8 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = dxi_dx;
 
     if (verbose)
-      printf("%d: %.2e, %.2e, %.2e, %.2e, %.2e, %.2e \n", xid, dx, roe, ue, he,
-             pe, dxi_dx);
+      printf("%d: dx=%.2e, roe=%.2e, ue=%.2e, he=%.2e, pe=%.2e, dxi_dx=%.2e \n",
+             xid, dx, roe, ue, he, pe, dxi_dx);
   }
 
   printf("\n");

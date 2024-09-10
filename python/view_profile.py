@@ -13,7 +13,7 @@ import numpy as np
 #
 #
 
-FP_ID, GP_ID, G_ID = 2, 1, 4 
+FPP_ID, FP_ID, GP_ID, G_ID = 0, 2, 1, 4 
 
 def read_eta_file(filename: str = "eta_grid.h5") -> np.ndarray:
     with h5py.File(filename, 'r') as f:
@@ -57,9 +57,9 @@ except FileNotFoundError:
 
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12,6))
+fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
-ax1, ax2 = axes
+ax1, ax2, ax3 = axes
 
 ax1.plot(profile[FP_ID, :], eta_grid, color='k')
 ax1.set_title(r"$f'(\eta) \ = \ u / u_{e}$")
@@ -67,10 +67,11 @@ ax1.set_title(r"$f'(\eta) \ = \ u / u_{e}$")
 ax2.plot(profile[G_ID, :], eta_grid, color='k')
 ax2.set_title(r"$g(\eta) \ = \ h / h_{e}$")
 
+ax3.plot(profile[FPP_ID, :], eta_grid, color='k')
+ax3.set_title(r"$C(\eta) f''(\eta)$")
+
 for ax in axes:
     ax.grid(which="both")
     ax.set_ylim([0, np.max(eta_grid)])
 
 plt.show()
-
-

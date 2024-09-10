@@ -1356,7 +1356,6 @@ void BoundaryLayer::ComputeLS(const BoundaryData &boundary_data,
       printf("Invalid edge conditions. Abort\n");
       break;
     } else {
-      profile_params.PrintEdgeValues();
       profile_params.PrintODEFactors();
     }
     printf("\n");

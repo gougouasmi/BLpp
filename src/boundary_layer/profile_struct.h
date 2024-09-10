@@ -64,12 +64,10 @@ typedef struct ProfileParams {
     }
 
     if (solve_type == SolveType::LocallySimilar) {
-      printf("Profile ODE factors (locally-similar): eckert = %.2e, (xi / ue) "
-             "* due_dxi = %.2e, xi "
-             "* dhe_dxi / he "
-             "= %.2e, xi * (ue / he) * due_dxi = %.2e.\n",
-             eckert, (xi / ue) * due_dxi, xi * dhe_dxi / he,
-             xi * (ue / he) * due_dxi);
+      printf("Profile ODE factors (locally-similar):\n - eckert=%.2e, c1=%.2e, "
+             "c2=%.2e, c3=%.2e\n\n",
+             eckert, 2. * (xi / ue) * due_dxi, 2. * xi * dhe_dxi / he,
+             2. * xi * (ue / he) * due_dxi);
     }
   }
 

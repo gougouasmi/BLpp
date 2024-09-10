@@ -33,7 +33,6 @@ void ParseStationId(int argc, char *argv[], int &station_id) {
     if (arg == "-station") {
       if (i + 1 < argc) {
         station_id = std::stoi(argv[++i]);
-        printf("station id set to %d.\n", station_id);
       } else {
         printf("profile nb_steps spec is incomplete.\n");
       }
@@ -75,12 +74,13 @@ int main(int argc, char *argv[]) {
   profile_params.due_dxi = boundary_data.edge_field[offset + EDGE_DU_DXI_ID];
   profile_params.dhe_dxi = boundary_data.edge_field[offset + EDGE_DH_DXI_ID];
 
+  profile_params.PrintODEFactors();
+
   profile_params.g0 = boundary_data.wall_field[station_id];
 
   //
   std::vector<double> score(2);
-  int profile_size =
-      boundary_layer.DevelopProfile(profile_params, score, 0, true);
+  int profile_size = boundary_layer.DevelopProfile(profile_params, score);
 
   double s0 = score[0], s1 = score[1];
   double snorm = pow(s0 * s0 + s1 * s1, 0.5);
