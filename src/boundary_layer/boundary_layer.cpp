@@ -1281,12 +1281,14 @@ void BoundaryLayer::Compute(const BoundaryData &boundary_data,
   SolveType solve_type = profile_params.solve_type;
 
   if (solve_type == SolveType::LocallySimilar) {
-    ComputeLS(boundary_data, profile_params, search_params, bl_state_grid);
+    ComputeLocalSimilarity(boundary_data, profile_params, search_params,
+                           bl_state_grid);
     return;
   }
 
   if (solve_type == SolveType::DifferenceDifferential) {
-    ComputeDD(boundary_data, profile_params, search_params, bl_state_grid);
+    ComputeDifferenceDifferential(boundary_data, profile_params, search_params,
+                                  bl_state_grid);
     return;
   }
 
@@ -1303,10 +1305,9 @@ void BoundaryLayer::Compute(const BoundaryData &boundary_data,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void BoundaryLayer::ComputeLS(const BoundaryData &boundary_data,
-                              ProfileParams &profile_params,
-                              SearchParams &search_params,
-                              vector<vector<double>> &bl_state_grid) {
+void BoundaryLayer::ComputeLocalSimilarity(
+    const BoundaryData &boundary_data, ProfileParams &profile_params,
+    SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
   assert(bl_state_grid.size() >= 1);
   int eta_dim = eta_grids[0].size();
@@ -1394,10 +1395,9 @@ void BoundaryLayer::ComputeLS(const BoundaryData &boundary_data,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void BoundaryLayer::ComputeDD(const BoundaryData &boundary_data,
-                              ProfileParams &profile_params,
-                              SearchParams &search_params,
-                              vector<vector<double>> &bl_state_grid) {
+void BoundaryLayer::ComputeDifferenceDifferential(
+    const BoundaryData &boundary_data, ProfileParams &profile_params,
+    SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
   assert(bl_state_grid.size() >= 1);
   const int eta_dim = eta_grids[0].size();
