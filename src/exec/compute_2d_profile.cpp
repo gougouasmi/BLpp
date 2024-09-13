@@ -57,7 +57,8 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  BoundaryData boundary_data = GetFlatNosedCylinder(50, 2., true);
+  const char *flow_path = "test_flow.csv";
+  BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path, false);
 
   const int xi_dim = boundary_data.xi_dim;
 
@@ -67,13 +68,6 @@ int main(int argc, char *argv[]) {
   // Solve for 2D profile
   boundary_layer.Compute(boundary_data, profile_params, search_params,
                          bl_state_grid);
-
-  // Post-process
-  //  constexpr int OUTPUT_RANK = 4;
-  //  std::vector<std::vector<double>> bl_output_grid(
-  //      xi_dim, std::vector<double>(OUTPUT_RANK * (eta_dim + 1), 0.));
-  //
-  // boundary_layer.PostProcess(boundary_data, bl_state_grid, bl_output_grid);
 
   // Write to file
   bool write_profiles = true;
@@ -88,11 +82,6 @@ int main(int argc, char *argv[]) {
       std::string state_filename("station_" + std::to_string(xi_id) + ".h5");
       WriteH5(state_filename, bl_state_grid[xi_id], "state_data", eta_dim + 1,
               BL_RANK);
-
-      // std::string output_filename("station_" + std::to_string(xi_id) +
-      //                             "_outputs.csv");
-      // WriteCSV(output_filename, bl_output_grid[xi_id], OUTPUT_RANK,
-      //          eta_dim + 1);
     }
   }
 }

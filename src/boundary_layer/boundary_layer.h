@@ -19,7 +19,8 @@ public:
                 RhsFunction rhs_diff_diff_fun,
                 RhsJacobianFunction jacobian_self_similar_fun,
                 RhsJacobianFunction jacobian_locally_similar_fun,
-                RhsJacobianFunction jacobian_diff_diff_fun);
+                RhsJacobianFunction jacobian_diff_diff_fun,
+                LimitUpdateFunction limit_update_fun);
 
   //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
@@ -37,21 +38,24 @@ public:
                                int worker_id = 0);
 
   // Shooting algorithm implementations
-  int ProfileSearch(ProfileParams &profile_params, SearchParams &search_params,
-                    vector<double> &best_guess);
-  int BoxProfileSearch(ProfileParams &profile_params,
-                       SearchParams &search_params, vector<double> &best_guess);
-  int BoxProfileSearchParallel(ProfileParams &profile_params,
-                               SearchParams &search_params,
-                               vector<double> &best_guess);
-  int BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
+  SearchOutcome ProfileSearch(ProfileParams &profile_params,
+                              SearchParams &search_params,
+                              vector<double> &best_guess);
+  SearchOutcome BoxProfileSearch(ProfileParams &profile_params,
+                                 SearchParams &search_params,
+                                 vector<double> &best_guess);
+  SearchOutcome BoxProfileSearchParallel(ProfileParams &profile_params,
                                          SearchParams &search_params,
                                          vector<double> &best_guess);
+  SearchOutcome
+  BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
+                                     SearchParams &search_params,
+                                     vector<double> &best_guess);
 
   // Gradient Descent / Newton method
-  int GradientProfileSearch(ProfileParams &profile_params,
-                            SearchParams &search_params,
-                            vector<double> &best_guess);
+  SearchOutcome GradientProfileSearch(ProfileParams &profile_params,
+                                      SearchParams &search_params,
+                                      vector<double> &best_guess);
 
   // 2D profile calculation
   void Compute(const BoundaryData &boundary_data, ProfileParams &profile_params,
@@ -85,6 +89,7 @@ private:
 
   InitializeFunction initialize;
   InitializeSensitivityFunction initialize_sensitivity;
+  LimitUpdateFunction limit_update;
   RhsFunction compute_rhs_self_similar, compute_rhs_locally_similar,
       compute_rhs_diff_diff;
   RhsJacobianFunction compute_rhs_jacobian_self_similar,

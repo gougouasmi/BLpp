@@ -3,6 +3,9 @@
 Use this script to visualize properties
 at the edge of your boundary layer domain.
 
+You can create a symbolic link to your use folder
+-> ln -s <path_to_view_edge.py> .
+
 """
 
 import matplotlib.pyplot as plt
@@ -73,13 +76,13 @@ fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
 ax1, ax2, ax3 = axes
 
-ax1.plot(x_grid, ue_grid)
+ax1.plot(x_grid, ue_grid, marker='x')
 ax1.set_title(r"$u_{e}(x)$")
 
-ax2.plot(x_grid, he_grid)
+ax2.plot(x_grid, he_grid, marker='x')
 ax2.set_title(r"$h_{e}(x)$")
 
-ax3.plot(x_grid, pe_grid)
+ax3.plot(x_grid, pe_grid, marker='x')
 ax3.set_title(r"$p_{e}(x)$")
 
 for ax in axes:
@@ -92,13 +95,13 @@ fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
 ax1, ax2, ax3 = axes
 
-ax1.plot(x_grid, ue_grid)
+ax1.plot(x_grid, ue_grid, marker='x')
 ax1.set_title(r"$u_{e}(x)$")
 
-ax2.plot(x_grid, he_grid)
+ax2.plot(x_grid, he_grid, marker='x')
 ax2.set_title(r"$h_{e}(x)$")
 
-ax3.plot(x_grid, pe_grid)
+ax3.plot(x_grid, pe_grid, marker='x')
 ax3.set_title(r"$p_{e}(x)$")
 
 for ax in axes:
@@ -111,13 +114,13 @@ fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
 ax1, ax2, ax3 = axes
 
-ax1.plot(xi_grid, dxi_dx_grid)
+ax1.plot(xi_grid, dxi_dx_grid, marker='x')
 ax1.set_title(r"$\frac{d\xi}{dx}$")
 
-ax2.plot(xi_grid, due_dxi_grid)
+ax2.plot(xi_grid, due_dxi_grid, marker='x')
 ax2.set_title(r"$\frac{du_{e}}{d\xi}$")
 
-ax3.plot(xi_grid, dhe_dxi_grid)
+ax3.plot(xi_grid, dhe_dxi_grid, marker='x')
 ax3.set_title(r"$\frac{dh_{e}}{d\xi}$")
 
 for ax in axes:
@@ -130,13 +133,13 @@ fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
 ax1, ax2, ax3 = axes
 
-ax1.plot(xi_grid, ue_grid)
+ax1.plot(xi_grid, ue_grid, marker='x')
 ax1.set_title(r"$u_{e}(\xi)$")
 
-ax2.plot(xi_grid, he_grid)
+ax2.plot(xi_grid, he_grid, marker='x')
 ax2.set_title(r"$h_{e}(\xi)$")
 
-ax3.plot(xi_grid, pe_grid)
+ax3.plot(xi_grid, pe_grid, marker='x')
 ax3.set_title(r"$p_{e}(\xi)$")
 
 for ax in axes:
@@ -157,10 +160,10 @@ fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
 
 ax11, ax12 = axes
 
-ax11.plot(xi_grid[1:], c1_grid)
+ax11.plot(xi_grid[1:], c1_grid, marker='x')
 ax11.set_title(r"$c_{1}(\xi) := \frac{2 \xi}{u_{e}}\frac{du_{e}}{d\xi}$")
 
-ax12.plot(xi_grid[1:], c2_grid)
+ax12.plot(xi_grid[1:], c2_grid, marker='x')
 ax12.set_title(r"$c_{2}(\xi) = \frac{2 \xi}{h_{e}} \frac{dh_{e}}{d\xi} = - c_{3}(\xi)$")
 
 for ax in axes:
@@ -173,11 +176,11 @@ fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
 
 ax21, ax22 = axes
 
-ax21.plot(xi_grid, ue_grid**2 / he_grid)
+ax21.plot(xi_grid, ue_grid**2 / he_grid, marker='x')
 ax21.set_title(r"$u_{e}^{2} / h_{e}$")
 
 delta_xi = xi_grid[1:] - xi_grid[:-1]
-ax22.plot(xi_grid[1:], 2. * xi_grid[1:] / delta_xi)
+ax22.plot(xi_grid[1:], 2. * xi_grid[1:] / delta_xi, marker='x')
 ax22.set_title(r"$2 \xi / \Delta \xi$")
 
 for ax in axes:
@@ -192,10 +195,10 @@ fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
 
 ax1, ax2 = axes
 
-ax1.plot(xi_grid)
+ax1.plot(xi_grid, marker='x')
 ax1.set_title(r"$\xi$")
 
-ax2.plot(x_grid)
+ax2.plot(x_grid, marker='x')
 ax2.set_title(r"$x$")
 
 for ax in axes:

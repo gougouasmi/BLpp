@@ -6,9 +6,14 @@
 #include <vector>
 
 enum SearchMethod { BoxSerial, BoxParallel, BoxParallelQueue, GradientSerial };
-enum Scoring { Default, Square, SquareSteady, Exp };
+enum Scoring { Default, Square, SquareSteady, Exp, ExpScaled };
 
-typedef struct SearchWindow {
+struct SearchOutcome {
+  bool success;
+  int worker_id;
+};
+
+struct SearchWindow {
   double fpp_min;
   double fpp_max;
   double gp_min;
@@ -60,10 +65,9 @@ typedef struct SearchWindow {
       }
     }
   }
+};
 
-} SearchWindow;
-
-typedef struct SearchParams {
+struct SearchParams {
   int max_iter;
   bool verbose;
   double rtol;
@@ -110,13 +114,15 @@ typedef struct SearchParams {
         scoring = Scoring::SquareSteady;
       } else if (arg == "-score_exp") {
         scoring = Scoring::Exp;
+      } else if (arg == "-score_exp_scaled") {
+        scoring = Scoring::ExpScaled;
       }
     }
     window.ParseCmdInputs(argc, argv);
   }
-} SearchParams;
+};
 
-struct SearchInput {
+struct BoxSearchInput {
   double x0;
   double dx;
   double y0;
@@ -127,27 +133,29 @@ struct SearchInput {
   int yid_start;
   int yid_end;
 
-  SearchInput(double x0_val, double dx_val, double y0_val, double dy_val,
-              int xid_start_val, int xid_end_val, int yid_start_val,
-              int yid_end_val)
+  BoxSearchInput(double x0_val, double dx_val, double y0_val, double dy_val,
+                 int xid_start_val, int xid_end_val, int yid_start_val,
+                 int yid_end_val)
       : x0(x0_val), dx(dx_val), y0(y0_val), dy(dy_val),
         xid_start(xid_start_val), xid_end(xid_end_val),
         yid_start(yid_start_val), yid_end(yid_end_val){};
-  static SearchInput StopMessage() {
-    return SearchInput(0., 0., 0., 0., 0, 0, 0, 0);
+  static BoxSearchInput StopMessage() {
+    return BoxSearchInput(0., 0., 0., 0., 0, 0, 0, 0);
   };
   bool Stop() { return (dx == 0.) || (dy == 0.); };
 };
 
-struct SearchResult {
+struct BoxSearchResult {
   double res_norm;
   int xid;
   int yid;
   int worker_id;
-  SearchResult(double res_val, int xid_val, int yid_val, int worker_id_val)
+  BoxSearchResult(double res_val, int xid_val, int yid_val, int worker_id_val)
       : res_norm(res_val), xid(xid_val), yid(yid_val),
         worker_id(worker_id_val){};
-  static SearchResult StopMessage() { return SearchResult(1e30, -1, -1, -1); };
+  static BoxSearchResult StopMessage() {
+    return BoxSearchResult(1e30, -1, -1, -1);
+  };
 };
 
 #endif

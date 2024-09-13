@@ -2,7 +2,11 @@
 
 Usage: main.py <filename.h5>
 
-Will plot $f'(\eta) = u/u_e$ and $g(\eta) = h / h_{e}$.
+Will plot $f'(\eta) = u/u_e$, $g(\eta) = h / h_{e}$
+and $C f''(\eta)$.
+
+You can create a symbolic link to your use folder
+-> ln -s <path_to_view_edge.py> .
 
 """
 
@@ -33,11 +37,13 @@ def read_profile(filename: str) -> np.ndarray:
 
 import sys
 
-if len(sys.argv) != 2:
-    print("Usage: main.py <filename.h5>")
+if len(sys.argv) > 2:
+    print("Usage: main.py <debug_profile.h5>")
     sys.exit(1)
 
-filename = sys.argv[1]
+filename = "debug_profile.h5"
+if len(sys.argv) == 2:
+    filename = sys.argv[1]
 
 try:
     eta_grid = read_eta_file()

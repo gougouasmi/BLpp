@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
            dp_ds, roe, ue);
   }
 
-  bool write_to_file = false;
+  bool write_to_file = true;
   if (write_to_file) {
     vector<vector<double>> output_data;
     output_data.push_back(body_grid);

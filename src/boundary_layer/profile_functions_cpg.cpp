@@ -1,7 +1,7 @@
 #include "profile_functions_cpg.h"
 #include "gas_model.h"
 
-void initialize_cpg(ProfileParams &profile_params, std::vector<double> &state) {
+void initialize_cpg(ProfileParams &profile_params, vector<double> &state) {
   double fpp0 = profile_params.fpp0;
   double gp0 = profile_params.gp0;
   double g0 = profile_params.g0;
@@ -48,7 +48,7 @@ void initialize_cpg(ProfileParams &profile_params, std::vector<double> &state) {
 }
 
 void initialize_sensitivity_cpg(ProfileParams &profile_params,
-                                std::vector<double> &state_sensitivity_cm) {
+                                vector<double> &state_sensitivity_cm) {
   double fpp0 = profile_params.fpp0;
   double gp0 = profile_params.gp0;
   double g0 = profile_params.g0;
@@ -123,9 +123,29 @@ void initialize_sensitivity_cpg(ProfileParams &profile_params,
   }
 }
 
-double compute_rhs_cpg(const std::vector<double> &state, int state_offset,
-                       const std::vector<double> &field, int field_offset,
-                       std::vector<double> &rhs, ProfileParams &params) {
+double limit_update_cpg(const vector<double> &state,
+                        const vector<double> &state_varn,
+                        ProfileParams &profile_params) {
+  double alpha = 1.;
+
+  // Do not let u become negative
+  if (state_varn[FP_ID] < 0) {
+    alpha = std::min(alpha, 0.2 * state[FP_ID] / (-state_varn[FP_ID]));
+  } else {
+    alpha = std::min(alpha,
+                     0.2 * (1.2 - state[FP_ID]) / (state_varn[FP_ID] + 1e-30));
+  }
+
+  alpha =
+      std::min(alpha, 0.2 * state[FPP_ID] / fabs(state_varn[FPP_ID] + 1e-30));
+  alpha = std::min(alpha, 0.2 * state[G_ID] / fabs(state_varn[G_ID] + 1e-30));
+
+  return alpha;
+}
+
+double compute_rhs_cpg(const vector<double> &state, int state_offset,
+                       const vector<double> &field, int field_offset,
+                       vector<double> &rhs, ProfileParams &params) {
   //
   double fp = state[state_offset + FP_ID];
   double g = state[state_offset + G_ID];
@@ -165,9 +185,9 @@ double compute_rhs_cpg(const std::vector<double> &state, int state_offset,
   return limit_step;
 }
 
-double compute_lsim_rhs_cpg(const std::vector<double> &state, int state_offset,
-                            const std::vector<double> &field, int field_offset,
-                            std::vector<double> &rhs, ProfileParams &params) {
+double compute_lsim_rhs_cpg(const vector<double> &state, int state_offset,
+                            const vector<double> &field, int field_offset,
+                            vector<double> &rhs, ProfileParams &params) {
   //
   double fp = state[state_offset + FP_ID];
   double g = state[state_offset + G_ID];
@@ -220,9 +240,9 @@ double compute_lsim_rhs_cpg(const std::vector<double> &state, int state_offset,
   return limit_step;
 }
 
-double compute_full_rhs_cpg(const std::vector<double> &state, int state_offset,
-                            const std::vector<double> &field, int field_offset,
-                            std::vector<double> &rhs, ProfileParams &params) {
+double compute_full_rhs_cpg(const vector<double> &state, int state_offset,
+                            const vector<double> &field, int field_offset,
+                            vector<double> &rhs, ProfileParams &params) {
   //
   double fp = state[state_offset + FP_ID];
   double g = state[state_offset + G_ID];
@@ -286,11 +306,9 @@ double compute_full_rhs_cpg(const std::vector<double> &state, int state_offset,
   return limit_step;
 }
 
-void compute_rhs_jacobian_cpg(const std::vector<double> &state,
-                              int state_offset,
-                              const std::vector<double> &field,
-                              int field_offset,
-                              std::vector<double> &matrix_data,
+void compute_rhs_jacobian_cpg(const vector<double> &state, int state_offset,
+                              const vector<double> &field, int field_offset,
+                              vector<double> &matrix_data,
                               ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
@@ -382,12 +400,9 @@ void compute_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = dgp_dg;
 }
 
-void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
-                                   int state_offset,
-                                   const std::vector<double> &field,
-                                   int field_offset,
-                                   std::vector<double> &matrix_data,
-                                   ProfileParams &params) {
+void compute_lsim_rhs_jacobian_cpg(
+    const vector<double> &state, int state_offset, const vector<double> &field,
+    int field_offset, vector<double> &matrix_data, ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double fp = state[state_offset + FP_ID];
@@ -492,12 +507,9 @@ void compute_lsim_rhs_jacobian_cpg(const std::vector<double> &state,
   matrix_data[offset + G_ID] = dgp_dg;
 }
 
-void compute_full_rhs_jacobian_cpg(const std::vector<double> &state,
-                                   int state_offset,
-                                   const std::vector<double> &field,
-                                   int field_offset,
-                                   std::vector<double> &matrix_data,
-                                   ProfileParams &params) {
+void compute_full_rhs_jacobian_cpg(
+    const vector<double> &state, int state_offset, const vector<double> &field,
+    int field_offset, vector<double> &matrix_data, ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double fp = state[state_offset + FP_ID];

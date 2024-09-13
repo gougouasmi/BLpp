@@ -1,9 +1,12 @@
 #include "utils.h"
 #include <cassert>
 
-void print_state(std::vector<double> &state, int offset) {
-  printf("%f %f %f %f %f\n", state[offset], state[offset + 1],
-         state[offset + 2], state[offset + 3], state[offset + 4]);
+void print_state(std::vector<double> &state, int offset, int state_rank) {
+  printf("[");
+  for (int state_id = 0; state_id < state_rank - 1; state_id++) {
+    printf("%.4e, ", state[offset + state_id]);
+  }
+  printf("%.4e ].\n", state[offset + state_rank - 1]);
 }
 
 void print_matrix_column_major(std::vector<double> &matrix_data, int xdim,

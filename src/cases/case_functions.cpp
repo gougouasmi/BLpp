@@ -77,8 +77,8 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
   return BoundaryData(edge_field, wall_field);
 }
 
-BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
-                                  bool verbose) {
+BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
+                                  const char *path, bool verbose) {
   assert(mach > 1);
   assert(altitude_km > 0);
 
@@ -128,7 +128,7 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
   double v_scale = sqrt(stag_pressure / stag_density);
 
   // (3 / 5) Fetch flow along body eddge
-  vector<vector<double>> csv_data = ReadCSV(FLAT_NOSED_CONSTANT_RO_PATH);
+  vector<vector<double>> csv_data = ReadCSV(path);
 
   vector<double> &body_grid = csv_data[0];
   vector<double> &pressure_field = csv_data[1];
@@ -195,4 +195,10 @@ BoundaryData GetFlatNosedCylinder(double altitude_km, double mach,
   printf("\n");
 
   return BoundaryData(edge_field, wall_field);
+}
+
+BoundaryData GenFlatNosedCylinder_Temp(double altitude_km, double mach,
+                                       bool verbose) {
+  return GenFlatNosedCylinder(altitude_km, mach, FLAT_NOSED_CONSTANT_RO_PATH,
+                              verbose);
 }

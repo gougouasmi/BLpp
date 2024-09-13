@@ -56,7 +56,11 @@ int main(int argc, char *argv[]) {
       BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
   // Get data to play with
-  BoundaryData boundary_data = GetFlatNosedCylinder(50, 2.);
+  const char *flow_path = "test_flow.csv";
+  BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path);
+
+  WriteH5("edge_grid.h5", boundary_data.edge_field, "edge_data",
+          boundary_data.xi_dim, EDGE_FIELD_RANK);
 
   // Set profile params
   int station_id = 1;
@@ -93,15 +97,17 @@ int main(int argc, char *argv[]) {
   search_params.ParseCmdInputs(argc, argv);
 
   vector<double> guess(2, 0.5);
+  guess[0] = profile_params.fpp0;
+  guess[1] = profile_params.gp0;
 
-  int worker_id = boundary_layer.GradientProfileSearch(profile_params,
-                                                       search_params, guess);
+  SearchOutcome outcome = boundary_layer.GradientProfileSearch(
+      profile_params, search_params, guess);
 
-  // if (worker_id < 0) {
-  //   return 1;
-  // }
+  if (!outcome.success) {
+    printf("Search did not converge.\n");
+  }
 
-  worker_id = 0;
+  int worker_id = outcome.worker_id;
   WriteH5("eta_grid.h5", boundary_layer.GetEtaGrid(worker_id), "eta_grid");
   WriteH5("debug_profile.h5", boundary_layer.GetStateGrid(worker_id),
           "state_data", profile_params.nb_steps + 1, BL_RANK);

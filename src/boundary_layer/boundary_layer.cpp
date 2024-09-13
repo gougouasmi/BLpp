@@ -20,6 +20,7 @@ BoundaryLayer::BoundaryLayer(int max_nb_steps)
       compute_rhs_jacobian_self_similar(compute_rhs_jacobian_default),
       compute_rhs_jacobian_locally_similar(compute_lsim_rhs_jacobian_default),
       compute_rhs_jacobian_diff_diff(compute_full_rhs_jacobian_default),
+      limit_update(limit_update_default),
       state_grids(_max_nb_workers,
                   vector<double>(BL_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
@@ -35,7 +36,8 @@ BoundaryLayer::BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
                              RhsFunction rhs_diff_diff_fun,
                              RhsJacobianFunction jacobian_self_similar_fun,
                              RhsJacobianFunction jacobian_locally_similar_fun,
-                             RhsJacobianFunction jacobian_diff_diff_fun)
+                             RhsJacobianFunction jacobian_diff_diff_fun,
+                             LimitUpdateFunction limit_update_fun)
     : _max_nb_steps(max_nb_steps), initialize(init_fun),
       initialize_sensitivity(init_sensitivity_fun),
       compute_rhs_self_similar(rhs_self_similar_fun),
@@ -44,6 +46,7 @@ BoundaryLayer::BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
       compute_rhs_jacobian_self_similar(jacobian_self_similar_fun),
       compute_rhs_jacobian_locally_similar(jacobian_locally_similar_fun),
       compute_rhs_jacobian_diff_diff(jacobian_diff_diff_fun),
+      limit_update(limit_update_fun),
       state_grids(_max_nb_workers,
                   vector<double>(BL_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
@@ -129,7 +132,7 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
 
   vector<double> &state_grid = state_grids[worker_id];
 
-  ComputeScore(profile_params.scoring, state_grid, state_offset, score);
+  ComputeScore(profile_params, state_grid, state_offset, score);
 
   if (advise) {
     vector<double> &sensitivity = sensitivity_matrices[worker_id];
@@ -139,8 +142,8 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
 
     vector<double> score_jacobian(4, 0.); // row_major
 
-    ComputeScoreJacobian(profile_params.scoring, state_grid, state_offset,
-                         sensitivity, 0, score_jacobian);
+    ComputeScoreJacobian(profile_params, state_grid, state_offset, sensitivity,
+                         0, score_jacobian);
 
     printf("Score jacobian:\n");
     print_matrix_row_major(score_jacobian, 2, 2);
@@ -234,8 +237,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
       printf("g^{%d+1} = nan!, step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = "
              "%.2e.\n",
              step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
-      print_state(rhs, 0);
-      print_state(state_grid, state_offset);
+      print_state(rhs, 0, BL_RANK);
+      print_state(state_grid, state_offset, BL_RANK);
       assert(false);
     }
 
@@ -243,8 +246,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
       printf(
           "g^{%d+1} < 0! step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = %.2e.\n",
           step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
-      print_state(rhs, 0);
-      print_state(state_grid, state_offset);
+      print_state(rhs, 0, BL_RANK);
+      print_state(state_grid, state_offset, BL_RANK);
       assert(false);
     }
 
@@ -308,16 +311,10 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   };
 
   // (2 / 3) Limit update function
-  auto limit_update_fun = [xdim](const vector<double> &state,
+  auto limit_update_fun = [xdim, &profile_params,
+                           this](const vector<double> &state,
                                  const vector<double> &state_varn) {
-    double alpha = 1.;
-
-    if (state_varn[FP_ID] < 0) {
-      alpha = std::min(alpha, 0.2 * state[FP_ID] / (-state_varn[FP_ID]));
-    }
-    alpha = std::min(alpha, 0.2 * state[G_ID] / fabs(state_varn[G_ID] + 1e-30));
-
-    return alpha;
+    return limit_update(state, state_varn, profile_params);
   };
 
   // (3 / 3) Jacobian function
@@ -456,16 +453,10 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   };
 
   // (2 / 3) Limit update function
-  auto limit_update_fun = [xdim](const vector<double> &state,
+  auto limit_update_fun = [xdim, &profile_params,
+                           this](const vector<double> &state,
                                  const vector<double> &state_varn) {
-    double alpha = 1.;
-
-    if (state_varn[FP_ID] < 0) {
-      alpha = std::min(alpha, 0.2 * state[FP_ID] / (-state_varn[FP_ID]));
-    }
-    alpha = std::min(alpha, 0.2 * state[G_ID] / fabs(state_varn[G_ID] + 1e-30));
-
-    return alpha;
+    return limit_update(state, state_varn, profile_params);
   };
 
   // (3 / 3) Jacobian function
@@ -592,9 +583,9 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 // Search methods
 //
 
-int BoundaryLayer::ProfileSearch(ProfileParams &profile_params,
-                                 SearchParams &search_params,
-                                 vector<double> &best_guess) {
+SearchOutcome BoundaryLayer::ProfileSearch(ProfileParams &profile_params,
+                                           SearchParams &search_params,
+                                           vector<double> &best_guess) {
   SearchMethod method = search_params.method;
 
   if (method == SearchMethod::BoxSerial) {
@@ -614,12 +605,12 @@ int BoundaryLayer::ProfileSearch(ProfileParams &profile_params,
     return GradientProfileSearch(profile_params, search_params, best_guess);
   }
 
-  return -1;
+  return SearchOutcome{false, -1};
 }
 
-int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
-                                    SearchParams &search_params,
-                                    vector<double> &best_guess) {
+SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
+                                              SearchParams &search_params,
+                                              vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -645,6 +636,8 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
            "=[[%.2e, %.2e], [%.2e, %.2e]\n",
            fpp_min, fpp_max, gp_min, gp_max);
   }
+
+  const int worker_id = 0;
 
   // Temporary arrays
   vector<double> initial_guess(2, 0.0);
@@ -692,7 +685,7 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
               }
               best_guess[0] = fpp0;
               best_guess[1] = gp0;
-              return 0;
+              return SearchOutcome{true, worker_id};
             }
           }
         }
@@ -705,7 +698,7 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
 
     if (min_res_norm == 1e30) {
       printf("STOP CONDITION: Not a single converged profile, aborting.\n\n");
-      return -1;
+      return SearchOutcome{false, worker_id};
     }
 
     // (2 / 2) Define next bounds
@@ -749,19 +742,16 @@ int BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
     }
   }
 
-  if (min_res_norm > rtol) {
-    return -1;
-  }
-
-  return 0;
+  return SearchOutcome{min_res_norm < rtol, worker_id};
 }
 
 #include <future>
 #include <thread>
 
-int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
-                                            SearchParams &search_params,
-                                            vector<double> &best_guess) {
+SearchOutcome
+BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
+                                        SearchParams &search_params,
+                                        vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -822,7 +812,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
             min_gid = gid;
 
             if (res_norm < rtol) {
-              return SearchResult(min_res_norm, min_fid, min_gid, worker_id);
+              return BoxSearchResult(min_res_norm, min_fid, min_gid, worker_id);
             }
           }
         }
@@ -832,7 +822,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
 
       fpp0 += delta_fpp;
     }
-    return SearchResult(min_res_norm, min_fid, min_gid, worker_id);
+    return BoxSearchResult(min_res_norm, min_fid, min_gid, worker_id);
   };
 
   for (int iter = 0; iter < max_iter; iter++) {
@@ -841,7 +831,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
     delta_gp = (gp_max - gp_min) / (ydim - 1);
 
     // (1 / 2) Develop profiles on square grids
-    vector<std::future<SearchResult>> futures;
+    vector<std::future<BoxSearchResult>> futures;
 
     futures.emplace_back(std::async(std::launch::async, local_search_task, 0,
                                     xdim / 2, 0, ydim / 2, 0));
@@ -856,7 +846,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
     int min_fid = 0, min_gid = 0;
 
     for (auto &ftr : futures) {
-      SearchResult result = ftr.get();
+      BoxSearchResult result = ftr.get();
       double res_norm = result.res_norm;
       if (res_norm < min_res_norm) {
         min_res_norm = res_norm;
@@ -876,7 +866,7 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
                best_guess[1]);
       }
 
-      return best_worker_id;
+      return SearchOutcome{true, best_worker_id};
     }
 
     // (2 / 2) Define next bounds
@@ -921,19 +911,16 @@ int BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
     }
   }
 
-  if (min_res_norm >= rtol) {
-    return -1;
-  }
-
-  return best_worker_id;
+  return SearchOutcome{min_res_norm < rtol, best_worker_id};
 }
 
 #include "message_queue.h"
 #include <memory>
 
-int BoundaryLayer::BoxProfileSearchParallelWithQueues(
-    ProfileParams &profile_params, SearchParams &search_params,
-    vector<double> &best_guess) {
+SearchOutcome
+BoundaryLayer::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
+                                                  SearchParams &search_params,
+                                                  vector<double> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -956,17 +943,17 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
 
   int best_worker_id = -1;
 
-  // Define queues for SearchInput and SearchResult
-  std::shared_ptr<MessageQueue<SearchInput>> work_queue(
-      new MessageQueue<SearchInput>());
-  std::shared_ptr<MessageQueue<SearchResult>> result_queue(
-      new MessageQueue<SearchResult>());
+  // Define queues for BoxSearchInput and BoxSearchResult
+  std::shared_ptr<MessageQueue<BoxSearchInput>> work_queue(
+      new MessageQueue<BoxSearchInput>());
+  std::shared_ptr<MessageQueue<BoxSearchResult>> result_queue(
+      new MessageQueue<BoxSearchResult>());
 
   // Spawn worker threads
   auto local_search_task = [rtol, profile_params, work_queue, result_queue,
                             this](const int worker_id) mutable {
     while (true) {
-      SearchInput inputs = work_queue->fetch();
+      BoxSearchInput inputs = work_queue->fetch();
 
       if (inputs.Stop()) {
         break;
@@ -1015,7 +1002,7 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
 
               if (res_norm < rtol) {
                 result_queue->send(
-                    SearchResult(min_res_norm, min_fid, min_gid, worker_id));
+                    BoxSearchResult(min_res_norm, min_fid, min_gid, worker_id));
 
                 // Force nested loop termination
                 fid = fid_end;
@@ -1033,7 +1020,7 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
 
       if (!result_sent) {
         result_queue->send(
-            SearchResult(min_res_norm, min_fid, min_gid, worker_id));
+            BoxSearchResult(min_res_norm, min_fid, min_gid, worker_id));
       }
     }
   };
@@ -1052,14 +1039,14 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
     double delta_gp = (gp_max - gp_min) / (ydim - 1);
 
     // Send work orders
-    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, 0,
-                                 xdim / 2, 0, ydim / 2));
-    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, xdim / 2,
-                                 xdim, 0, ydim / 2));
-    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, 0,
-                                 xdim / 2, ydim / 2, ydim));
-    work_queue->send(SearchInput(fpp_min, delta_fpp, gp_min, delta_gp, xdim / 2,
-                                 xdim, ydim / 2, ydim));
+    work_queue->send(BoxSearchInput(fpp_min, delta_fpp, gp_min, delta_gp, 0,
+                                    xdim / 2, 0, ydim / 2));
+    work_queue->send(BoxSearchInput(fpp_min, delta_fpp, gp_min, delta_gp,
+                                    xdim / 2, xdim, 0, ydim / 2));
+    work_queue->send(BoxSearchInput(fpp_min, delta_fpp, gp_min, delta_gp, 0,
+                                    xdim / 2, ydim / 2, ydim));
+    work_queue->send(BoxSearchInput(fpp_min, delta_fpp, gp_min, delta_gp,
+                                    xdim / 2, xdim, ydim / 2, ydim));
 
     // Fetch best guesses from workers
     min_res_norm = 1e30;
@@ -1067,7 +1054,7 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
 
     int processed_results = 0;
     while (processed_results < 4) {
-      SearchResult result = result_queue->fetch();
+      BoxSearchResult result = result_queue->fetch();
 
       if (result.res_norm < min_res_norm) {
         min_res_norm = result.res_norm;
@@ -1088,7 +1075,7 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
                best_guess[1]);
       }
       work_queue->stop();
-      return best_worker_id;
+      return SearchOutcome{true, best_worker_id};
     }
 
     // (2 / 2) Define next bounds
@@ -1137,16 +1124,13 @@ int BoundaryLayer::BoxProfileSearchParallelWithQueues(
   std::for_each(futures.begin(), futures.end(),
                 [](std::future<void> &ftr) { ftr.wait(); });
 
-  if (min_res_norm >= rtol) {
-    return -1;
-  }
-
-  return best_worker_id;
+  return SearchOutcome{min_res_norm < rtol, best_worker_id};
 }
 
-int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
-                                         SearchParams &search_params,
-                                         vector<double> &best_guess) {
+SearchOutcome
+BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
+                                     SearchParams &search_params,
+                                     vector<double> &best_guess) {
   assert(vector_norm(best_guess) > 0);
 
   // Fetch search parameters
@@ -1176,18 +1160,17 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
 
   printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e.\n", best_guess[0],
          best_guess[1], snorm);
+  if (snorm < rtol) {
+    printf("  -> Successful search.\n");
+    return SearchOutcome{true, worker_id};
+  }
 
   // Start main loop
   int iter = 0;
   while (iter < max_iter) {
 
-    if (snorm < rtol) {
-      printf("  -> Successful search.\n");
-      return worker_id;
-    }
-
     // Assemble score jacobian
-    ComputeScoreJacobian(profile_params.scoring, state_grids[worker_id],
+    ComputeScoreJacobian(profile_params, state_grids[worker_id],
                          profile_size * BL_RANK, sensitivity, 0,
                          score_jacobian);
 
@@ -1201,6 +1184,9 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
     delta[1] = -score[1];
 
     LUSolve(score_jacobian, delta, 2, lu_resources);
+
+    if (isnan(delta[0]) || isnan(delta[1]))
+      return SearchOutcome{false, worker_id};
 
     if (verbose) {
       printf(" -> delta:\n");
@@ -1254,8 +1240,21 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
     }
 
     if (ls_pass) {
-      printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e.\n", iter + 1,
-             best_guess[0], best_guess[1], snorm);
+      printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
+             "alpha=%.2e.\n",
+             iter + 1, best_guess[0], best_guess[1], snorm, vector_norm(delta),
+             alpha);
+
+      if (snorm < rtol) {
+        printf("  -> Successful search.\n");
+        if (profile_size < _max_nb_steps) {
+          printf("   -> Yet the run did not complete! (%d / %d)\n",
+                 profile_size, _max_nb_steps);
+          printf("   -> Final state : ");
+          print_state(state_grids[worker_id], profile_size * BL_RANK, BL_RANK);
+        }
+        return SearchOutcome{true, worker_id};
+      }
 
     } else {
       printf("Line search failed. Aborting.\n");
@@ -1267,10 +1266,10 @@ int BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
 
   if (snorm > rtol) {
     printf("  -> Unsuccessful search.\n");
-    return -1;
+    return SearchOutcome{false, worker_id};
   } else {
     printf("  -> Successful search.\n");
-    return worker_id;
+    return SearchOutcome{true, worker_id};
   }
 }
 
@@ -1328,6 +1327,9 @@ void BoundaryLayer::ComputeLocalSimilarity(
   //
   vector<double> best_guess(2, 0.5);
 
+  // For debugging - track unresolved stations
+  vector<int> debug_stations;
+
   //
   printf("##################################\n");
   printf("# Local-Similarity Solve (START) #\n\n");
@@ -1362,17 +1364,18 @@ void BoundaryLayer::ComputeLocalSimilarity(
     printf("\n");
 
     // Call search method
-    int worker_id = ProfileSearch(profile_params, search_params, best_guess);
+    SearchOutcome outcome =
+        ProfileSearch(profile_params, search_params, best_guess);
 
-    if (worker_id < 0) {
+    if (!outcome.success) {
+      debug_stations.push_back(xi_id);
       printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
-      break;
     } else {
       printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
     }
 
     // Copy profile to output vector
-    bl_state_grid[xi_id] = state_grids[worker_id];
+    bl_state_grid[xi_id] = state_grids[outcome.worker_id];
 
     //
     if (xi_id == 0) {
@@ -1382,6 +1385,15 @@ void BoundaryLayer::ComputeLocalSimilarity(
 
   printf("\n# Local-Similarity Solve (END) #\n");
   printf("################################\n\n");
+
+  int debug_size = debug_stations.size();
+  if (debug_size > 0) {
+    printf("Could not solve stations [");
+    for (int debug_id = 0; debug_id < debug_size - 1; debug_id++) {
+      printf(" %d, ", debug_stations[debug_id]);
+    }
+    printf("%d].\n", debug_stations[debug_size - 1]);
+  }
 }
 
 /*
@@ -1501,9 +1513,10 @@ void BoundaryLayer::ComputeDifferenceDifferential(
     }
 
     // Call search method
-    int worker_id = ProfileSearch(profile_params, search_params, best_guess);
+    SearchOutcome outcome =
+        ProfileSearch(profile_params, search_params, best_guess);
 
-    if (worker_id < 0) {
+    if (!outcome.success) {
       printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
       break;
     } else {
@@ -1511,7 +1524,7 @@ void BoundaryLayer::ComputeDifferenceDifferential(
     }
 
     // Copy profile to output vector
-    bl_state_grid[xi_id] = state_grids[worker_id];
+    bl_state_grid[xi_id] = state_grids[outcome.worker_id];
 
     //
     if (xi_id == 0) {

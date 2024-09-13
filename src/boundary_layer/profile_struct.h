@@ -6,6 +6,8 @@
 
 #include "search_struct.h"
 
+using std::vector;
+
 constexpr int BL_RANK = 5;
 
 constexpr int FPP_ID = 0;
@@ -96,7 +98,7 @@ typedef struct ProfileParams {
     }
 
     if ((fpp0 < 0.) || (isnan(fpp0))) {
-      printf("f''(0) either negative or nan.\n");
+      printf("f''(0) = %.2e (negative or nan).\n", fpp0);
       return false;
     }
 
@@ -112,7 +114,7 @@ typedef struct ProfileParams {
     max_step = 1e-2;
   }
 
-  void SetInitialValues(std::vector<double> &initial_vals) {
+  void SetInitialValues(vector<double> &initial_vals) {
     fpp0 = initial_vals[0];
 
     switch (wall_type) {
@@ -182,21 +184,23 @@ typedef struct ProfileParams {
 } ProfileParams;
 
 typedef void (*InitializeFunction)(ProfileParams &profile_params,
-                                   std::vector<double> &state);
+                                   vector<double> &state);
 
 typedef void (*InitializeSensitivityFunction)(
-    ProfileParams &profile_params, std::vector<double> &state_sensitivity);
+    ProfileParams &profile_params, vector<double> &state_sensitivity);
 
-typedef double (*RhsFunction)(const std::vector<double> &state,
-                              int state_offset,
-                              const std::vector<double> &field,
-                              int field_offset, std::vector<double> &rhs,
+typedef double (*RhsFunction)(const vector<double> &state, int state_offset,
+                              const vector<double> &field, int field_offset,
+                              vector<double> &rhs,
                               ProfileParams &profile_params);
-typedef void (*RhsJacobianFunction)(const std::vector<double> &state,
+typedef void (*RhsJacobianFunction)(const vector<double> &state,
                                     int state_offset,
-                                    const std::vector<double> &field,
+                                    const vector<double> &field,
                                     int field_offset,
-                                    std::vector<double> &matrix_data,
+                                    vector<double> &matrix_data,
                                     ProfileParams &profile_params);
+typedef double (*LimitUpdateFunction)(const vector<double> &state,
+                                      const vector<double> &state_varn,
+                                      ProfileParams &profile_params);
 
 #endif
