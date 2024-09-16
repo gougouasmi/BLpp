@@ -10,6 +10,10 @@ option(ENABLE_DEBUG "Enable debugging information" OFF)
 
 # Set compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-march=native)
+  message(STATUS "'-march=native' flag added.\n")
+endif()
 
 if(ENABLE_DEBUG)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
@@ -21,8 +25,8 @@ endif()
 #
 
 find_package(HDF5 REQUIRED COMPONENTS CXX)
-message("Don't forget to provide HDF5_INCLUDE_DIRS=${HDF5_INCLUDE_DIRS} to targets")
-message("Same for HDF5_LIBRARIES=${HDF5_LIBRARIES}\n")
+message(STATUS "Don't forget to provide HDF5_INCLUDE_DIRS=${HDF5_INCLUDE_DIRS} to targets")
+message(STATUS "Same for HDF5_LIBRARIES=${HDF5_LIBRARIES}\n")
 
 ###
 # Configure files
@@ -57,7 +61,7 @@ add_library(profile_lib
     src/boundary_layer/profile_functions_cpg.cpp
     src/boundary_layer/score_functions.cpp
 )
-target_include_directories(profile_lib PRIVATE src/boundary_layer src/physics)
+target_include_directories(profile_lib PRIVATE src/boundary_layer src/physics src/data)
 target_link_libraries(profile_lib PRIVATE utils_lib)
 
 # Linear algebra functions

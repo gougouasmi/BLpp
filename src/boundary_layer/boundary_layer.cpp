@@ -350,6 +350,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   }
 
   NewtonParams newton_params;
+  // newton_params.verbose = true;
   NewtonResources newton_resources(xdim);
 
   // Time loop
@@ -1252,6 +1253,8 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
                  profile_size, _max_nb_steps);
           printf("   -> Final state : ");
           print_state(state_grids[worker_id], profile_size * BL_RANK, BL_RANK);
+          printf("   -> Jacobian : ");
+          print_matrix_row_major(matrix_buffers[0], BL_RANK, BL_RANK);
         }
         return SearchOutcome{true, worker_id};
       }
@@ -1338,18 +1341,9 @@ void BoundaryLayer::ComputeLocalSimilarity(
 
     printf("###\n# station #%d - start\n#\n\n", xi_id);
 
-    int edge_offset = EDGE_FIELD_RANK * xi_id;
-
     // Set local profile settings
-    profile_params.ue = edge_field[edge_offset + EDGE_U_ID];
-    profile_params.he = edge_field[edge_offset + EDGE_H_ID];
-    profile_params.pe = edge_field[edge_offset + EDGE_P_ID];
-    profile_params.xi = edge_field[edge_offset + EDGE_XI_ID];
-    profile_params.due_dxi = edge_field[edge_offset + EDGE_DU_DXI_ID];
-    profile_params.dhe_dxi = edge_field[edge_offset + EDGE_DH_DXI_ID];
-
-    //
-    profile_params.g0 = wall_field[xi_id];
+    profile_params.ReadEdgeConditions(edge_field, xi_id * EDGE_FIELD_RANK);
+    profile_params.ReadWallConditions(wall_field, xi_id);
 
     if (xi_id == 0) {
       profile_params.solve_type = SolveType::SelfSimilar;
@@ -1440,18 +1434,9 @@ void BoundaryLayer::ComputeDifferenceDifferential(
 
     printf("###\n# station #%d - start\n#\n\n", xi_id);
 
-    int edge_offset = EDGE_FIELD_RANK * xi_id;
-
     // Set local profile settings
-    profile_params.ue = edge_field[edge_offset + EDGE_U_ID];
-    profile_params.he = edge_field[edge_offset + EDGE_H_ID];
-    profile_params.pe = edge_field[edge_offset + EDGE_P_ID];
-    profile_params.xi = edge_field[edge_offset + EDGE_XI_ID];
-    profile_params.due_dxi = edge_field[edge_offset + EDGE_DU_DXI_ID];
-    profile_params.dhe_dxi = edge_field[edge_offset + EDGE_DH_DXI_ID];
-
-    //
-    profile_params.g0 = wall_field[xi_id];
+    profile_params.ReadEdgeConditions(edge_field, xi_id * EDGE_FIELD_RANK);
+    profile_params.ReadWallConditions(wall_field, xi_id);
 
     // Compute field
     if (xi_id > 0) {

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "boundary_data_struct.h"
 #include "search_struct.h"
 
 using std::vector;
@@ -52,6 +53,21 @@ typedef struct ProfileParams {
   double mue = 1.;
 
   double eckert = 1.;
+
+  inline void ReadEdgeConditions(const vector<double> &edge_field,
+                                 size_t offset) {
+    ue = edge_field[offset + EDGE_U_ID];
+    he = edge_field[offset + EDGE_H_ID];
+    pe = edge_field[offset + EDGE_P_ID];
+    xi = edge_field[offset + EDGE_XI_ID];
+    due_dxi = edge_field[offset + EDGE_DU_DXI_ID];
+    dhe_dxi = edge_field[offset + EDGE_DH_DXI_ID];
+  }
+
+  inline void ReadWallConditions(const vector<double> &wall_field,
+                                 size_t offset) {
+    g0 = wall_field[offset];
+  }
 
   void PrintEdgeValues() const {
     printf("Profile parameters: -ue=%.2e, -he=%.2e, -pe=%.2e, -xi=%.2e, "
