@@ -1,0 +1,64 @@
+#ifndef BL_MODEL_H
+#define BL_MODEL_H
+
+#include "profile_struct.h"
+#include <vector>
+
+using std::vector;
+
+typedef void (*InitializeFunction)(ProfileParams &profile_params,
+                                   vector<double> &state);
+
+typedef void (*InitializeSensitivityFunction)(
+    ProfileParams &profile_params, vector<double> &state_sensitivity);
+
+typedef double (*RhsFunction)(const vector<double> &state, int state_offset,
+                              const vector<double> &field, int field_offset,
+                              vector<double> &rhs,
+                              ProfileParams &profile_params);
+typedef void (*RhsJacobianFunction)(const vector<double> &state,
+                                    int state_offset,
+                                    const vector<double> &field,
+                                    int field_offset,
+                                    vector<double> &matrix_data,
+                                    ProfileParams &profile_params);
+typedef double (*LimitUpdateFunction)(const vector<double> &state,
+                                      const vector<double> &state_varn,
+                                      ProfileParams &profile_params);
+typedef void (*ComputeOutputsFunction)(const vector<double> &state_grid,
+                                       const vector<double> &eta_grid,
+                                       vector<double> &output_grid,
+                                       size_t profile_size,
+                                       const ProfileParams &profile_params);
+
+class BLModel {
+public:
+  BLModel(InitializeFunction init_fun,
+          InitializeSensitivityFunction init_sensitivity_fun,
+          RhsFunction rhs_self_similar_fun, RhsFunction rhs_locally_similar_fun,
+          RhsFunction rhs_diff_diff_fun,
+          RhsJacobianFunction jacobian_self_similar_fun,
+          RhsJacobianFunction jacobian_locally_similar_fun,
+          RhsJacobianFunction jacobian_diff_diff_fun,
+          LimitUpdateFunction limit_update_fun,
+          ComputeOutputsFunction compute_outputs_fun)
+      : initialize(init_fun), initialize_sensitivity(init_sensitivity_fun),
+        compute_rhs_self_similar(rhs_self_similar_fun),
+        compute_rhs_locally_similar(rhs_locally_similar_fun),
+        compute_rhs_diff_diff(rhs_diff_diff_fun),
+        compute_rhs_jacobian_self_similar(jacobian_self_similar_fun),
+        compute_rhs_jacobian_locally_similar(jacobian_locally_similar_fun),
+        compute_rhs_jacobian_diff_diff(jacobian_diff_diff_fun),
+        limit_update(limit_update_fun), compute_outputs(compute_outputs_fun){};
+
+  InitializeFunction initialize;
+  InitializeSensitivityFunction initialize_sensitivity;
+  LimitUpdateFunction limit_update;
+  RhsFunction compute_rhs_self_similar, compute_rhs_locally_similar,
+      compute_rhs_diff_diff;
+  RhsJacobianFunction compute_rhs_jacobian_self_similar,
+      compute_rhs_jacobian_locally_similar, compute_rhs_jacobian_diff_diff;
+  ComputeOutputsFunction compute_outputs;
+};
+
+#endif

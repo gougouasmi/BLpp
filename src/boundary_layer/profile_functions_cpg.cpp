@@ -136,8 +136,10 @@ double limit_update_cpg(const vector<double> &state,
                      0.2 * (1.2 - state[FP_ID]) / (state_varn[FP_ID] + 1e-30));
   }
 
-  alpha =
-      std::min(alpha, 0.2 * state[FPP_ID] / fabs(state_varn[FPP_ID] + 1e-30));
+  if (state_varn[FPP_ID] < 0) {
+    alpha =
+        std::min(alpha, 0.2 * (state[FPP_ID]) / (-state_varn[FPP_ID] + 1e-30));
+  }
   alpha = std::min(alpha, 0.2 * state[G_ID] / fabs(state_varn[G_ID] + 1e-30));
 
   return alpha;
@@ -633,3 +635,76 @@ void compute_full_rhs_jacobian_cpg(
   matrix_data[mat_offset + GP_ID] = dgp_dgp;
   matrix_data[mat_offset + G_ID] = dgp_dg;
 }
+
+/////
+// Output functions
+//
+
+void compute_outputs_cpg(const vector<double> &state_grid,
+                         const vector<double> &eta_grid,
+                         vector<double> &output_grid, size_t profile_size,
+                         const ProfileParams &profile_params) {
+  assert(output_grid.size() >= profile_size * OUTPUT_RANK);
+
+  double delta_eta = profile_params.max_step;
+
+  double pe = profile_params.pe;
+  double he = profile_params.he;
+
+  double roe = profile_params.roe;
+  double mue = profile_params.mue;
+
+  // ro, temperature, cp = thermo_fun(pe, he * g)
+  // mu, k = transport_fun(temperature)
+  double delta_y;
+  double y_old = 0;
+  double ro_old = 0;
+
+  int output_offset = 0;
+  int state_offset = 0;
+  for (int eta_id = 0; eta_id < profile_size; eta_id++) {
+    //
+    double fp = state_grid[state_offset + FP_ID];
+    double g = state_grid[state_offset + G_ID];
+
+    double ro = AIR_CPG_RO(g * he, pe);
+    double cp = AIR_CPG_CP(g * he, pe);
+    double temperature = pe / (ro * R_AIR);
+
+    double mu = AIR_VISC(temperature);
+    double k = AIR_COND(temperature);
+
+    double romu = (ro * mu) / (roe * mue);
+    double prandtl = mu * cp / k;
+
+    //
+    output_grid[output_offset + OUTPUT_U_ID] = fp;
+    output_grid[output_offset + OUTPUT_H_ID] = g;
+    output_grid[output_offset + OUTPUT_RO_ID] = 1. / g;
+
+    output_grid[output_offset + OUTPUT_CHAPMANN_ID] = romu;
+    output_grid[output_offset + OUTPUT_PRANDTL_ID] = prandtl;
+
+    //
+    if (eta_id >= 1) {
+      delta_y = 2. * delta_eta * (roe / (ro + ro_old));
+      output_grid[output_offset + OUTPUT_Y_ID] = y_old + delta_y;
+
+      y_old = output_grid[output_offset + OUTPUT_Y_ID];
+    }
+
+    //
+    state_offset += BL_RANK;
+    output_offset += OUTPUT_RANK;
+
+    ro_old = ro;
+  }
+}
+
+// Define bundle
+BLModel cpg_model_functions(initialize_cpg, initialize_sensitivity_cpg,
+                            compute_rhs_cpg, compute_lsim_rhs_cpg,
+                            compute_full_rhs_cpg, compute_rhs_jacobian_cpg,
+                            compute_lsim_rhs_jacobian_cpg,
+                            compute_full_rhs_jacobian_cpg, limit_update_cpg,
+                            compute_outputs_cpg);

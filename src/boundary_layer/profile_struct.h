@@ -9,6 +9,7 @@
 
 using std::vector;
 
+// State variable indices
 constexpr int BL_RANK = 5;
 
 constexpr int FPP_ID = 0;
@@ -17,8 +18,21 @@ constexpr int FP_ID = 2;
 constexpr int F_ID = 3;
 constexpr int G_ID = 4;
 
+// Field variable indices (Difference-Differential method)
 constexpr int FIELD_RANK = 8;
 
+// Output field indices
+constexpr int OUTPUT_RANK = 6;
+
+constexpr int OUTPUT_U_ID = 0;
+constexpr int OUTPUT_H_ID = 1;
+constexpr int OUTPUT_RO_ID = 2;
+constexpr int OUTPUT_Y_ID = 3;
+
+constexpr int OUTPUT_PRANDTL_ID = 4;
+constexpr int OUTPUT_CHAPMANN_ID = 5;
+
+//
 enum WallType { Wall, Adiabatic };
 enum TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
 enum SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
@@ -198,25 +212,5 @@ typedef struct ProfileParams {
     }
   }
 } ProfileParams;
-
-typedef void (*InitializeFunction)(ProfileParams &profile_params,
-                                   vector<double> &state);
-
-typedef void (*InitializeSensitivityFunction)(
-    ProfileParams &profile_params, vector<double> &state_sensitivity);
-
-typedef double (*RhsFunction)(const vector<double> &state, int state_offset,
-                              const vector<double> &field, int field_offset,
-                              vector<double> &rhs,
-                              ProfileParams &profile_params);
-typedef void (*RhsJacobianFunction)(const vector<double> &state,
-                                    int state_offset,
-                                    const vector<double> &field,
-                                    int field_offset,
-                                    vector<double> &matrix_data,
-                                    ProfileParams &profile_params);
-typedef double (*LimitUpdateFunction)(const vector<double> &state,
-                                      const vector<double> &state_varn,
-                                      ProfileParams &profile_params);
 
 #endif

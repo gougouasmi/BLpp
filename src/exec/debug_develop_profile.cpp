@@ -4,11 +4,14 @@
 #include <vector>
 
 #include "atmosphere.h"
+#include "boundary_data_struct.h"
 #include "boundary_layer_factory.h"
 #include "case_functions.h"
 #include "file_io.h"
 #include "profile.h"
 #include "search_struct.h"
+
+#include "profile_functions_cpg.h"
 
 /*
  *
@@ -59,8 +62,7 @@ int main(int argc, char *argv[]) {
   const char *flow_path = "test_flow.csv";
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path);
 
-  WriteH5("edge_grid.h5", boundary_data.edge_field, "edge_data",
-          boundary_data.xi_dim, EDGE_FIELD_RANK);
+  boundary_data.Write();
 
   // Set profile params
   int station_id = 1;
@@ -69,18 +71,10 @@ int main(int argc, char *argv[]) {
     profile_params.solve_type = SolveType::SelfSimilar;
   }
 
-  int offset = EDGE_FIELD_RANK * station_id;
-
-  profile_params.ue = boundary_data.edge_field[offset + EDGE_U_ID];
-  profile_params.he = boundary_data.edge_field[offset + EDGE_H_ID];
-  profile_params.pe = boundary_data.edge_field[offset + EDGE_P_ID];
-  profile_params.xi = boundary_data.edge_field[offset + EDGE_XI_ID];
-  profile_params.due_dxi = boundary_data.edge_field[offset + EDGE_DU_DXI_ID];
-  profile_params.dhe_dxi = boundary_data.edge_field[offset + EDGE_DH_DXI_ID];
-
+  profile_params.ReadEdgeConditions(boundary_data.edge_field,
+                                    station_id * EDGE_FIELD_RANK);
+  profile_params.ReadWallConditions(boundary_data.wall_field, station_id);
   profile_params.PrintODEFactors();
-
-  profile_params.g0 = boundary_data.wall_field[station_id];
 
   //
   std::vector<double> score(2);
@@ -108,9 +102,12 @@ int main(int argc, char *argv[]) {
   }
 
   int worker_id = outcome.worker_id;
-  WriteH5("eta_grid.h5", boundary_layer.GetEtaGrid(worker_id), "eta_grid");
-  WriteH5("debug_profile.h5", boundary_layer.GetStateGrid(worker_id),
-          "state_data", profile_params.nb_steps + 1, BL_RANK);
+
+  boundary_layer.WriteEtaGrid(outcome.worker_id);
+
+  boundary_layer.WriteStateGrid("debug_profile.h5", worker_id);
+  boundary_layer.WriteOutputGrid("debug_outputs.h5", profile_params, 200,
+                                 worker_id);
 
   return 0;
 }

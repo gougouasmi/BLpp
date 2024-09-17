@@ -12,26 +12,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 import h5py
 
+from typing import Tuple, Dict
+
 ###
-# Indices
+# 
 #
 
-FP_ID, GP_ID, G_ID = 2, 1, 4 
+def read_edge_file(
+    filename: str = "edge_grid.h5",
+) -> Tuple[np.ndarray, Dict[str, int]]:
 
-EDGE_U_ID = 0
-EDGE_H_ID = 1
-EDGE_P_ID = 2
-EDGE_XI_ID = 3
-EDGE_X_ID = 4
-EDGE_DU_DXI_ID = 5
-EDGE_DH_DXI_ID = 6
-EDGE_DXI_DX_ID = 7
-
-def read_edge_file(filename: str = "edge_grid.h5") -> np.ndarray:
     with h5py.File(filename, 'r') as f:
-        edge_grid = np.transpose(f["edge_data"][:])
+        edge_grid = np.transpose(f["data"][:])
+        assert(f.attrs["description"] == "edge fields")
+        raw = f["field indices"][:]
 
-    return edge_grid
+    edge_indices = {
+        key.decode('utf-8'): key_id
+        for key_id, key in zip(raw['index'], raw['label'])
+    }
+
+    return edge_grid, edge_indices
 
 ###
 #
@@ -48,7 +49,7 @@ if len(sys.argv) == 2:
     filename = sys.argv[1]
 
 try:
-    edge_grid = read_edge_file(filename)
+    edge_grid, edge_indices = read_edge_file(filename)
 except FileNotFoundError:
     print(f"File {filename:s} not found.")
     sys.exit(1)
@@ -56,6 +57,15 @@ except FileNotFoundError:
 ###
 #
 #
+
+EDGE_U_ID = edge_indices["ue"]
+EDGE_H_ID = edge_indices["he"]
+EDGE_P_ID = edge_indices["pe"]
+EDGE_XI_ID = edge_indices["xi"]
+EDGE_X_ID = edge_indices["x"]
+EDGE_DU_DXI_ID = edge_indices["due/dxi"]
+EDGE_DH_DXI_ID = edge_indices["dhe/dxi"]
+EDGE_DXI_DX_ID = edge_indices["dxi/dx"]
 
 ue_grid = edge_grid[EDGE_U_ID,:]
 he_grid = edge_grid[EDGE_H_ID,:]

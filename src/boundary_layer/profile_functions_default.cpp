@@ -405,3 +405,47 @@ void compute_full_rhs_jacobian_default(
   matrix_data[mat_offset + GP_ID] = prandtl / romu;
   matrix_data[mat_offset + G_ID] = 0.;
 }
+
+/////
+// Output functions
+//
+
+void compute_outputs_default(const vector<double> &state_grid,
+                             const vector<double> &eta_grid,
+                             vector<double> &output_grid, size_t profile_size,
+                             const ProfileParams &profile_params) {
+  assert(output_grid.size() >= profile_size * OUTPUT_RANK);
+
+  int output_offset = 0;
+  int state_offset = 0;
+  for (int eta_id = 0; eta_id < profile_size; eta_id++) {
+    //
+    double fp = state_grid[state_offset + FP_ID];
+    double g = state_grid[state_offset + G_ID];
+
+    double romu = 1.;
+    double prandtl = 1.;
+
+    //
+    output_grid[output_offset + OUTPUT_U_ID] = fp;
+    output_grid[output_offset + OUTPUT_H_ID] = g;
+    output_grid[output_offset + OUTPUT_RO_ID] = 1. / g;
+
+    output_grid[output_offset + OUTPUT_CHAPMANN_ID] = romu;
+    output_grid[output_offset + OUTPUT_PRANDTL_ID] = prandtl;
+
+    //
+    state_offset += BL_RANK;
+    output_offset += OUTPUT_RANK;
+  }
+}
+
+// Define bundle
+BLModel default_model_functions(initialize_default,
+                                initialize_sensitivity_default,
+                                compute_rhs_default, compute_lsim_rhs_default,
+                                compute_full_rhs_default,
+                                compute_rhs_jacobian_default,
+                                compute_lsim_rhs_jacobian_default,
+                                compute_full_rhs_jacobian_default,
+                                limit_update_default, compute_outputs_default);

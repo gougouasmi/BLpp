@@ -1,9 +1,12 @@
 #ifndef PROFILE_FUNCTIONS_CPG_H
 #define PROFILE_FUNCTIONS_CPG_H
 
+#include "bl_model_struct.h"
 #include "profile_struct.h"
 
 using std::vector;
+
+extern BLModel cpg_model_functions;
 
 void initialize_cpg(ProfileParams &profile_params, vector<double> &state);
 
@@ -38,5 +41,10 @@ void compute_lsim_rhs_jacobian_cpg(
 void compute_full_rhs_jacobian_cpg(
     const vector<double> &state, int state_offset, const vector<double> &field,
     int field_offset, vector<double> &matrix_data, ProfileParams &params);
+
+void compute_outputs_cpg(const vector<double> &state_grid,
+                         const vector<double> &eta_grid,
+                         vector<double> &output_grid, size_t profile_size,
+                         const ProfileParams &profile_params);
 
 #endif

@@ -1,5 +1,7 @@
 #include "file_io.h"
 
+#include "H5Cpp.h"
+
 #include <cassert>
 #include <fstream>
 #include <iomanip>
@@ -173,4 +175,42 @@ void WriteH5(const string &filepath, const vector<double> &data,
   H5::DataSet dataset = file.createDataSet(data_label, datatype, dataspace);
 
   dataset.write(data.data(), datatype);
+}
+
+void WriteH5(const string &filepath, const vector<double> &data,
+             const vector<LabelIndex> &data_labels, const size_t nb_points,
+             const size_t rank, const string description) {
+  assert(data.size() >= nb_points * rank);
+  assert(data_labels.size() == rank);
+
+  H5::H5File file(filepath, H5F_ACC_TRUNC);
+
+  // Write data
+  hsize_t data_dims[2] = {nb_points, rank};
+  H5::DataSpace dataspace(2, data_dims);
+  H5::PredType datatype(H5::PredType::NATIVE_DOUBLE);
+
+  H5::DataSet dataset = file.createDataSet("data", datatype, dataspace);
+  dataset.write(data.data(), datatype);
+
+  // Write (variable_name, variable_id) pairs
+  H5::CompType H5_LABEL_INDEX_PAIR(sizeof(LabelIndex));
+  H5_LABEL_INDEX_PAIR.insertMember("index", HOFFSET(LabelIndex, index),
+                                   H5::PredType::NATIVE_INT);
+  H5_LABEL_INDEX_PAIR.insertMember(
+      "label", HOFFSET(LabelIndex, label),
+      H5::StrType(H5::PredType::C_S1, LABEL_CSIZE));
+
+  hsize_t label_dims[1] = {rank};
+  H5::DataSpace label_dataspace{1, label_dims};
+
+  H5::DataSet label_dataset =
+      file.createDataSet("field indices", H5_LABEL_INDEX_PAIR, label_dataspace);
+  label_dataset.write(data_labels.data(), H5_LABEL_INDEX_PAIR);
+
+  // Write attribute
+  H5::StrType str_dtype(H5::PredType::C_S1, H5T_VARIABLE);
+  H5::Attribute str_attribute =
+      file.createAttribute("description", str_dtype, H5S_SCALAR);
+  str_attribute.write(str_dtype, description);
 }

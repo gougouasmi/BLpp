@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "H5Cpp.h"
-
 using std::string;
 using std::vector;
 
@@ -23,4 +21,16 @@ void WriteH5(const string &filepath, const vector<double> &data,
 void WriteH5(const string &filepath, const vector<double> &data,
              const string &data_label, const size_t nb_points,
              const size_t rank);
+
+constexpr size_t LABEL_CSIZE = 10;
+
+struct LabelIndex {
+  char label[LABEL_CSIZE];
+  int index;
+};
+
+void WriteH5(const string &filepath, const vector<double> &data,
+             const vector<LabelIndex> &data_labels, const size_t nb_points,
+             const size_t rank, const string description);
+
 #endif

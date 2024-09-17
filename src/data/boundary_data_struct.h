@@ -2,7 +2,10 @@
 #define BOUNDARY_DATA_STRUCT_H
 
 #include <cassert>
+#include <string>
 #include <vector>
+
+#include "file_io.h"
 
 using std::vector;
 
@@ -26,6 +29,22 @@ typedef struct BoundaryData {
   vector<double> edge_field;
   vector<double> wall_field;
   int xi_dim;
+
+  void WriteEdgeConditions(const std::string filepath = "edge_grid.h5") const {
+    static vector<LabelIndex> edge_data_labels = {
+        {"ue", EDGE_U_ID},
+        {"he", EDGE_H_ID},
+        {"pe", EDGE_P_ID},
+        {"xi", EDGE_XI_ID},
+        {"x", EDGE_X_ID},
+        {"due/dxi", EDGE_DU_DXI_ID},
+        {"dhe/dxi", EDGE_DH_DXI_ID},
+        {"dxi/dx", EDGE_DXI_DX_ID},
+    };
+    WriteH5(filepath, edge_field, edge_data_labels, xi_dim, EDGE_FIELD_RANK,
+            "edge fields");
+  }
+
 } BoundaryData;
 
 #endif

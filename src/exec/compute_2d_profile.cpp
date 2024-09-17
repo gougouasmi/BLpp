@@ -6,6 +6,7 @@
 #include "file_io.h"
 #include "profile_struct.h"
 #include "search_struct.h"
+#include "timers.h"
 
 #include <sstream>
 #include <vector>
@@ -57,7 +58,7 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  const char *flow_path = "test_flow.csv";
+  const char *flow_path = "test_flow.csv"; // FLAT_NOSED_CONSTANT_RO_PATH;
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path, false);
 
   const int xi_dim = boundary_data.xi_dim;
@@ -66,17 +67,21 @@ int main(int argc, char *argv[]) {
       xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
 
   // Solve for 2D profile
-  boundary_layer.Compute(boundary_data, profile_params, search_params,
-                         bl_state_grid);
+  auto compute_task = [&boundary_layer, &boundary_data, &profile_params,
+                       &search_params, &bl_state_grid]() {
+    boundary_layer.Compute(boundary_data, profile_params, search_params,
+                           bl_state_grid);
+  };
+
+  auto compute_duration = timeit(compute_task, 1);
+
+  std::cout << "\nCompute task took " << compute_duration << " seconds.\n";
 
   // Write to file
   bool write_profiles = true;
   if (write_profiles) {
-    vector<double> &eta_grid = boundary_layer.GetEtaGrid(0);
-
-    WriteH5("eta_grid.h5", eta_grid, "eta_grid");
-    WriteH5("edge_grid.h5", boundary_data.edge_field, "edge_data", xi_dim,
-            EDGE_FIELD_RANK);
+    boundary_layer.WriteEtaGrid(0);
+    boundary_data.WriteEdgeConditions();
 
     for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
       std::string state_filename("station_" + std::to_string(xi_id) + ".h5");

@@ -11,46 +11,13 @@
 #include <cassert>
 #include <tuple>
 
-BoundaryLayer::BoundaryLayer(int max_nb_steps)
-    : _max_nb_steps(max_nb_steps), initialize(initialize_default),
-      initialize_sensitivity(initialize_sensitivity_default),
-      compute_rhs_self_similar(compute_rhs_default),
-      compute_rhs_locally_similar(compute_lsim_rhs_default),
-      compute_rhs_diff_diff(compute_full_rhs_default),
-      compute_rhs_jacobian_self_similar(compute_rhs_jacobian_default),
-      compute_rhs_jacobian_locally_similar(compute_lsim_rhs_jacobian_default),
-      compute_rhs_jacobian_diff_diff(compute_full_rhs_jacobian_default),
-      limit_update(limit_update_default),
+BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel model_functions)
+    : _max_nb_steps(max_nb_steps), model_functions(model_functions),
       state_grids(_max_nb_workers,
                   vector<double>(BL_RANK * (1 + _max_nb_steps))),
       eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
       field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
-      rhs_vecs(_max_nb_workers, vector<double>(BL_RANK)),
-      sensitivity_matrices(_max_nb_workers, vector<double>(BL_RANK * 2)),
-      matrix_buffers(2 * _max_nb_workers, vector<double>(BL_RANK * BL_RANK)) {}
-
-BoundaryLayer::BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
-                             InitializeSensitivityFunction init_sensitivity_fun,
-                             RhsFunction rhs_self_similar_fun,
-                             RhsFunction rhs_locally_similar_fun,
-                             RhsFunction rhs_diff_diff_fun,
-                             RhsJacobianFunction jacobian_self_similar_fun,
-                             RhsJacobianFunction jacobian_locally_similar_fun,
-                             RhsJacobianFunction jacobian_diff_diff_fun,
-                             LimitUpdateFunction limit_update_fun)
-    : _max_nb_steps(max_nb_steps), initialize(init_fun),
-      initialize_sensitivity(init_sensitivity_fun),
-      compute_rhs_self_similar(rhs_self_similar_fun),
-      compute_rhs_locally_similar(rhs_locally_similar_fun),
-      compute_rhs_diff_diff(rhs_diff_diff_fun),
-      compute_rhs_jacobian_self_similar(jacobian_self_similar_fun),
-      compute_rhs_jacobian_locally_similar(jacobian_locally_similar_fun),
-      compute_rhs_jacobian_diff_diff(jacobian_diff_diff_fun),
-      limit_update(limit_update_fun),
-      state_grids(_max_nb_workers,
-                  vector<double>(BL_RANK * (1 + _max_nb_steps))),
-      eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
-      field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
+      output_grid(OUTPUT_RANK * (1 + _max_nb_steps)),
       rhs_vecs(_max_nb_workers, vector<double>(BL_RANK)),
       sensitivity_matrices(_max_nb_workers, vector<double>(BL_RANK * 2)),
       matrix_buffers(2 * _max_nb_workers, vector<double>(BL_RANK * BL_RANK)) {}
@@ -58,34 +25,35 @@ BoundaryLayer::BoundaryLayer(int max_nb_steps, InitializeFunction init_fun,
 void BoundaryLayer::InitializeState(ProfileParams &profile_params,
                                     int worker_id) {
   // State grid
-  initialize(profile_params, state_grids[worker_id]);
+  model_functions.initialize(profile_params, state_grids[worker_id]);
 
   // Sensitivity matrix
-  initialize_sensitivity(profile_params, sensitivity_matrices[worker_id]);
+  model_functions.initialize_sensitivity(profile_params,
+                                         sensitivity_matrices[worker_id]);
 }
 
 RhsFunction BoundaryLayer::GetRhsFun(SolveType solve_type) {
   if (solve_type == SolveType::SelfSimilar)
-    return compute_rhs_self_similar;
+    return model_functions.compute_rhs_self_similar;
 
   if (solve_type == SolveType::LocallySimilar)
-    return compute_rhs_locally_similar;
+    return model_functions.compute_rhs_locally_similar;
 
   if (solve_type == SolveType::DifferenceDifferential)
-    return compute_rhs_diff_diff;
+    return model_functions.compute_rhs_diff_diff;
 
   return nullptr;
 }
 
 RhsJacobianFunction BoundaryLayer::GetJacobianFun(SolveType solve_type) {
   if (solve_type == SolveType::SelfSimilar)
-    return compute_rhs_jacobian_self_similar;
+    return model_functions.compute_rhs_jacobian_self_similar;
 
   if (solve_type == SolveType::LocallySimilar)
-    return compute_rhs_jacobian_locally_similar;
+    return model_functions.compute_rhs_jacobian_locally_similar;
 
   if (solve_type == SolveType::DifferenceDifferential)
-    return compute_rhs_jacobian_diff_diff;
+    return model_functions.compute_rhs_jacobian_diff_diff;
 
   return nullptr;
 }
@@ -96,6 +64,39 @@ vector<double> &BoundaryLayer::GetEtaGrid(int worker_id) {
 
 vector<double> &BoundaryLayer::GetStateGrid(int worker_id) {
   return state_grids[worker_id];
+}
+
+void BoundaryLayer::WriteEtaGrid(int worker_id) {
+  WriteH5("eta_grid.h5", GetEtaGrid(worker_id), "eta_grid");
+}
+
+void BoundaryLayer::WriteStateGrid(const std::string &file_path,
+                                   int worker_id) {
+  static vector<LabelIndex> state_labels = {
+      {"C f''", FPP_ID},    {"f'", FP_ID}, {"f", F_ID},
+      {"(C/Pr) g'", GP_ID}, {"g", G_ID},
+  };
+
+  WriteH5(file_path, state_grids[worker_id], state_labels, (1 + _max_nb_steps),
+          BL_RANK, "state fields");
+}
+
+void BoundaryLayer::WriteOutputGrid(const std::string &file_path,
+                                    const ProfileParams &profile_params,
+                                    int profile_size, int worker_id) {
+  // Compute outputs
+  model_functions.compute_outputs(GetStateGrid(worker_id),
+                                  GetEtaGrid(worker_id), output_grid,
+                                  profile_size, profile_params);
+
+  static vector<LabelIndex> output_labels = {
+      {"u/ue", OUTPUT_U_ID},     {"h/he", OUTPUT_H_ID},
+      {"ro/roe", OUTPUT_RO_ID},  {"y", OUTPUT_Y_ID},
+      {"C", OUTPUT_CHAPMANN_ID}, {"Pr", OUTPUT_PRANDTL_ID},
+  };
+
+  WriteH5(file_path, output_grid, output_labels, profile_size, OUTPUT_RANK,
+          "output fields");
 }
 
 int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
@@ -314,7 +315,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   auto limit_update_fun = [xdim, &profile_params,
                            this](const vector<double> &state,
                                  const vector<double> &state_varn) {
-    return limit_update(state, state_varn, profile_params);
+    return model_functions.limit_update(state, state_varn, profile_params);
   };
 
   // (3 / 3) Jacobian function
@@ -350,7 +351,6 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   }
 
   NewtonParams newton_params;
-  // newton_params.verbose = true;
   NewtonResources newton_resources(xdim);
 
   // Time loop
@@ -457,7 +457,7 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   auto limit_update_fun = [xdim, &profile_params,
                            this](const vector<double> &state,
                                  const vector<double> &state_varn) {
-    return limit_update(state, state_varn, profile_params);
+    return model_functions.limit_update(state, state_varn, profile_params);
   };
 
   // (3 / 3) Jacobian function
