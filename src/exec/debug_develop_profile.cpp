@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   const char *flow_path = "test_flow.csv";
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path);
 
-  boundary_data.Write();
+  boundary_data.WriteEdgeConditions();
 
   // Set profile params
   int station_id = 1;
@@ -103,11 +103,11 @@ int main(int argc, char *argv[]) {
 
   int worker_id = outcome.worker_id;
 
-  boundary_layer.WriteEtaGrid(outcome.worker_id);
+  boundary_layer.WriteEtaGrid(worker_id);
 
   boundary_layer.WriteStateGrid("debug_profile.h5", worker_id);
-  boundary_layer.WriteOutputGrid("debug_outputs.h5", profile_params, 200,
-                                 worker_id);
+  boundary_layer.WriteOutputGrid("debug_outputs.h5", profile_params,
+                                 outcome.profile_size, worker_id);
 
   return 0;
 }

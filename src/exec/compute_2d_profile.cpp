@@ -85,8 +85,13 @@ int main(int argc, char *argv[]) {
 
     for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
       std::string state_filename("station_" + std::to_string(xi_id) + ".h5");
-      WriteH5(state_filename, bl_state_grid[xi_id], "state_data", eta_dim + 1,
-              BL_RANK);
+      boundary_layer.WriteStateGrid(state_filename, bl_state_grid[xi_id]);
+
+      std::string output_filename("station_" + std::to_string(xi_id) +
+                                  "_outputs.h5");
+      boundary_layer.WriteOutputGrid(
+          output_filename, bl_state_grid[xi_id], boundary_layer.GetEtaGrid(0),
+          profile_params, 1 + profile_params.nb_steps);
     }
   }
 }

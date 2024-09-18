@@ -11,6 +11,7 @@ enum Scoring { Default, Square, SquareSteady, Exp, ExpScaled };
 struct SearchOutcome {
   bool success;
   int worker_id;
+  int profile_size;
 };
 
 struct SearchWindow {
@@ -150,11 +151,13 @@ struct BoxSearchResult {
   int xid;
   int yid;
   int worker_id;
-  BoxSearchResult(double res_val, int xid_val, int yid_val, int worker_id_val)
-      : res_norm(res_val), xid(xid_val), yid(yid_val),
-        worker_id(worker_id_val){};
+  int profile_size;
+  BoxSearchResult(double res_val, int xid_val, int yid_val, int worker_id_val,
+                  int profile_size_val)
+      : res_norm(res_val), xid(xid_val), yid(yid_val), worker_id(worker_id_val),
+        profile_size(profile_size_val){};
   static BoxSearchResult StopMessage() {
-    return BoxSearchResult(1e30, -1, -1, -1);
+    return BoxSearchResult(1e30, -1, -1, -1, 1);
   };
 };
 

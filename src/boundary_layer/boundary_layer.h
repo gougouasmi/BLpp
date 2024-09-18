@@ -69,9 +69,15 @@ public:
   vector<double> &GetStateGrid(int worker_id = 0);
   void WriteEtaGrid(int worker_id = 0);
   void WriteStateGrid(const std::string &file_path, int worker_id = 0);
+  void WriteStateGrid(const std::string &file_path,
+                      const vector<double> &state_grid);
   void WriteOutputGrid(const std::string &file_path,
                        const ProfileParams &profile_params, int profile_size,
                        int worker_id = 0);
+  void WriteOutputGrid(const std::string &file_path,
+                       const vector<double> &state_grid,
+                       const vector<double> &eta_grid,
+                       const ProfileParams &profile_params, int profile_size);
 
 private:
   const int _max_nb_workers = 8;
