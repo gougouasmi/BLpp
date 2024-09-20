@@ -66,11 +66,13 @@ int main(int argc, char *argv[]) {
   std::vector<std::vector<double>> bl_state_grid(
       xi_dim, std::vector<double>(BL_RANK * (eta_dim + 1), 0.));
 
+  vector<SearchOutcome> search_outcomes;
+
   // Solve for 2D profile
   auto compute_task = [&boundary_layer, &boundary_data, &profile_params,
-                       &search_params, &bl_state_grid]() {
-    boundary_layer.Compute(boundary_data, profile_params, search_params,
-                           bl_state_grid);
+                       &search_params, &bl_state_grid, &search_outcomes]() {
+    search_outcomes = boundary_layer.Compute(boundary_data, profile_params,
+                                             search_params, bl_state_grid);
   };
 
   auto compute_duration = timeit(compute_task, 1);
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
                                   "_outputs.h5");
       boundary_layer.WriteOutputGrid(
           output_filename, bl_state_grid[xi_id], boundary_layer.GetEtaGrid(0),
-          profile_params, 1 + profile_params.nb_steps);
+          profile_params, search_outcomes[xi_id].profile_size);
     }
   }
 }

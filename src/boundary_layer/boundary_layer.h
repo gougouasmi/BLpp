@@ -52,17 +52,16 @@ public:
                                       vector<double> &best_guess);
 
   // 2D profile calculation
-  void Compute(const BoundaryData &boundary_data, ProfileParams &profile_params,
-               SearchParams &search_params,
-               vector<vector<double>> &bl_state_grid);
-  void ComputeLocalSimilarity(const BoundaryData &boundary_data,
-                              ProfileParams &profile_params,
-                              SearchParams &search_params,
-                              vector<vector<double>> &bl_state_grid);
-  void ComputeDifferenceDifferential(const BoundaryData &boundary_data,
-                                     ProfileParams &profile_params,
-                                     SearchParams &search_params,
-                                     vector<vector<double>> &bl_state_grid);
+  vector<SearchOutcome> Compute(const BoundaryData &boundary_data,
+                                ProfileParams &profile_params,
+                                SearchParams &search_params,
+                                vector<vector<double>> &bl_state_grid);
+  vector<SearchOutcome> ComputeLocalSimilarity(
+      const BoundaryData &boundary_data, ProfileParams &profile_params,
+      SearchParams &search_params, vector<vector<double>> &bl_state_grid);
+  vector<SearchOutcome> ComputeDifferenceDifferential(
+      const BoundaryData &boundary_data, ProfileParams &profile_params,
+      SearchParams &search_params, vector<vector<double>> &bl_state_grid);
 
   // Post-processing
   vector<double> &GetEtaGrid(int worker_id = 0);

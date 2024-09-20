@@ -1323,25 +1323,23 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
   return SearchOutcome{success, worker_id, best_profile_size};
 }
 
-void BoundaryLayer::Compute(const BoundaryData &boundary_data,
-                            ProfileParams &profile_params,
-                            SearchParams &search_params,
-                            vector<vector<double>> &bl_state_grid) {
+vector<SearchOutcome> BoundaryLayer::Compute(
+    const BoundaryData &boundary_data, ProfileParams &profile_params,
+    SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
   SolveType solve_type = profile_params.solve_type;
 
   if (solve_type == SolveType::LocallySimilar) {
-    ComputeLocalSimilarity(boundary_data, profile_params, search_params,
-                           bl_state_grid);
-    return;
+    return ComputeLocalSimilarity(boundary_data, profile_params, search_params,
+                                  bl_state_grid);
   }
 
   if (solve_type == SolveType::DifferenceDifferential) {
-    ComputeDifferenceDifferential(boundary_data, profile_params, search_params,
-                                  bl_state_grid);
-    return;
+    return ComputeDifferenceDifferential(boundary_data, profile_params,
+                                         search_params, bl_state_grid);
   }
 
   printf("\nCompute: SolveType input not recognized.\n");
+  return {};
 }
 
 /*
@@ -1354,7 +1352,7 @@ void BoundaryLayer::Compute(const BoundaryData &boundary_data,
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void BoundaryLayer::ComputeLocalSimilarity(
+vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
     SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
@@ -1379,6 +1377,8 @@ void BoundaryLayer::ComputeLocalSimilarity(
 
   // For debugging - track unresolved stations
   vector<int> debug_stations;
+
+  vector<SearchOutcome> search_outcomes(xi_dim);
 
   //
   printf("##################################\n");
@@ -1416,6 +1416,8 @@ void BoundaryLayer::ComputeLocalSimilarity(
     // Copy profile to output vector
     bl_state_grid[xi_id] = state_grids[outcome.worker_id];
 
+    search_outcomes[xi_id] = std::move(outcome);
+
     //
     if (xi_id == 0) {
       profile_params.solve_type = SolveType::LocallySimilar;
@@ -1433,6 +1435,8 @@ void BoundaryLayer::ComputeLocalSimilarity(
     }
     printf("%d].\n", debug_stations[debug_size - 1]);
   }
+
+  return std::move(search_outcomes);
 }
 
 /*
@@ -1446,7 +1450,7 @@ void BoundaryLayer::ComputeLocalSimilarity(
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-void BoundaryLayer::ComputeDifferenceDifferential(
+vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
     SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
   // Output arrays should have consistent dimensions
@@ -1462,6 +1466,8 @@ void BoundaryLayer::ComputeDifferenceDifferential(
 
   const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
   assert(xi_dim == bl_state_grid.size());
+
+  vector<SearchOutcome> search_outcomes(xi_dim);
 
   //
   printf("#########################################\n");
@@ -1556,6 +1562,8 @@ void BoundaryLayer::ComputeDifferenceDifferential(
     // Copy profile to output vector
     bl_state_grid[xi_id] = state_grids[outcome.worker_id];
 
+    search_outcomes[xi_id] = std::move(outcome);
+
     //
     if (xi_id == 0) {
       profile_params.solve_type = SolveType::DifferenceDifferential;
@@ -1564,4 +1572,6 @@ void BoundaryLayer::ComputeDifferenceDifferential(
 
   printf("\n# Difference-Differential Solve (END) #\n");
   printf("#######################################\n\n");
+
+  return std::move(search_outcomes);
 }
