@@ -22,15 +22,16 @@ constexpr int G_ID = 4;
 constexpr int FIELD_RANK = 8;
 
 // Output field indices
-constexpr int OUTPUT_RANK = 6;
+constexpr int OUTPUT_RANK = 7;
 
-constexpr int OUTPUT_U_ID = 0;
-constexpr int OUTPUT_H_ID = 1;
+constexpr int OUTPUT_TAU_ID = 0;
+constexpr int OUTPUT_Q_ID = 1;
 constexpr int OUTPUT_RO_ID = 2;
 constexpr int OUTPUT_Y_ID = 3;
 
-constexpr int OUTPUT_PRANDTL_ID = 4;
-constexpr int OUTPUT_CHAPMANN_ID = 5;
+constexpr int OUTPUT_MU_ID = 4;
+constexpr int OUTPUT_PRANDTL_ID = 5;
+constexpr int OUTPUT_CHAPMANN_ID = 6;
 
 //
 enum WallType { Wall, Adiabatic };

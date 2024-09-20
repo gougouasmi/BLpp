@@ -52,25 +52,40 @@ def view_state(
 
     profile_size = state_grid.shape[1]
 
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
+    # f', g
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
     
     fig.suptitle(fig_title)
 
-    ax1, ax2, ax3 = axes
+    ax1, ax2 = axes
     
     ax1.plot(state_grid[FP_ID, :], eta_grid[:profile_size], color='k')
     ax1.set_title(r"$f'(\eta) \ = \ u / u_{e}$")
     
     ax2.plot(state_grid[G_ID, :], eta_grid[:profile_size], color='k')
     ax2.set_title(r"$g(\eta) \ = \ h / h_{e}$")
-    
-    ax3.plot(state_grid[FPP_ID, :], eta_grid[:profile_size], color='k')
-    ax3.set_title(r"$C(\eta) f''(\eta)$")
-    
+
     for ax in axes:
         ax.grid(which="both")
         ax.set_ylim([0, np.max(eta_grid)])
+
+    # f'', g'
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
     
+    fig.suptitle(fig_title)
+
+    ax1, ax2 = axes
+
+    ax1.plot(state_grid[GP_ID, :], eta_grid[:profile_size], color='k')
+    ax1.set_title(r"$\frac{C}{Pr} g'(\eta)$")
+
+    ax2.plot(state_grid[FPP_ID, :], eta_grid[:profile_size], color='k')
+    ax2.set_title(r"$C(\eta) f''(\eta)$")
+ 
+    for ax in axes:
+        ax.grid(which="both")
+        ax.set_ylim([0, np.max(eta_grid)])
+
     plt.show()
 
 ###

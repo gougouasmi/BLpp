@@ -427,8 +427,9 @@ void compute_outputs_default(const vector<double> &state_grid,
     double prandtl = 1.;
 
     //
-    output_grid[output_offset + OUTPUT_U_ID] = fp;
-    output_grid[output_offset + OUTPUT_H_ID] = g;
+    output_grid[output_offset + OUTPUT_TAU_ID] =
+        state_grid[state_offset + FPP_ID];
+    output_grid[output_offset + OUTPUT_Q_ID] = state_grid[state_offset + GP_ID];
     output_grid[output_offset + OUTPUT_RO_ID] = 1. / g;
 
     output_grid[output_offset + OUTPUT_CHAPMANN_ID] = romu;

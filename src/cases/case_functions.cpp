@@ -65,6 +65,9 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] = 0.; // dhe_dxi
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = 0.; // dxi_dx
 
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_RO_ID] = roe;
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_MU_ID] = mue;
+
     wall_field[xid] = gaw * (1 + 0.25 - 0.83 * xval + 0.33 * xval * xval); // gw
 
     printf("boundary data at station #%d: xi=%.2e, ue=%.2e, he=%.2e, "
@@ -146,6 +149,10 @@ BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
   edge_field[EDGE_FIELD_RANK * 0 + EDGE_H_ID] = stag_enthalpy;
   edge_field[EDGE_FIELD_RANK * 0 + EDGE_P_ID] = stag_pressure;
 
+  edge_field[EDGE_FIELD_RANK * 0 + EDGE_RO_ID] = stag_density;
+  edge_field[EDGE_FIELD_RANK * 0 + EDGE_MU_ID] =
+      AIR_VISC(stag_pressure / (stag_density * R_AIR));
+
   for (int xid = 1; xid < grid_size; xid++) {
     //
     double dx = body_grid[xid] - body_grid[xid - 1];
@@ -186,6 +193,9 @@ BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DH_DXI_ID] =
         dhe_dx / dxi_dx; // dhe_dxi
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = dxi_dx;
+
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_RO_ID] = roe;
+    edge_field[EDGE_FIELD_RANK * xid + EDGE_MU_ID] = mue;
 
     if (verbose)
       printf("%d: dx=%.2e, roe=%.2e, ue=%.2e, he=%.2e, pe=%.2e, dxi_dx=%.2e \n",

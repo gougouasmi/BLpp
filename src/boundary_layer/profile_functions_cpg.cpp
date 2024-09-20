@@ -650,6 +650,7 @@ void compute_outputs_cpg(const vector<double> &state_grid,
 
   double pe = profile_params.pe;
   double he = profile_params.he;
+  double ue = profile_params.ue;
 
   double roe = profile_params.roe;
   double mue = profile_params.mue;
@@ -678,16 +679,18 @@ void compute_outputs_cpg(const vector<double> &state_grid,
     double prandtl = mu * cp / k;
 
     //
-    output_grid[output_offset + OUTPUT_U_ID] = fp;
-    output_grid[output_offset + OUTPUT_H_ID] = g;
-    output_grid[output_offset + OUTPUT_RO_ID] = 1. / g;
+    output_grid[output_offset + OUTPUT_TAU_ID] =
+        state_grid[state_offset + FPP_ID];
+    output_grid[output_offset + OUTPUT_Q_ID] = state_grid[state_offset + GP_ID];
+    output_grid[output_offset + OUTPUT_RO_ID] = roe / g;
 
+    output_grid[output_offset + OUTPUT_MU_ID] = mu;
     output_grid[output_offset + OUTPUT_CHAPMANN_ID] = romu;
     output_grid[output_offset + OUTPUT_PRANDTL_ID] = prandtl;
 
     //
     if (eta_id >= 1) {
-      delta_y = 2. * delta_eta * (roe / (ro + ro_old));
+      delta_y = delta_eta * (2. / (ro + ro_old));
       output_grid[output_offset + OUTPUT_Y_ID] = y_old + delta_y;
 
       y_old = output_grid[output_offset + OUTPUT_Y_ID];

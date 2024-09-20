@@ -101,9 +101,10 @@ void BoundaryLayer::WriteOutputGrid(const std::string &file_path,
                                   profile_size, profile_params);
 
   static vector<LabelIndex> output_labels = {
-      {"u/ue", OUTPUT_U_ID},     {"h/he", OUTPUT_H_ID},
-      {"ro/roe", OUTPUT_RO_ID},  {"y", OUTPUT_Y_ID},
-      {"C", OUTPUT_CHAPMANN_ID}, {"Pr", OUTPUT_PRANDTL_ID},
+      {"ro", OUTPUT_RO_ID},      {"tau", OUTPUT_TAU_ID},
+      {"q", OUTPUT_Q_ID},        {"y", OUTPUT_Y_ID},
+      {"mu", OUTPUT_MU_ID},      {"C", OUTPUT_CHAPMANN_ID},
+      {"Pr", OUTPUT_PRANDTL_ID},
   };
 
   WriteH5(file_path, output_grid, output_labels, profile_size, OUTPUT_RANK,
@@ -120,9 +121,10 @@ void BoundaryLayer::WriteOutputGrid(const std::string &file_path,
                                   profile_size, profile_params);
 
   static vector<LabelIndex> output_labels = {
-      {"u/ue", OUTPUT_U_ID},     {"h/he", OUTPUT_H_ID},
-      {"ro/roe", OUTPUT_RO_ID},  {"y", OUTPUT_Y_ID},
-      {"C", OUTPUT_CHAPMANN_ID}, {"Pr", OUTPUT_PRANDTL_ID},
+      {"ro", OUTPUT_RO_ID},      {"tau", OUTPUT_TAU_ID},
+      {"q", OUTPUT_Q_ID},        {"y", OUTPUT_Y_ID},
+      {"mu", OUTPUT_MU_ID},      {"C", OUTPUT_CHAPMANN_ID},
+      {"Pr", OUTPUT_PRANDTL_ID},
   };
 
   WriteH5(file_path, output_grid, output_labels, profile_size, OUTPUT_RANK,
@@ -1397,10 +1399,8 @@ void BoundaryLayer::ComputeLocalSimilarity(
     if (!profile_params.AreValid()) {
       printf("Invalid edge conditions. Abort\n");
       break;
-    } else {
-      profile_params.PrintODEFactors();
     }
-    printf("\n");
+    profile_params.PrintODEFactors();
 
     // Call search method
     SearchOutcome outcome =
