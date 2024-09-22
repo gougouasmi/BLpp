@@ -6,8 +6,11 @@
 #include <vector>
 
 #include "file_io.h"
+#include "indexing.h"
 
 using std::vector;
+
+constexpr int EDGE_FIELD_RANK = 10;
 
 constexpr int EDGE_U_ID = 0;
 constexpr int EDGE_H_ID = 1;
@@ -21,7 +24,11 @@ constexpr int EDGE_X_ID = 7;
 constexpr int EDGE_RO_ID = 8;
 constexpr int EDGE_MU_ID = 9;
 
-constexpr int EDGE_FIELD_RANK = 10;
+constexpr std::array<int, EDGE_FIELD_RANK> EDGE_INDICES{
+    EDGE_U_ID,      EDGE_H_ID,      EDGE_P_ID, EDGE_XI_ID, EDGE_DU_DXI_ID,
+    EDGE_DH_DXI_ID, EDGE_DXI_DX_ID, EDGE_X_ID, EDGE_RO_ID, EDGE_MU_ID,
+};
+static_assert(complete_indexing(EDGE_INDICES));
 
 typedef struct BoundaryData {
   BoundaryData(vector<double> edge_vals, vector<double> wall_vals)

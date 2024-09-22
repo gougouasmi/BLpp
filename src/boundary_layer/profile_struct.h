@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "boundary_data_struct.h"
+#include "indexing.h"
 #include "search_struct.h"
 
 using std::vector;
@@ -17,6 +18,9 @@ constexpr int GP_ID = 1;
 constexpr int FP_ID = 2;
 constexpr int F_ID = 3;
 constexpr int G_ID = 4;
+
+constexpr std::array<int, BL_RANK> BL_INDICES{FPP_ID, GP_ID, FP_ID, F_ID, G_ID};
+static_assert(complete_indexing(BL_INDICES));
 
 // Field variable indices (Difference-Differential method)
 constexpr int FIELD_RANK = 8;
@@ -32,6 +36,11 @@ constexpr int OUTPUT_Y_ID = 3;
 constexpr int OUTPUT_MU_ID = 4;
 constexpr int OUTPUT_PRANDTL_ID = 5;
 constexpr int OUTPUT_CHAPMANN_ID = 6;
+
+constexpr std::array<int, OUTPUT_RANK> OUTPUT_INDICES{
+    OUTPUT_TAU_ID, OUTPUT_Q_ID,       OUTPUT_RO_ID,      OUTPUT_Y_ID,
+    OUTPUT_MU_ID,  OUTPUT_PRANDTL_ID, OUTPUT_CHAPMANN_ID};
+static_assert(complete_indexing(OUTPUT_INDICES));
 
 //
 enum class WallType { Wall, Adiabatic };
@@ -54,20 +63,20 @@ typedef struct ProfileParams {
   Scoring scoring{Scoring::Default};
 
   // Primary edge conditions
-  double ue = 1.;
-  double he = 1.;
-  double pe = 1.;
+  double ue{1.};
+  double he{1.};
+  double pe{1.};
 
-  double xi = 0.;
-  double due_dxi = 0.;
-  double dhe_dxi = 0.;
+  double xi{0.};
+  double due_dxi{0.};
+  double dhe_dxi{0.};
 
   // Secondary edge conditions (which
   // you can compute from primary)
-  double roe = 1.;
-  double mue = 1.;
+  double roe{1.};
+  double mue{1.};
 
-  double eckert = 1.;
+  double eckert{1.};
 
   //
   ProfileParams() = default;
