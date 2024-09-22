@@ -34,24 +34,24 @@ constexpr int OUTPUT_PRANDTL_ID = 5;
 constexpr int OUTPUT_CHAPMANN_ID = 6;
 
 //
-enum WallType { Wall, Adiabatic };
-enum TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
-enum SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
+enum class WallType { Wall, Adiabatic };
+enum class TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
+enum class SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
 
 typedef struct ProfileParams {
-  int nb_steps;
+  int nb_steps{2000};
 
-  WallType wall_type;
-  double fpp0;
-  double gp0;
-  double g0;
+  WallType wall_type{WallType::Wall};
+  double fpp0{0.5};
+  double gp0{0.5};
+  double g0{0.2};
 
-  SolveType solve_type = SolveType::SelfSimilar;
+  SolveType solve_type{SolveType::SelfSimilar};
 
-  TimeScheme scheme = TimeScheme::Explicit;
-  double max_step;
+  TimeScheme scheme{TimeScheme::Explicit};
+  double max_step{1e-2};
 
-  Scoring scoring = Scoring::Default;
+  Scoring scoring{Scoring::Default};
 
   // Primary edge conditions
   double ue = 1.;
@@ -68,6 +68,9 @@ typedef struct ProfileParams {
   double mue = 1.;
 
   double eckert = 1.;
+
+  //
+  ProfileParams() = default;
 
   inline void ReadEdgeConditions(const vector<double> &edge_field,
                                  size_t offset) {
@@ -134,15 +137,6 @@ typedef struct ProfileParams {
     }
 
     return (nb_steps > 1) && (max_step > 0);
-  }
-
-  void SetDefault() {
-    nb_steps = 2000;
-    fpp0 = 0.5;
-    gp0 = 0.5;
-    wall_type = WallType::Wall;
-    g0 = 0.2;
-    max_step = 1e-2;
   }
 
   void SetInitialValues(vector<double> &initial_vals) {

@@ -206,9 +206,3 @@ BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
 
   return BoundaryData(edge_field, wall_field);
 }
-
-BoundaryData GenFlatNosedCylinder_Temp(double altitude_km, double mach,
-                                       bool verbose) {
-  return GenFlatNosedCylinder(altitude_km, mach, FLAT_NOSED_CONSTANT_RO_PATH,
-                              verbose);
-}

@@ -47,7 +47,6 @@ int main(int argc, char *argv[]) {
 
   // Parse Profile parameters
   ProfileParams profile_params;
-  profile_params.SetDefault();
 
   profile_params.solve_type = SolveType::LocallySimilar;
   profile_params.scheme = TimeScheme::Implicit;
@@ -59,7 +58,7 @@ int main(int argc, char *argv[]) {
       BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
   // Get data to play with
-  const char *flow_path = "test_flow.csv";
+  const char *flow_path = FLAT_NOSED_CONSTANT_RO_COARSE_PATH;
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path);
 
   boundary_data.WriteEdgeConditions();
@@ -87,7 +86,6 @@ int main(int argc, char *argv[]) {
 
   //
   SearchParams search_params;
-  search_params.SetDefault();
   search_params.ParseCmdInputs(argc, argv);
 
   vector<double> guess(2, 0.5);

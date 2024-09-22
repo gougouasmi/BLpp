@@ -38,11 +38,9 @@
 int main(int argc, char *argv[]) {
 
   SearchParams search_params;
-  search_params.SetDefault();
   search_params.ParseCmdInputs(argc, argv);
 
   ProfileParams profile_params;
-  profile_params.SetDefault();
   profile_params.ParseCmdInputs(argc, argv);
 
   double altitude_km = 5., mach_number = 0.2;
@@ -58,7 +56,8 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  const char *flow_path = "test_flow.csv"; // FLAT_NOSED_CONSTANT_RO_PATH;
+  const char *flow_path =
+      FLAT_NOSED_CONSTANT_RO_COARSE_PATH; // FLAT_NOSED_CONSTANT_RO_PATH;
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path, false);
 
   const int xi_dim = boundary_data.xi_dim;

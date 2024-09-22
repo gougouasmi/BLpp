@@ -12,8 +12,6 @@ BoundaryData GenFlatNosedCylinder(double altitude, double mach, const char* path
 
 static const char* FLAT_NOSED_PATH = "@FLAT_NOSED_PATH@";
 static const char* FLAT_NOSED_CONSTANT_RO_PATH = "@FLAT_NOSED_PATH_RO@";
-
-BoundaryData GenFlatNosedCylinder_Temp(double altitude, double mach,
-                                  bool verbose = false);
+static const char* FLAT_NOSED_CONSTANT_RO_COARSE_PATH = "@FLAT_NOSED_PATH_RO_COARSE@";
 
 #endif

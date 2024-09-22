@@ -15,7 +15,6 @@ double vector_norm(const std::vector<double> &x) {
 template <typename RhsFun, typename JacobianFun>
 void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
   ProfileParams profile_params;
-  profile_params.SetDefault();
 
   const int matrix_dim = BL_RANK * BL_RANK;
 
@@ -87,7 +86,6 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
  */
 void LocalSimilarityIsConsistent() {
   ProfileParams profile_params;
-  profile_params.SetDefault();
 
   std::vector<double> state(BL_RANK, 0.);
   fillWithRandomData(state, BL_RANK);
@@ -141,7 +139,6 @@ void LocalSimilarityIsConsistent() {
 void DifferenceDifferentialIsConsistent() {
 
   ProfileParams profile_params;
-  profile_params.SetDefault();
 
   profile_params.xi = 1.5;
   profile_params.due_dxi = 0.9;

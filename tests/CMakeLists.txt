@@ -8,12 +8,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CMAKE_CXX_STANDARD_REQUIRED True)
 
     # Include the src directory
-    include_directories(../src/boundary_layer ../src/physics ../src/data ../src/utils)
+    include_directories(../src/boundary_layer ../src/physics ../src/utils)
 else()
     # Include the src directory relative to the main project
     include_directories(${CMAKE_SOURCE_DIR}/src/boundary_layer)
     include_directories(${CMAKE_SOURCE_DIR}/src/physics)
-    include_directories(${CMAKE_SOURCE_DIR}/src/data)
     include_directories(${CMAKE_SOURCE_DIR}/src/utils)
 endif()
 

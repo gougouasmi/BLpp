@@ -1363,10 +1363,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
   assert(bl_state_grid[0].size() == state_grids[0].size());
 
   // Checking edge_field has the correct dimensions
-  const vector<double> &edge_field = boundary_data.edge_field;
-  const vector<double> &wall_field = boundary_data.wall_field;
-
-  const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
+  const int xi_dim = boundary_data.xi_dim;
   assert(xi_dim == bl_state_grid.size());
 
   // Parameters
@@ -1389,8 +1386,9 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
     printf("###\n# station #%d - start\n#\n\n", xi_id);
 
     // Set local profile settings
-    profile_params.ReadEdgeConditions(edge_field, xi_id * EDGE_FIELD_RANK);
-    profile_params.ReadWallConditions(wall_field, xi_id);
+    profile_params.ReadEdgeConditions(boundary_data.edge_field,
+                                      xi_id * EDGE_FIELD_RANK);
+    profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
 
     if (xi_id == 0) {
       profile_params.solve_type = SolveType::SelfSimilar;
@@ -1462,9 +1460,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
   // Checking edge_field has the correct dimensions
   const vector<double> &edge_field = boundary_data.edge_field;
-  const vector<double> &wall_field = boundary_data.wall_field;
 
-  const int xi_dim = edge_field.size() / EDGE_FIELD_RANK;
+  const int xi_dim = boundary_data.xi_dim;
   assert(xi_dim == bl_state_grid.size());
 
   vector<SearchOutcome> search_outcomes(xi_dim);
@@ -1486,8 +1483,9 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     printf("###\n# station #%d - start\n#\n\n", xi_id);
 
     // Set local profile settings
-    profile_params.ReadEdgeConditions(edge_field, xi_id * EDGE_FIELD_RANK);
-    profile_params.ReadWallConditions(wall_field, xi_id);
+    profile_params.ReadEdgeConditions(boundary_data.edge_field,
+                                      xi_id * EDGE_FIELD_RANK);
+    profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
 
     // Compute field
     if (xi_id > 0) {

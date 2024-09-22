@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
 
   // Parse Profile parameters
   ProfileParams profile_params;
-  profile_params.SetDefault();
   profile_params.ParseCmdInputs(argc, argv);
 
   double altitude_km = 5., mach_number = 0.2;

@@ -5,8 +5,13 @@
 #include <iostream>
 #include <vector>
 
-enum SearchMethod { BoxSerial, BoxParallel, BoxParallelQueue, GradientSerial };
-enum Scoring { Default, Square, SquareSteady, Exp, ExpScaled };
+enum class SearchMethod {
+  BoxSerial,
+  BoxParallel,
+  BoxParallelQueue,
+  GradientSerial
+};
+enum class Scoring { Default, Square, SquareSteady, Exp, ExpScaled };
 
 struct SearchOutcome {
   bool success;
@@ -15,21 +20,14 @@ struct SearchOutcome {
 };
 
 struct SearchWindow {
-  double fpp_min;
-  double fpp_max;
-  double gp_min;
-  double gp_max;
-  int xdim;
-  int ydim;
+  double fpp_min{0.1};
+  double fpp_max{10.0};
+  double gp_min{0.1};
+  double gp_max{10.0};
+  int xdim{10};
+  int ydim{10};
 
-  void SetDefault() {
-    fpp_min = 0.1;
-    fpp_max = 10.0;
-    gp_min = 0.1;
-    gp_max = 10.0;
-    xdim = 10;
-    ydim = 10;
-  }
+  SearchWindow() = default;
 
   void Print() const {
     printf("Window = {fpp_min=%.2e, fpp_max=%.2e, gp_min=%.2e, gp_max=%.2e, "
@@ -69,22 +67,16 @@ struct SearchWindow {
 };
 
 struct SearchParams {
-  int max_iter;
-  bool verbose;
-  double rtol;
+  int max_iter{20};
+  bool verbose{false};
+  double rtol{1e-3};
 
-  SearchWindow window;
-  SearchMethod method = SearchMethod::GradientSerial;
+  SearchWindow window{};
+  SearchMethod method{SearchMethod::GradientSerial};
 
-  Scoring scoring;
+  Scoring scoring{Scoring::Default};
 
-  void SetDefault() {
-    max_iter = 20;
-    rtol = 1e-3;
-    verbose = false;
-    scoring = Scoring::Default;
-    window.SetDefault();
-  }
+  SearchParams() = default;
 
   void ParseCmdInputs(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
