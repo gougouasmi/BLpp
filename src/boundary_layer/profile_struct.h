@@ -47,7 +47,7 @@ enum class WallType { Wall, Adiabatic };
 enum class TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
 enum class SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
 
-typedef struct ProfileParams {
+struct ProfileParams {
   int nb_steps{2000};
 
   WallType wall_type{WallType::Wall};
@@ -215,6 +215,6 @@ typedef struct ProfileParams {
       }
     }
   }
-} ProfileParams;
+};
 
 #endif

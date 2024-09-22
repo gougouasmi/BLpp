@@ -3,13 +3,13 @@
 
 #include <cmath>
 
-typedef struct ShockRatios {
+struct ShockRatios {
   double pressure;
   double velocity;
   double density;
   ShockRatios(double p_ratio, double u_ratio, double ro_ratio)
       : pressure(p_ratio), velocity(u_ratio), density(ro_ratio){};
-} ShockRatios;
+};
 
 ShockRatios inline ComputeShockRatiosCPG(double mach, double gamma = 1.4,
                                          double beta = 0.5 * M_PI) {

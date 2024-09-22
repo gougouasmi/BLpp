@@ -30,7 +30,7 @@ constexpr std::array<int, EDGE_FIELD_RANK> EDGE_INDICES{
 };
 static_assert(complete_indexing(EDGE_INDICES));
 
-typedef struct BoundaryData {
+struct BoundaryData {
   BoundaryData(vector<double> edge_vals, vector<double> wall_vals)
       : edge_field(edge_vals), wall_field(wall_vals), xi_dim(wall_vals.size()) {
     assert(wall_field.size() > 0);
@@ -51,7 +51,6 @@ typedef struct BoundaryData {
     WriteH5(filepath, edge_field, edge_data_labels, xi_dim, EDGE_FIELD_RANK,
             "edge fields");
   }
-
-} BoundaryData;
+};
 
 #endif
