@@ -11,37 +11,18 @@
 #include <sstream>
 #include <vector>
 
-/*
- * ./compute_boundary_layer -flag1 flag1_args ... -flagN flagN_args where
- *
- * Flow configuration parameters:
- *   flag: altitude, flag_args(1) altitude_km
- *   flag: mach, flag_args(1) mach_number
- *   flag: wall, flag_args(1) wall_type
- *
- * Initial profile parameters:
- *   flag: fpp0, flag_args(1) f''(0)
- *   flag: gp0,  flag_args(1) g'(0)
- *   flag: g0,   flag_args(1) g(0)
- *
- * Grid parameters
- *   flag: eta_step, flag_args(1) eta step size
- *   flag: neta,     flag_args(1) nb of points along eta
- *   flag: xi_step,  flag_args(1) delta_xi
- *   flag: nxi,      flag_args(1) nb of points long xi
- *
- * Program computes boundary layer flow. It can write to file
- *   - loads (friction, thermal) along the wall.
- *   - the entire flow-field
- */
-
 int main(int argc, char *argv[]) {
 
   SearchParams search_params;
   search_params.ParseCmdInputs(argc, argv);
+  search_params.rtol = 1e-4;
+  search_params.scoring = Scoring::Exp;
 
   ProfileParams profile_params;
   profile_params.ParseCmdInputs(argc, argv);
+  profile_params.scheme = TimeScheme::Implicit;
+  profile_params.max_step = 1e-3;
+  profile_params.nb_steps = 20000;
 
   int eta_dim = profile_params.nb_steps;
 
@@ -63,8 +44,8 @@ int main(int argc, char *argv[]) {
   // Solve for 2D profile
   auto compute_task = [&boundary_layer, &boundary_data, &profile_params,
                        &search_params, &bl_state_grid, &search_outcomes]() {
-    search_outcomes = boundary_layer.Compute(boundary_data, profile_params,
-                                             search_params, bl_state_grid);
+    search_outcomes = boundary_layer.ComputeLocalSimilarityParallel(
+        boundary_data, profile_params, search_params, bl_state_grid, 4);
   };
 
   auto compute_duration = timeit(compute_task, 1);

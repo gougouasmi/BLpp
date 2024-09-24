@@ -49,16 +49,24 @@ public:
   // Gradient Descent / Newton method
   SearchOutcome GradientProfileSearch(ProfileParams &profile_params,
                                       SearchParams &search_params,
-                                      vector<double> &best_guess);
+                                      vector<double> &best_guess,
+                                      int worker_id = 0);
 
   // 2D profile calculation
   vector<SearchOutcome> Compute(const BoundaryData &boundary_data,
                                 ProfileParams &profile_params,
                                 SearchParams &search_params,
                                 vector<vector<double>> &bl_state_grid);
+
   vector<SearchOutcome> ComputeLocalSimilarity(
       const BoundaryData &boundary_data, ProfileParams &profile_params,
       SearchParams &search_params, vector<vector<double>> &bl_state_grid);
+
+  vector<SearchOutcome> ComputeLocalSimilarityParallel(
+      const BoundaryData &boundary_data, ProfileParams &profile_params,
+      SearchParams &search_params, vector<vector<double>> &bl_state_grid,
+      const int &nb_workers = 4);
+
   vector<SearchOutcome> ComputeDifferenceDifferential(
       const BoundaryData &boundary_data, ProfileParams &profile_params,
       SearchParams &search_params, vector<vector<double>> &bl_state_grid);

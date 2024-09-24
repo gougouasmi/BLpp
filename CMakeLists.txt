@@ -99,15 +99,17 @@ add_executable(devel_profile
 target_link_libraries(devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
 target_include_directories(devel_profile PRIVATE src/boundary_layer src/physics src/linalg)
 
-# Search for the initial conditions that develop into the correct self-similar profile
+# (BENCH) Search for the initial conditions that develop into
+#         the correct self-similar profile
+#         using different implementations.
 add_executable(search_profile
-    src/exec/search_profile.cpp
+    src/bench/search_profile.cpp
 )
 
 target_link_libraries(search_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
 target_include_directories(search_profile PRIVATE src/boundary_layer src/physics src/utils)
 
-# Compute 2D profile (local-similarity)
+# Compute 2D profile
 add_executable(compute_2d_profile
     src/exec/compute_2d_profile.cpp
 )
@@ -122,10 +124,20 @@ target_link_libraries(edge_solve PRIVATE utils_lib linalg_lib)
 target_include_directories(edge_solve PRIVATE src/boundary_layer src/utils src/solvers src/linalg)
 
 # (DEBUGGING) Develop profile for specific boundary stations
-add_executable(debug_devel_profile src/exec/debug_develop_profile.cpp)
+add_executable(debug_devel_profile src/debug/debug_develop_profile.cpp)
 
 target_link_libraries(debug_devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
 target_include_directories(debug_devel_profile PRIVATE src/boundary_layer src/physics src/utils src/cases)
+
+# (BENCH) Parallel implementation of local-similarity solve
+add_executable(parallel_compute
+    src/bench/parallel_compute_2d_profile.cpp
+)
+
+target_link_libraries(parallel_compute PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
+target_include_directories(parallel_compute PRIVATE src/boundary_layer src/physics src/utils src/cases)
+
+
 
 ###
 # Tests

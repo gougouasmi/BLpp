@@ -1175,10 +1175,9 @@ BoundaryLayer::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
   return SearchOutcome{min_res_norm < rtol, best_worker_id, best_profile_size};
 }
 
-SearchOutcome
-BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
-                                     SearchParams &search_params,
-                                     vector<double> &best_guess) {
+SearchOutcome BoundaryLayer::GradientProfileSearch(
+    ProfileParams &profile_params, SearchParams &search_params,
+    vector<double> &best_guess, int worker_id) {
   assert(vector_norm(best_guess) > 0);
 
   // Fetch search parameters
@@ -1189,7 +1188,6 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
   profile_params.scoring = search_params.scoring;
 
   // Get worker id to fetch appropriate resources
-  int worker_id = 0;
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
   vector<double> score(2, 0);
@@ -1207,10 +1205,13 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
 
   snorm = vector_norm(score);
 
-  printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e.\n", best_guess[0],
-         best_guess[1], snorm);
+  if (verbose)
+    printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e.\n", best_guess[0],
+           best_guess[1], snorm);
+
   if (snorm < rtol) {
-    printf("  -> Successful search.\n");
+    if (verbose)
+      printf("  -> Successful search.\n");
     return SearchOutcome{true, worker_id, profile_size};
   }
 
@@ -1223,10 +1224,10 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
                          profile_size * BL_RANK, sensitivity, 0,
                          score_jacobian);
 
-    if (verbose) {
-      printf(" -> Score jacobian:\n");
-      print_matrix_row_major(score_jacobian, 2, 2);
-    }
+    // if (verbose) {
+    //   printf(" -> Score jacobian:\n");
+    //   print_matrix_row_major(score_jacobian, 2, 2);
+    // }
 
     // Solve linear system
     delta[0] = -score[0];
@@ -1237,10 +1238,10 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
     if (isnan(delta[0]) || isnan(delta[1]))
       return SearchOutcome{false, worker_id, 1};
 
-    if (verbose) {
-      printf(" -> delta:\n");
-      print_matrix_row_major(delta, 1, 2);
-    }
+    // if (verbose) {
+    //   printf(" -> delta:\n");
+    //   print_matrix_row_major(delta, 1, 2);
+    // }
 
     // Line search
     //    (1 / 2) : Lower coeff to meet conditions
@@ -1291,26 +1292,31 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
     }
 
     if (ls_pass) {
-      printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
-             "alpha=%.2e.\n",
-             iter + 1, best_guess[0], best_guess[1], snorm, vector_norm(delta),
-             alpha);
+      if (verbose)
+        printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
+               "alpha=%.2e.\n",
+               iter + 1, best_guess[0], best_guess[1], snorm,
+               vector_norm(delta), alpha);
 
       if (snorm < rtol) {
-        printf("  -> Successful search.\n");
-        if (profile_size < _max_nb_steps) {
-          printf("   -> Yet the run did not complete! (%d / %d)\n",
-                 profile_size, _max_nb_steps);
-          printf("   -> Final state : ");
-          print_state(state_grids[worker_id], profile_size * BL_RANK, BL_RANK);
-          printf("   -> Jacobian : ");
-          print_matrix_row_major(matrix_buffers[0], BL_RANK, BL_RANK);
+        if (verbose) {
+          printf("  -> Successful search.\n");
+          if (profile_size < _max_nb_steps) {
+            printf("   -> Yet the run did not complete! (%d / %d)\n",
+                   profile_size, _max_nb_steps);
+            printf("   -> Final state : ");
+            print_state(state_grids[worker_id], profile_size * BL_RANK,
+                        BL_RANK);
+            printf("   -> Jacobian : ");
+            print_matrix_row_major(matrix_buffers[0], BL_RANK, BL_RANK);
+          }
         }
         return SearchOutcome{true, worker_id, best_profile_size};
       }
 
     } else {
-      printf("Line search failed. Aborting.\n");
+      if (verbose)
+        printf("Line search failed. Aborting.\n");
       break;
     }
 
@@ -1318,10 +1324,15 @@ BoundaryLayer::GradientProfileSearch(ProfileParams &profile_params,
   }
 
   bool success = (snorm < rtol);
-  printf("  -> %s search.\n", (success) ? "Successful" : "Unsuccesful");
+  if (verbose)
+    printf("  -> %s search.\n", (success) ? "Successful" : "Unsuccesful");
 
   return SearchOutcome{success, worker_id, best_profile_size};
 }
+
+//////
+// 2D compute functions
+//
 
 vector<SearchOutcome> BoundaryLayer::Compute(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
@@ -1342,6 +1353,37 @@ vector<SearchOutcome> BoundaryLayer::Compute(
   return {};
 }
 
+void compute_args_are_consistent(const BoundaryData &boundary_data,
+                                 const vector<vector<double>> &bl_state_grid,
+                                 const vector<vector<double>> &eta_grids,
+                                 const vector<vector<double>> &state_grids) {
+  // Output arrays should have consistent dimensions
+  assert(bl_state_grid.size() >= 1);
+  int eta_dim = eta_grids[0].size();
+
+  assert(BL_RANK * eta_dim == state_grids[0].size());
+  assert(bl_state_grid[0].size() == state_grids[0].size());
+
+  // Checking edge_field has the correct dimensions
+  const int xi_dim = boundary_data.xi_dim;
+  assert(xi_dim == bl_state_grid.size());
+}
+
+void print_summary(const vector<SearchOutcome> &search_outcomes) {
+  if (std::any_of(
+          search_outcomes.begin(), search_outcomes.end(),
+          [](const SearchOutcome &outcome) { return !outcome.success; })) {
+    printf("Could not solve stations ");
+    int station_id = 0;
+    for (const SearchOutcome &outcome : search_outcomes) {
+      if (!outcome.success)
+        printf("%d, ", station_id);
+      station_id++;
+    }
+    printf("\n");
+  }
+}
+
 /*
  * This function computes the whole 2D profile using the local-similarity method
  *
@@ -1355,34 +1397,19 @@ vector<SearchOutcome> BoundaryLayer::Compute(
 vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
     SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
-  // Output arrays should have consistent dimensions
-  assert(bl_state_grid.size() >= 1);
-  int eta_dim = eta_grids[0].size();
+  // Consistency check
+  compute_args_are_consistent(boundary_data, bl_state_grid, eta_grids,
+                              state_grids);
 
-  assert(BL_RANK * eta_dim == state_grids[0].size());
-  assert(bl_state_grid[0].size() == state_grids[0].size());
-
-  // Checking edge_field has the correct dimensions
+  // Data structures
   const int xi_dim = boundary_data.xi_dim;
-  assert(xi_dim == bl_state_grid.size());
 
-  // Parameters
-  SearchWindow &window = search_params.window;
-
-  //
   vector<double> best_guess(2, 0.5);
-
-  // For debugging - track unresolved stations
-  vector<int> debug_stations;
-
   vector<SearchOutcome> search_outcomes(xi_dim);
 
-  //
-  printf("##################################\n");
-  printf("# Local-Similarity Solve (START) #\n\n");
-
-  for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
-
+  // Worker function
+  auto lsim_task = [&profile_params, &search_params, &boundary_data,
+                    &best_guess, &bl_state_grid, this](int xi_id) {
     printf("###\n# station #%d - start\n#\n\n", xi_id);
 
     // Set local profile settings
@@ -1390,13 +1417,9 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
                                       xi_id * EDGE_FIELD_RANK);
     profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
 
-    if (xi_id == 0) {
-      profile_params.solve_type = SolveType::SelfSimilar;
-    }
-
     if (!profile_params.AreValid()) {
-      printf("Invalid edge conditions. Abort\n");
-      break;
+      printf("Invalid edge conditions at station #%d. Abort\n", xi_id);
+      return SearchOutcome{false, 0, 0};
     }
     profile_params.PrintODEFactors();
 
@@ -1404,35 +1427,153 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
     SearchOutcome outcome =
         ProfileSearch(profile_params, search_params, best_guess);
 
-    if (!outcome.success) {
-      debug_stations.push_back(xi_id);
-      printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
+    if (outcome.success) {
+      printf("\n\n# station #%d: SUCCESS.\n###\n\n", xi_id);
     } else {
-      printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
+      printf("\n\n# station #%d: FAIL.\n###\n\n", xi_id);
     }
 
-    // Copy profile to output vector
-    bl_state_grid[xi_id] = state_grids[outcome.worker_id];
+    // Copy to output
+    std::copy(state_grids[outcome.worker_id].begin(),
+              state_grids[outcome.worker_id].end(),
+              bl_state_grid[xi_id].begin());
 
+    return std::move(outcome);
+  };
+
+  printf("##################################\n"
+         "# Local-Similarity Solve (START) #\n\n");
+
+  // First station -> Self-Similar solve
+  profile_params.solve_type = SolveType::SelfSimilar;
+
+  SearchOutcome outcome = lsim_task(0);
+
+  search_outcomes[0] = std::move(outcome);
+
+  // Following stations -> Locally-Similar solves
+  profile_params.solve_type = SolveType::LocallySimilar;
+
+  for (int xi_id = 1; xi_id < xi_dim; xi_id++) {
+
+    SearchOutcome outcome = lsim_task(xi_id);
+
+    // Assign outcome
     search_outcomes[xi_id] = std::move(outcome);
-
-    //
-    if (xi_id == 0) {
-      profile_params.solve_type = SolveType::LocallySimilar;
-    }
   }
 
-  printf("\n# Local-Similarity Solve (END) #\n");
-  printf("################################\n\n");
+  printf("\n# Local-Similarity Solve (END) #\n"
+         "################################\n\n");
 
-  int debug_size = debug_stations.size();
-  if (debug_size > 0) {
-    printf("Could not solve stations [");
-    for (int debug_id = 0; debug_id < debug_size - 1; debug_id++) {
-      printf(" %d, ", debug_stations[debug_id]);
+  print_summary(search_outcomes);
+
+  return std::move(search_outcomes);
+}
+
+/*
+ * This function computes the whole 2D profile using a parallel
+ * implementation of the local-similarity method with gradient
+ * search.
+ */
+vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
+    const BoundaryData &boundary_data, ProfileParams &profile_params,
+    SearchParams &search_params, vector<vector<double>> &bl_state_grid,
+    const int &nb_workers) {
+  compute_args_are_consistent(boundary_data, bl_state_grid, eta_grids,
+                              state_grids);
+
+  bool verbose = search_params.verbose;
+
+  // Data structures
+  const int xi_dim = boundary_data.xi_dim;
+
+  assert(nb_workers <= _max_nb_workers);
+
+  vector<vector<double>> guess_buffers(nb_workers, {0.5, 0.5});
+
+  vector<SearchOutcome> search_outcomes(xi_dim);
+
+  // Worker function
+  auto lsim_loop_task = [&search_params, &boundary_data, &bl_state_grid,
+                         &guess_buffers, &search_outcomes, nb_workers, verbose,
+                         this](int xi0_id, int xi_end, int worker_id,
+                               ProfileParams profile_params) {
+    vector<double> &best_guess = guess_buffers[worker_id];
+
+    for (int xi_id = xi0_id; xi_id < xi_end; xi_id += nb_workers) {
+
+      if (verbose) {
+        printf("###\n# station #%d - start\n#\n\n", xi_id);
+        profile_params.PrintODEFactors();
+      }
+
+      // Set local profile settings
+      profile_params.ReadEdgeConditions(boundary_data.edge_field,
+                                        xi_id * EDGE_FIELD_RANK);
+      profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
+
+      if (!profile_params.AreValid()) {
+        printf("Invalid edge conditions at station #%d. \n", xi_id);
+        return;
+      }
+
+      // Call search method
+      SearchOutcome outcome = GradientProfileSearch(
+          profile_params, search_params, best_guess, worker_id);
+
+      if (verbose) {
+        if (outcome.success) {
+          printf("\n\n# station #%d: SUCCESS.\n###\n\n", xi_id);
+        } else {
+          printf("\n\n# station #%d: FAIL.\n###\n\n", xi_id);
+        }
+      }
+
+      // Copy to output
+      std::copy(state_grids[outcome.worker_id].begin(),
+                state_grids[outcome.worker_id].end(),
+                bl_state_grid[xi_id].begin());
+
+      search_outcomes[xi_id] = std::move(outcome);
     }
-    printf("%d].\n", debug_stations[debug_size - 1]);
+  };
+
+  if (verbose) {
+    printf("##################################\n"
+           "# Local-Similarity Solve (START) #\n\n");
   }
+
+  // First station -> Self-Similar solve
+  profile_params.solve_type = SolveType::SelfSimilar;
+
+  lsim_loop_task(0, 1, 0, profile_params);
+
+  // Share the solution as initial guess to the other workers
+  for (int worker_id = 1; worker_id < nb_workers; worker_id++) {
+    std::copy(guess_buffers[0].begin(), guess_buffers[0].end(),
+              guess_buffers[worker_id].begin());
+  }
+
+  // Following stations -> Locally-Similar solves
+  profile_params.solve_type = SolveType::LocallySimilar;
+
+  // Get the threads working
+  vector<std::future<void>> futures;
+  for (int worker_id = 0; worker_id < nb_workers; worker_id++) {
+    futures.emplace_back(std::async(std::launch::async, lsim_loop_task,
+                                    1 + worker_id, xi_dim, worker_id,
+                                    profile_params));
+  }
+
+  // Wait for the threads
+  std::for_each(futures.begin(), futures.end(), [](auto &ftr) { ftr.wait(); });
+
+  if (verbose) {
+    printf("\n# Local-Similarity Solve (END) #\n"
+           "################################\n\n");
+  }
+
+  print_summary(search_outcomes);
 
   return std::move(search_outcomes);
 }
@@ -1451,18 +1592,16 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
 vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
     SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
+
+  compute_args_are_consistent(boundary_data, bl_state_grid, eta_grids,
+                              state_grids);
+
   // Output arrays should have consistent dimensions
-  assert(bl_state_grid.size() >= 1);
-  const int eta_dim = eta_grids[0].size();
-
-  assert(BL_RANK * eta_dim == state_grids[0].size());
-  assert(bl_state_grid[0].size() == state_grids[0].size());
-
   // Checking edge_field has the correct dimensions
   const vector<double> &edge_field = boundary_data.edge_field;
 
+  const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
-  assert(xi_dim == bl_state_grid.size());
 
   vector<SearchOutcome> search_outcomes(xi_dim);
 
@@ -1471,8 +1610,6 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
   printf("# Difference-Differential Solve (START) #\n\n");
 
   // Parameters
-  SearchWindow &window = search_params.window;
-
   double dxi1 = 1. / (edge_field[EDGE_FIELD_RANK + 3] - edge_field[0]);
 
   //
