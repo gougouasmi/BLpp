@@ -6,30 +6,28 @@
 
 using std::vector;
 
-typedef void (*InitializeFunction)(ProfileParams &profile_params,
-                                   vector<double> &state);
-
-typedef void (*InitializeSensitivityFunction)(
-    ProfileParams &profile_params, vector<double> &state_sensitivity);
-
-typedef double (*RhsFunction)(const vector<double> &state, int state_offset,
-                              const vector<double> &field, int field_offset,
-                              vector<double> &rhs,
-                              ProfileParams &profile_params);
-typedef void (*RhsJacobianFunction)(const vector<double> &state,
-                                    int state_offset,
-                                    const vector<double> &field,
-                                    int field_offset,
-                                    vector<double> &matrix_data,
-                                    ProfileParams &profile_params);
-typedef double (*LimitUpdateFunction)(const vector<double> &state,
-                                      const vector<double> &state_varn,
-                                      ProfileParams &profile_params);
-typedef void (*ComputeOutputsFunction)(const vector<double> &state_grid,
-                                       const vector<double> &eta_grid,
-                                       vector<double> &output_grid,
-                                       size_t profile_size,
-                                       const ProfileParams &profile_params);
+using InitializeFunction = void (*)(ProfileParams &profile_params,
+                                    vector<double> &state);
+using InitializeSensitivityFunction =
+    void (*)(ProfileParams &profile_params, vector<double> &state_sensitivity);
+using RhsFunction = double (*)(const vector<double> &state, int state_offset,
+                               const vector<double> &field, int field_offset,
+                               vector<double> &rhs,
+                               ProfileParams &profile_params);
+using RhsJacobianFunction = void (*)(const vector<double> &state,
+                                     int state_offset,
+                                     const vector<double> &field,
+                                     int field_offset,
+                                     vector<double> &matrix_data,
+                                     ProfileParams &profile_params);
+using LimitUpdateFunction = double (*)(const vector<double> &state,
+                                       const vector<double> &state_varn,
+                                       ProfileParams &profile_params);
+using ComputeOutputsFunction = void (*)(const vector<double> &state_grid,
+                                        const vector<double> &eta_grid,
+                                        vector<double> &output_grid,
+                                        size_t profile_size,
+                                        const ProfileParams &profile_params);
 
 class BLModel {
 public:

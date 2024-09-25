@@ -78,6 +78,10 @@ struct ProfileParams {
 
   double eckert{1.};
 
+  double c1{0};
+  double c2{0};
+  double c3{0};
+
   //
   ProfileParams() = default;
 
@@ -89,6 +93,10 @@ struct ProfileParams {
     xi = edge_field[offset + EDGE_XI_ID];
     due_dxi = edge_field[offset + EDGE_DU_DXI_ID];
     dhe_dxi = edge_field[offset + EDGE_DH_DXI_ID];
+
+    c1 = 2. * (xi / ue) * due_dxi;
+    c2 = 2. * xi * dhe_dxi / he;
+    c3 = 2. * xi * (ue / he) * due_dxi;
   }
 
   inline void ReadWallConditions(const vector<double> &wall_field,
@@ -111,8 +119,14 @@ struct ProfileParams {
     if (solve_type == SolveType::LocallySimilar) {
       printf("Profile ODE factors (locally-similar):\n - eckert=%.2e, c1=%.2e, "
              "c2=%.2e, c3=%.2e\n\n",
-             eckert, 2. * (xi / ue) * due_dxi, 2. * xi * dhe_dxi / he,
-             2. * xi * (ue / he) * due_dxi);
+             eckert, c1, c2, c3);
+    }
+
+    if (solve_type == SolveType::DifferenceDifferential) {
+      printf("Profile ODE factors (difference-differential):\n - eckert=%.2e, "
+             "c1=%.2e, "
+             "c2=%.2e, c3=%.2e\n\n",
+             eckert, c1, c2, c3);
     }
   }
 

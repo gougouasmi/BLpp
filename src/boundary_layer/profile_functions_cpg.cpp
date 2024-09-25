@@ -197,12 +197,6 @@ double compute_lsim_rhs_cpg(const vector<double> &state, int state_offset,
   double pe = params.pe;
   double he = params.he;
 
-  double xi = params.xi;
-  double ue = params.ue;
-
-  double due_dxi = params.due_dxi;
-  double dhe_dxi = params.dhe_dxi;
-
   // ro, temperature, cp = thermo_fun(pe, he * g)
   // mu, k = transport_fun(temperature)
   double ro = AIR_CPG_RO(g * he, pe);
@@ -223,9 +217,9 @@ double compute_lsim_rhs_cpg(const vector<double> &state, int state_offset,
   double f = state[state_offset + F_ID];
   double gp = state[state_offset + GP_ID] / romu * prandtl;
 
-  double c1 = 2. * (xi / ue) * due_dxi;
-  double c2 = 2. * xi * dhe_dxi / he;
-  double c3 = 2. * xi * ue * due_dxi / he;
+  double c1 = params.c1; // 2. * (xi / ue) * due_dxi;
+  double c2 = params.c2; // 2. * xi * dhe_dxi / he;
+  double c3 = params.c3; // 2. * xi * ue * due_dxi / he;
 
   // printf("c1 = %.2e, c2 = %.2e, c3 = %.2e.\n", c1, c2, c3);
 
@@ -252,12 +246,6 @@ double compute_full_rhs_cpg(const vector<double> &state, int state_offset,
   double pe = params.pe;
   double he = params.he;
 
-  double xi = params.xi;
-  double ue = params.ue;
-
-  double due_dxi = params.due_dxi;
-  double dhe_dxi = params.dhe_dxi;
-
   // ro, temperature, cp = thermo_fun(pe, he * g)
   // mu, k = transport_fun(temperature)
   double ro = AIR_CPG_RO(g * he, pe);
@@ -278,6 +266,10 @@ double compute_full_rhs_cpg(const vector<double> &state, int state_offset,
   double f = state[state_offset + F_ID];
   double gp = state[state_offset + GP_ID] / romu * prandtl;
 
+  double c1 = params.c1; // 2. * (xi / ue) * due_dxi;
+  double c2 = params.c2; // 2. * xi * dhe_dxi / he;
+  double c3 = params.c3; // 2. * xi * ue * due_dxi / he;
+
   // momemtum equation coefficients
   double m00 = field[field_offset + 0];
   double m01 = field[field_offset + 1];
@@ -290,17 +282,14 @@ double compute_full_rhs_cpg(const vector<double> &state, int state_offset,
   double e10 = field[field_offset + 6];
   double e11 = field[field_offset + 7];
 
-  rhs[FPP_ID] =
-      -f * fpp + 2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi +
-      2. * xi * (m00 * fp * fp + m01 * fp + m10 * f * fpp + m11 * fpp);
+  rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - roe / ro) + fp * (m00 * fp + m01) -
+                fpp * (m10 * f + m11);
   rhs[FP_ID] = fpp;
   rhs[F_ID] = fp;
 
-  rhs[GP_ID] =
-      -(f * gp + romu * eckert * fpp * fpp) +
-      2. * xi *
-          (fp * g * dhe_dxi / he + (roe * ue) / (ro * he) * fp * due_dxi) +
-      2. * xi * (e00 * fp * g + e01 * fp + e10 * gp * f + e11 * gp);
+  rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp) +
+               fp * (c2 * g + c3 * (roe / ro)) + fp * (e00 * g + e01) -
+               gp * (e10 * f + e11);
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -412,11 +401,6 @@ void compute_lsim_rhs_jacobian_cpg(
 
   double pe = params.pe;
   double he = params.he;
-  double ue = params.ue;
-
-  double xi = params.xi;
-  double due_dxi = params.due_dxi;
-  double dhe_dxi = params.dhe_dxi;
 
   // ro, temperature, cp = thermo_fun(pe, he * g)
   // mu, k = transport_fun(temperature)
@@ -456,9 +440,9 @@ void compute_lsim_rhs_jacobian_cpg(
   double dgp_dg = state[state_offset + GP_ID] *
                   (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
 
-  double c1 = 2. * (xi / ue) * due_dxi;
-  double c2 = 2. * xi * dhe_dxi / he;
-  double c3 = 2. * xi * ue * due_dxi / he;
+  double c1 = params.c1; // 2. * (xi / ue) * due_dxi;
+  double c2 = params.c2; // 2. * xi * dhe_dxi / he;
+  double c3 = params.c3; // 2. * xi * ue * due_dxi / he;
 
   int offset;
 
@@ -519,11 +503,6 @@ void compute_full_rhs_jacobian_cpg(
 
   double pe = params.pe;
   double he = params.he;
-  double ue = params.ue;
-
-  double xi = params.xi;
-  double due_dxi = params.due_dxi;
-  double dhe_dxi = params.dhe_dxi;
 
   // ro, temperature, cp = thermo_fun(pe, he * g)
   // mu, k = transport_fun(temperature)
@@ -563,6 +542,10 @@ void compute_full_rhs_jacobian_cpg(
   double dgp_dg = state[state_offset + GP_ID] *
                   (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
 
+  double c1 = params.c1; // 2. * (xi / ue) * due_dxi;
+  double c2 = params.c2; // 2. * xi * dhe_dxi / he;
+  double c3 = params.c3; // 2. * xi * ue * due_dxi / he;
+
   // momemtum equation coefficients
   double m00 = field[field_offset + 0];
   double m01 = field[field_offset + 1];
@@ -579,18 +562,17 @@ void compute_full_rhs_jacobian_cpg(
 
   // rhs[FPP_ID] =
   //     -f * fpp +
-  //     2. * (xi / ue) * (fp * fp - roe / ro) * due_dxi +
-  //     2. * xi * (m00 * fp * fp + m01 * fp + (m10 * f + m11) * fpp);
+  //     c1 * (fp * fp - roe / ro) +
+  //     fp * (m00 * fp + m01) - fpp * (m10 * f + m11);
   mat_offset = FPP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] =
-      -f * dfpp_dfpp + 2. * xi * (m10 * f + m11) * dfpp_dfpp;
-  matrix_data[mat_offset + FP_ID] =
-      4. * (xi / ue) * fp * due_dxi + 2. * xi * (2. * m00 * fp + m01);
-  matrix_data[mat_offset + F_ID] = -fpp + 2. * xi * m10 * fpp;
+      -f * dfpp_dfpp - (m10 * f + m11) * dfpp_dfpp;
+  matrix_data[mat_offset + FP_ID] = 2. * c1 * fp + (2. * m00 * fp + m01);
+  matrix_data[mat_offset + F_ID] = -fpp - m10 * fpp;
   matrix_data[mat_offset + GP_ID] = 0.;
-  matrix_data[mat_offset + G_ID] =
-      -f * dfpp_dg + 2. * (xi / ue) * (roe * dro_dg / (ro * ro)) * due_dxi +
-      2. * xi * (m10 * f + m11) * dfpp_dg;
+  matrix_data[mat_offset + G_ID] = -f * dfpp_dg +
+                                   c1 * (roe * dro_dg / (ro * ro)) +
+                                   -(m10 * f + m11) * dfpp_dg;
 
   // rhs[FP_ID] = fpp;
   mat_offset = FP_ID * BL_RANK;
@@ -610,22 +592,19 @@ void compute_full_rhs_jacobian_cpg(
 
   // rhs[GP_ID] =
   //   -(f * gp + romu * eckert * fpp * fpp) +
-  //   2. * xi * fp * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi) +
-  //   2. * xi * ((e00 * g + e01) * fp + (e10 * f + e11) * gp);
+  //   fp * (c2 * g + c3 * (roe / ro)) +
+  //   fp * (e00 * g + e01) - gp * (e10 * f + e11);
   mat_offset = GP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
   matrix_data[mat_offset + FP_ID] =
-      2. * xi * (g * dhe_dxi / he + (roe * ue) / (ro * he) * due_dxi) +
-      2. * xi * (e00 * g + e01);
-  matrix_data[mat_offset + F_ID] = -gp + 2. * xi * e10 * gp;
-  matrix_data[mat_offset + GP_ID] =
-      -f * dgp_dgp + 2. * xi * (e10 * f * e11) * dgp_dgp;
+      (c2 * g + c3 * (roe / ro)) + (e00 * g + e01);
+  matrix_data[mat_offset + F_ID] = -gp - e10 * gp;
+  matrix_data[mat_offset + GP_ID] = -f * dgp_dgp - dgp_dgp * (e10 * f * e11);
   matrix_data[mat_offset + G_ID] =
       -(f * dgp_dg +
         eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp)) +
-      2. * xi * fp *
-          (dhe_dxi / he - dro_dg * (roe * ue) / (ro * ro * he) * due_dxi) +
-      2. * xi * (e00 * fp + (e10 * f + e11) * dgp_dg);
+      fp * (c2 - c3 * (roe * dro_dg) / (ro * ro)) + e00 * fp -
+      dgp_dg * (e10 * f + e11);
 
   // rhs[G_ID] = gp;
   mat_offset = G_ID * BL_RANK;

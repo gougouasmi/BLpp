@@ -157,6 +157,10 @@ double compute_full_rhs_default(const vector<double> &state, int state_offset,
   double due_dxi = params.due_dxi;
   double dhe_dxi = params.dhe_dxi;
 
+  double c1 = 2. * (xi / ue) * due_dxi;
+  double c2 = 2. * xi * dhe_dxi / he;
+  double c3 = 2. * xi * ue * due_dxi / he;
+
   // momemtum equation coefficients
   double m00 = field[field_offset + 0];
   double m01 = field[field_offset + 1];
@@ -169,16 +173,13 @@ double compute_full_rhs_default(const vector<double> &state, int state_offset,
   double e10 = field[field_offset + 6];
   double e11 = field[field_offset + 7];
 
-  rhs[FPP_ID] =
-      -f * fpp + 2. * (xi / ue) * (fp * fp - g) * due_dxi +
-      2. * xi * (m00 * fp * fp + m01 * fp + m10 * f * fpp + m11 * fpp);
+  rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - g) + fp * (m00 * fp + m01) -
+                fpp * (m10 * f + m11);
   rhs[FP_ID] = fpp;
   rhs[F_ID] = fp;
 
-  rhs[GP_ID] =
-      -(f * gp + romu * eckert * fpp * fpp) +
-      2. * xi * (fp * g * dhe_dxi / he + g * (ue / he) * fp * due_dxi) +
-      2. * xi * (e00 * fp * g + e01 * fp + e10 * gp * f + e11 * gp);
+  rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp) + fp * g * (c2 + c3) +
+               fp * (e00 * g + e01) - gp * (e10 * gp * f + e11);
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -269,15 +270,19 @@ void compute_lsim_rhs_jacobian_default(
   double due_dxi = params.due_dxi;
   double dhe_dxi = params.dhe_dxi;
 
+  double c1 = 2. * (xi / ue) * due_dxi;
+  double c2 = 2. * xi * dhe_dxi / he;
+  double c3 = 2. * xi * ue * due_dxi / he;
+
   int offset;
 
-  // rhs[FPP_ID] = - f * fpp + 2. * (xi / ue) * (fp * fp - g) * due_dxi
+  // rhs[FPP_ID] = - f * fpp + c1 * (fp * fp - g)
   offset = FPP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -f / romu;
-  matrix_data[offset + FP_ID] = 4. * (xi / ue) * fp * due_dxi;
+  matrix_data[offset + FP_ID] = 2. * c1 * fp;
   matrix_data[offset + F_ID] = -fpp;
   matrix_data[offset + GP_ID] = 0.;
-  matrix_data[offset + G_ID] = -2. * (xi / ue) * due_dxi;
+  matrix_data[offset + G_ID] = -c1;
 
   // rhs[FP_ID] = fpp
   offset = FP_ID * BL_RANK;
@@ -297,15 +302,13 @@ void compute_lsim_rhs_jacobian_default(
 
   // rhs[GP_ID] =
   //    -(f * gp + romu * eckert * fpp * fpp) +
-  //    2. * xi * (fp * g) * (dhe_dxi / he + (ue / he) * due_dxi)
+  //    fp * g * (c2 + c3)
   offset = GP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -eckert * 2. * fpp;
-  matrix_data[offset + FP_ID] =
-      2. * xi * g * (dhe_dxi / he + (ue / he) * due_dxi);
+  matrix_data[offset + FP_ID] = g * (c2 + c3);
   matrix_data[offset + F_ID] = -gp;
   matrix_data[offset + GP_ID] = -f * prandtl / romu;
-  matrix_data[offset + G_ID] =
-      2. * xi * fp * (dhe_dxi / he + (ue / he) * due_dxi);
+  matrix_data[offset + G_ID] = fp * (c2 + c3);
 
   // rhs[G_ID] = gp;
   offset = G_ID * BL_RANK;
@@ -339,6 +342,10 @@ void compute_full_rhs_jacobian_default(
   double due_dxi = params.due_dxi;
   double dhe_dxi = params.dhe_dxi;
 
+  double c1 = 2. * (xi / ue) * due_dxi;
+  double c2 = 2. * xi * dhe_dxi / he;
+  double c3 = 2. * xi * ue * due_dxi / he;
+
   // momemtum equation coefficients
   double m00 = field[field_offset + 0];
   double m01 = field[field_offset + 1];
@@ -355,16 +362,14 @@ void compute_full_rhs_jacobian_default(
 
   // rhs[FPP_ID] =
   //   - f * fpp +
-  //   2. * (xi / ue) * (fp * fp - g) * due_dxi +
-  //   2. * xi * (m00 * fp * fp + m01 * fp + (m10 * f + m11) * fpp);
+  //   c1 * (fp * fp - g) +
+  //   fp * (m00 * fp + m01) - fpp * (m10 * f + m11);
   mat_offset = FPP_ID * BL_RANK;
-  matrix_data[mat_offset + FPP_ID] =
-      -f / romu + 2. * xi * (m10 * f + m11) / romu;
-  matrix_data[mat_offset + FP_ID] =
-      4. * (xi / ue) * fp * due_dxi + 2. * xi * (2. * m00 * fp + m01);
-  matrix_data[mat_offset + F_ID] = -fpp + 2. * xi * m10 * fpp;
+  matrix_data[mat_offset + FPP_ID] = -f / romu - (m10 * f + m11) / romu;
+  matrix_data[mat_offset + FP_ID] = 2. * c1 * fp + (2. * m00 * fp + m01);
+  matrix_data[mat_offset + F_ID] = -fpp - m10 * fpp;
   matrix_data[mat_offset + GP_ID] = 0.;
-  matrix_data[mat_offset + G_ID] = -2. * (xi / ue) * due_dxi;
+  matrix_data[mat_offset + G_ID] = -c1;
 
   // rhs[FP_ID] = fpp
   mat_offset = FP_ID * BL_RANK;
@@ -384,18 +389,15 @@ void compute_full_rhs_jacobian_default(
 
   // rhs[GP_ID] =
   //    -(f * gp + romu * eckert * fpp * fpp) +
-  //    2. * xi * (fp * g) * (dhe_dxi / he + (ue / he) * due_dxi) +
-  //    2. * xi * ((e00 * g + e01) * fp + e10 * gp * f + e11 * gp);
+  //    fp * g * (c2 + c3) +
+  //    (fp * (e00 * g + e01) - gp * (e10 * f + e11));
   mat_offset = GP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = -eckert * 2. * fpp;
-  matrix_data[mat_offset + FP_ID] =
-      2. * xi * g * (dhe_dxi / he + (ue / he) * due_dxi) +
-      2. * xi * (e00 * g + e01);
-  matrix_data[mat_offset + F_ID] = -gp + 2. * xi * e10 * gp;
+  matrix_data[mat_offset + FP_ID] = g * (c2 + c3) + (e00 * g + e01);
+  matrix_data[mat_offset + F_ID] = -gp - e10 * gp;
   matrix_data[mat_offset + GP_ID] =
-      -f * prandtl / romu + 2. * xi * (e10 * f + e11) * prandtl / romu;
-  matrix_data[mat_offset + G_ID] =
-      2. * xi * fp * (dhe_dxi / he + (ue / he) * due_dxi) + 2. * xi * e00 * fp;
+      -f * prandtl / romu - (e10 * f + e11) * prandtl / romu;
+  matrix_data[mat_offset + G_ID] = fp * (c2 + c3) + e00 * fp;
 
   // rhs[G_ID] = gp;
   mat_offset = G_ID * BL_RANK;

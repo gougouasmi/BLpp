@@ -1589,6 +1589,79 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
+inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
+                             const vector<double> &edge_field,
+                             const vector<vector<double>> &bl_state_grid,
+                             vector<double> &field_grid) {
+  assert(xi_id > 0);
+
+  int field_offset = 0;
+  int state_offset = 0;
+
+  const int xi_offset = xi_id * EDGE_FIELD_RANK + EDGE_XI_ID;
+  const double xi_val = edge_field[xi_offset];
+  const double xim1_val = edge_field[xi_offset - EDGE_FIELD_RANK];
+
+  if (xi_id > 1) {
+    const double xim2_val = edge_field[xi_offset - 2 * EDGE_FIELD_RANK];
+
+    // 2nd order backward difference
+    const double lag0 = 2. * xi_val * (2. * xi_val - xim1_val - xim2_val) /
+                        ((xi_val - xim1_val) * (xi_val - xim2_val));
+    const double lag1 = 2. * xi_val * (xim2_val - xi_val) /
+                        ((xi_val - xim1_val) * (xim1_val - xim2_val));
+    const double lag2 = 2. * xi_val * (xi_val - xim1_val) /
+                        ((xi_val - xim2_val) * (xim1_val - xim2_val));
+
+    for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+
+      double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
+      double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
+      double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+
+      double fp_im2 = bl_state_grid[xi_id - 2][state_offset + FP_ID];
+      double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
+      double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
+
+      field_grid[field_offset + 0] = lag0;
+      field_grid[field_offset + 1] = lag1 * fp_im1 + lag2 * fp_im2;
+      field_grid[field_offset + 2] = lag0;
+      field_grid[field_offset + 3] = lag1 * f_im1 + lag1 * f_im2;
+
+      field_grid[field_offset + 4] = lag0;
+      field_grid[field_offset + 5] = lag1 * g_im1 + lag2 * g_im2;
+      field_grid[field_offset + 6] = lag0;
+      field_grid[field_offset + 7] = lag1 * f_im1 + lag2 * f_im2;
+
+      field_offset += FIELD_RANK;
+      state_offset += BL_RANK;
+    }
+
+  } else {
+    // 1st order backward difference
+    const double be_factor = 2. * xi_val / (xi_val - xim1_val);
+
+    for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+      double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
+      double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
+      double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+
+      field_grid[field_offset + 0] = be_factor;
+      field_grid[field_offset + 1] = -be_factor * fp_im1;
+      field_grid[field_offset + 2] = be_factor;
+      field_grid[field_offset + 3] = -be_factor * f_im1;
+
+      field_grid[field_offset + 4] = be_factor;
+      field_grid[field_offset + 5] = -be_factor * g_im1;
+      field_grid[field_offset + 6] = be_factor;
+      field_grid[field_offset + 7] = -be_factor * f_im1;
+
+      field_offset += FIELD_RANK;
+      state_offset += BL_RANK;
+    }
+  }
+}
+
 vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
     SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
@@ -1596,8 +1669,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
   compute_args_are_consistent(boundary_data, bl_state_grid, eta_grids,
                               state_grids);
 
-  // Output arrays should have consistent dimensions
-  // Checking edge_field has the correct dimensions
+  std::fill(field_grid.begin(), field_grid.end(), 0.);
+
   const vector<double> &edge_field = boundary_data.edge_field;
 
   const int eta_dim = eta_grids[0].size();
@@ -1609,11 +1682,10 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
   printf("#########################################\n");
   printf("# Difference-Differential Solve (START) #\n\n");
 
-  // Parameters
-  double dxi1 = 1. / (edge_field[EDGE_FIELD_RANK + 3] - edge_field[0]);
-
   //
   vector<double> best_guess(2, 0.5);
+
+  search_params.verbose = true;
 
   for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
 
@@ -1626,54 +1698,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
     // Compute field
     if (xi_id > 0) {
-
-      int eta_offset = 0;
-      if (xi_id > 1) {
-        // 2nd order backward difference
-
-        for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
-
-          double fp_im1 = bl_state_grid[xi_id - 1][eta_id * BL_RANK + FP_ID];
-          double f_im1 = bl_state_grid[xi_id - 1][eta_id * BL_RANK + F_ID];
-          double g_im1 = bl_state_grid[xi_id - 1][eta_id * BL_RANK + G_ID];
-
-          double fp_im2 = bl_state_grid[xi_id - 2][eta_id * BL_RANK + FP_ID];
-          double f_im2 = bl_state_grid[xi_id - 2][eta_id * BL_RANK + F_ID];
-          double g_im2 = bl_state_grid[xi_id - 2][eta_id * BL_RANK + G_ID];
-
-          field_grid[eta_offset + 0] = dxi1 * 3.; //
-          field_grid[eta_offset + 1] = dxi1 * (-4. * fp_im1 + fp_im2);
-          field_grid[eta_offset + 2] = -dxi1 * 3.;
-          field_grid[eta_offset + 3] = dxi1 * (4. * f_im1 - f_im2);
-
-          field_grid[eta_offset + 4] = dxi1 * 3.;
-          field_grid[eta_offset + 5] = dxi1 * (-4. * g_im1 + g_im2);
-          field_grid[eta_offset + 6] = -dxi1 * 3.;
-          field_grid[eta_offset + 7] = dxi1 * (4. * f_im1 - f_im2);
-
-          eta_offset += FIELD_RANK;
-        }
-
-      } else {
-        // 1st order backward difference
-        for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
-          double fp_im1 = bl_state_grid[xi_id - 1][eta_id * BL_RANK + FP_ID];
-          double f_im1 = bl_state_grid[xi_id - 1][eta_id * BL_RANK + F_ID];
-          double g_im1 = bl_state_grid[xi_id - 1][eta_id * BL_RANK + G_ID];
-
-          field_grid[eta_offset + 0] = dxi1;
-          field_grid[eta_offset + 1] = -dxi1 * fp_im1;
-          field_grid[eta_offset + 2] = -dxi1;
-          field_grid[eta_offset + 3] = dxi1 * f_im1;
-
-          field_grid[eta_offset + 4] = dxi1;
-          field_grid[eta_offset + 5] = -dxi1 * g_im1;
-          field_grid[eta_offset + 6] = -dxi1;
-          field_grid[eta_offset + 7] = dxi1 * f_im1;
-
-          eta_offset += FIELD_RANK;
-        }
-      }
+      ComputeFieldGrid(xi_id, eta_dim, edge_field, bl_state_grid, field_grid);
     } else {
       profile_params.solve_type = SolveType::SelfSimilar;
     }
@@ -1695,7 +1720,9 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     }
 
     // Copy profile to output vector
-    bl_state_grid[xi_id] = state_grids[outcome.worker_id];
+    std::copy(state_grids[outcome.worker_id].begin(),
+              state_grids[outcome.worker_id].end(),
+              bl_state_grid[xi_id].begin());
 
     search_outcomes[xi_id] = std::move(outcome);
 

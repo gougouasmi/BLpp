@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
   // Compute 2D profile
   const char *flow_path =
-      FLAT_NOSED_CONSTANT_RO_PATH; // FLAT_NOSED_CONSTANT_RO_PATH;
+      FLAT_NOSED_CONSTANT_RO_COARSE_PATH; // FLAT_NOSED_CONSTANT_RO_PATH;
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path, false);
 
   const int xi_dim = boundary_data.xi_dim;
@@ -42,15 +42,23 @@ int main(int argc, char *argv[]) {
   vector<SearchOutcome> search_outcomes;
 
   // Solve for 2D profile
+  int nb_workers = 1;
   auto compute_task = [&boundary_layer, &boundary_data, &profile_params,
-                       &search_params, &bl_state_grid, &search_outcomes]() {
+                       &search_params, &bl_state_grid, &search_outcomes,
+                       &nb_workers]() {
     search_outcomes = boundary_layer.ComputeLocalSimilarityParallel(
-        boundary_data, profile_params, search_params, bl_state_grid, 4);
+        boundary_data, profile_params, search_params, bl_state_grid,
+        nb_workers);
   };
 
-  auto compute_duration = timeit(compute_task, 1);
+  for (const int nb_workers_val : {1, 2, 4, 6, 8}) {
+    nb_workers = nb_workers_val;
 
-  std::cout << "\nCompute task took " << compute_duration << " seconds.\n";
+    auto compute_duration = timeit(compute_task, 1);
+
+    std::cout << "\nCompute task took " << compute_duration << " seconds with "
+              << nb_workers << " threads.\n";
+  }
 
   // Write to file
   bool write_profiles = true;

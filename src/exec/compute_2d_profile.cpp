@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   // Compute 2D profile
   const char *flow_path =
-      FLAT_NOSED_CONSTANT_RO_PATH; // FLAT_NOSED_CONSTANT_RO_PATH;
+      FLAT_NOSED_CONSTANT_RO_COARSE_PATH; // FLAT_NOSED_CONSTANT_RO_PATH;
   BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path, false);
 
   const int xi_dim = boundary_data.xi_dim;
