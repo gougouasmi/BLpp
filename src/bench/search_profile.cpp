@@ -1,12 +1,14 @@
+#include <array>
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "atmosphere.h"
 #include "boundary_layer_factory.h"
 #include "search_struct.h"
 #include "timers.h"
+
+using std::array;
 
 /*
  *
@@ -44,7 +46,7 @@ int main(int argc, char *argv[]) {
   // Compare search methods
 
   // (1 / 4) Serial solution (box)
-  std::vector<double> best_guess(2, 0.0);
+  array<double, 2> best_guess{{0.5, 0.5}};
 
   auto serial_task = [&profile_params, &search_params, &best_guess,
                       &boundary_layer]() {
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]) {
   printf("\n");
 
   // (2 / 4) Parallel solution (box)
-  std::vector<double> parallel_best_guess(2, 0.0);
+  array<double, 2> parallel_best_guess{{0.5, 0.5}};
 
   auto parallel_task = [&profile_params, &search_params, &parallel_best_guess,
                         &boundary_layer]() {
@@ -75,7 +77,7 @@ int main(int argc, char *argv[]) {
   printf("\n");
 
   // (3 / 4) Parallel solution with queues (box)
-  std::vector<double> parallel_queues_best_guess(2, 0.0);
+  array<double, 2> parallel_queues_best_guess{{0.5, 0.5}};
 
   auto parallel_queues_task = [&profile_params, &search_params,
                                &parallel_queues_best_guess, &boundary_layer]() {
@@ -89,7 +91,7 @@ int main(int argc, char *argv[]) {
             << " seconds." << std::endl;
 
   // (4 / 4) Serial solution (gradient)
-  std::vector<double> gradient_best_guess(2, 0.5);
+  array<double, 2> gradient_best_guess{{0.5, 0.5}};
 
   auto gradient_task = [&profile_params, &search_params, &gradient_best_guess,
                         &boundary_layer]() {

@@ -1,6 +1,7 @@
 #ifndef PROFILE_STRUCT_H
 #define PROFILE_STRUCT_H
 
+#include <array>
 #include <iostream>
 #include <vector>
 
@@ -8,6 +9,7 @@
 #include "indexing.h"
 #include "search_struct.h"
 
+using std::array;
 using std::vector;
 
 // State variable indices
@@ -78,9 +80,9 @@ struct ProfileParams {
 
   double eckert{1.};
 
-  double c1{0};
-  double c2{0};
-  double c3{0};
+  double c1{0.};
+  double c2{0.};
+  double c3{0.};
 
   //
   ProfileParams() = default;
@@ -162,7 +164,7 @@ struct ProfileParams {
     return (nb_steps > 1) && (max_step > 0);
   }
 
-  void SetInitialValues(vector<double> &initial_vals) {
+  void SetInitialValues(array<double, 2> &initial_vals) {
     fpp0 = initial_vals[0];
 
     switch (wall_type) {

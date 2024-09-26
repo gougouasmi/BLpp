@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
   SearchParams search_params;
   search_params.ParseCmdInputs(argc, argv);
 
-  vector<double> guess(2, 0.5);
+  array<double, 2> guess{{0.5, 0.5}};
   guess[0] = profile_params.fpp0;
   guess[1] = profile_params.gp0;
 

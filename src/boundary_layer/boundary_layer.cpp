@@ -323,7 +323,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   //
   int step_id = 0;
   int state_offset = 0;
-  int field_offset = 0;
+  int field_offset = FIELD_RANK;
 
   ////
   // Setup nonlinear solver functions
@@ -618,7 +618,7 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 
 SearchOutcome BoundaryLayer::ProfileSearch(ProfileParams &profile_params,
                                            SearchParams &search_params,
-                                           vector<double> &best_guess) {
+                                           array<double, 2> &best_guess) {
   SearchMethod method = search_params.method;
 
   if (method == SearchMethod::BoxSerial) {
@@ -643,7 +643,7 @@ SearchOutcome BoundaryLayer::ProfileSearch(ProfileParams &profile_params,
 
 SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
                                               SearchParams &search_params,
-                                              vector<double> &best_guess) {
+                                              array<double, 2> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -673,7 +673,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
   const int worker_id = 0;
 
   // Temporary arrays
-  vector<double> initial_guess(2, 0.0);
+  array<double, 2> initial_guess{{0.0, 0.0}};
   vector<double> score(2, 0.0);
 
   double res_norm;
@@ -787,7 +787,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
 SearchOutcome
 BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
                                         SearchParams &search_params,
-                                        vector<double> &best_guess) {
+                                        array<double, 2> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -819,7 +819,7 @@ BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
       [&fpp_min, &gp_min, &delta_fpp, &delta_gp, rtol, profile_params,
        this](const int fid_start, const int fid_end, const int gid_start,
              const int gid_end, const int worker_id) mutable {
-        vector<double> initial_guess(2, 0.0);
+        array<double, 2> initial_guess{{0.0, 0.0}};
         vector<double> score(2, 0.0);
 
         double res_norm;
@@ -960,10 +960,9 @@ BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
 #include "message_queue.h"
 #include <memory>
 
-SearchOutcome
-BoundaryLayer::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
-                                                  SearchParams &search_params,
-                                                  vector<double> &best_guess) {
+SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(
+    ProfileParams &profile_params, SearchParams &search_params,
+    array<double, 2> &best_guess) {
   // Fetch search parameters
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
@@ -1016,7 +1015,7 @@ BoundaryLayer::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
       const int gid_start = inputs.yid_start;
       const int gid_end = inputs.yid_end;
 
-      vector<double> initial_guess(2, 0.0);
+      array<double, 2> initial_guess{{0.0, 0.0}};
       vector<double> score(2, 0.0);
 
       double res_norm;
@@ -1177,8 +1176,8 @@ BoundaryLayer::BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
 
 SearchOutcome BoundaryLayer::GradientProfileSearch(
     ProfileParams &profile_params, SearchParams &search_params,
-    vector<double> &best_guess, int worker_id) {
-  assert(vector_norm(best_guess) > 0);
+    array<double, 2> &best_guess, int worker_id) {
+  assert(array_norm<2>(best_guess) > 0);
 
   // Fetch search parameters
   int max_iter = search_params.max_iter;
@@ -1216,6 +1215,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   }
 
   // Start main loop
+  array<double, 2> guess = {{best_guess[0], best_guess[1]}};
+
   int iter = 0;
   while (iter < max_iter) {
 
@@ -1247,18 +1248,18 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     //    (1 / 2) : Lower coeff to meet conditions
     double alpha = 1;
     if (delta[0] != 0) {
-      alpha = std::min(alpha, 0.5 * fabs(best_guess[0] / delta[0]));
+      alpha = std::min(alpha, 0.5 * fabs(guess[0] / delta[0]));
     }
 
     if (delta[1] != 0) {
-      alpha = std::min(alpha, 0.5 * fabs(best_guess[1] / delta[1]));
+      alpha = std::min(alpha, 0.5 * fabs(guess[1] / delta[1]));
     }
 
     //    (2 / 2) : Lower alpha until score drops
-    best_guess[0] += alpha * delta[0];
-    best_guess[1] += alpha * delta[1];
+    guess[0] += alpha * delta[0];
+    guess[1] += alpha * delta[1];
 
-    profile_params.SetInitialValues(best_guess);
+    profile_params.SetInitialValues(guess);
     int profile_size = DevelopProfile(profile_params, score, worker_id);
     assert(profile_size > 20);
 
@@ -1273,10 +1274,10 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
         alpha *= 0.5;
 
-        best_guess[0] -= alpha * delta[0];
-        best_guess[1] -= alpha * delta[1];
+        guess[0] -= alpha * delta[0];
+        guess[1] -= alpha * delta[1];
 
-        profile_params.SetInitialValues(best_guess);
+        profile_params.SetInitialValues(guess);
         int profile_size = DevelopProfile(profile_params, score, worker_id);
         assert(profile_size > 20);
 
@@ -1292,11 +1293,14 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     }
 
     if (ls_pass) {
+
+      // Save progress to best_guess
+      std::copy(guess.begin(), guess.end(), best_guess.begin());
+
       if (verbose)
         printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
                "alpha=%.2e.\n",
-               iter + 1, best_guess[0], best_guess[1], snorm,
-               vector_norm(delta), alpha);
+               iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha);
 
       if (snorm < rtol) {
         if (verbose) {
@@ -1316,7 +1320,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
     } else {
       if (verbose)
-        printf("Line search failed. Aborting.\n");
+        printf("Iter #%d, line search failed . Aborting.\n", iter + 1);
       break;
     }
 
@@ -1326,6 +1330,13 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   bool success = (snorm < rtol);
   if (verbose)
     printf("  -> %s search.\n", (success) ? "Successful" : "Unsuccesful");
+
+  // If the search did not converge, make sure the profile in
+  // state_grids[worker_id] is that of the best profile found.
+  if (!success) {
+    profile_params.SetInitialValues(best_guess);
+    int profile_size = DevelopProfile(profile_params, score, worker_id);
+  }
 
   return SearchOutcome{success, worker_id, best_profile_size};
 }
@@ -1404,7 +1415,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
   // Data structures
   const int xi_dim = boundary_data.xi_dim;
 
-  vector<double> best_guess(2, 0.5);
+  array<double, 2> best_guess{{0.5, 0.5}};
   vector<SearchOutcome> search_outcomes(xi_dim);
 
   // Worker function
@@ -1489,7 +1500,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
 
   assert(nb_workers <= _max_nb_workers);
 
-  vector<vector<double>> guess_buffers(nb_workers, {0.5, 0.5});
+  vector<array<double, 2>> guess_buffers(nb_workers, {{0.5, 0.5}});
 
   vector<SearchOutcome> search_outcomes(xi_dim);
 
@@ -1498,7 +1509,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
                          &guess_buffers, &search_outcomes, nb_workers, verbose,
                          this](int xi0_id, int xi_end, int worker_id,
                                ProfileParams profile_params) {
-    vector<double> &best_guess = guess_buffers[worker_id];
+    array<double, 2> &best_guess = guess_buffers[worker_id];
 
     for (int xi_id = xi0_id; xi_id < xi_end; xi_id += nb_workers) {
 
@@ -1674,7 +1685,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
   const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
 
-  vector<double> best_guess(2, 0.5);
+  array<double, 2> best_guess{{0.5, 0.5}};
   vector<SearchOutcome> search_outcomes(xi_dim);
 
   search_params.verbose = true;

@@ -6,9 +6,11 @@
 #include "profile_struct.h"
 #include "search_struct.h"
 
+#include <array>
 #include <string>
 #include <vector>
 
+using std::array;
 using std::vector;
 
 class BoundaryLayer {
@@ -34,22 +36,22 @@ public:
   // Shooting algorithm implementations
   SearchOutcome ProfileSearch(ProfileParams &profile_params,
                               SearchParams &search_params,
-                              vector<double> &best_guess);
+                              array<double, 2> &best_guess);
   SearchOutcome BoxProfileSearch(ProfileParams &profile_params,
                                  SearchParams &search_params,
-                                 vector<double> &best_guess);
+                                 array<double, 2> &best_guess);
   SearchOutcome BoxProfileSearchParallel(ProfileParams &profile_params,
                                          SearchParams &search_params,
-                                         vector<double> &best_guess);
+                                         array<double, 2> &best_guess);
   SearchOutcome
   BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
                                      SearchParams &search_params,
-                                     vector<double> &best_guess);
+                                     array<double, 2> &best_guess);
 
   // Gradient Descent / Newton method
   SearchOutcome GradientProfileSearch(ProfileParams &profile_params,
                                       SearchParams &search_params,
-                                      vector<double> &best_guess,
+                                      array<double, 2> &best_guess,
                                       int worker_id = 0);
 
   // 2D profile calculation

@@ -1,12 +1,14 @@
 #ifndef NEWTON_SOLVER_H
 #define NEWTON_SOLVER_H
 
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <vector>
 
 #include "dense_matrix.h"
 
+using std::array;
 using std::vector;
 
 struct NewtonParams {
@@ -27,6 +29,14 @@ struct NewtonResources {
 };
 
 double inline vector_norm(const vector<double> &x) {
+  double out = 0.;
+  for (int idx = 0; idx < x.size(); idx++) {
+    out += x[idx] * x[idx];
+  }
+  return sqrt(out);
+}
+
+template <std::size_t N> double inline array_norm(const array<double, N> &x) {
   double out = 0.;
   for (int idx = 0; idx < x.size(); idx++) {
     out += x[idx] * x[idx];
