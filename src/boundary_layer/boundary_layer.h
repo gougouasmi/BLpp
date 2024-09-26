@@ -3,6 +3,7 @@
 
 #include "bl_model_struct.h"
 #include "boundary_data_struct.h"
+#include "newton_solver.h"
 #include "profile_struct.h"
 #include "search_struct.h"
 
@@ -89,15 +90,18 @@ public:
                        const ProfileParams &profile_params, int profile_size);
 
 private:
-  const int _max_nb_workers = 8;
+  static constexpr size_t MAX_NB_WORKERS = 8;
+
   int _max_nb_steps;
 
-  vector<vector<double>> state_grids;
-  vector<vector<double>> eta_grids;
-  vector<vector<double>> rhs_vecs;
+  array<vector<double>, MAX_NB_WORKERS> state_grids;
+  array<vector<double>, MAX_NB_WORKERS> eta_grids;
+  array<vector<double>, MAX_NB_WORKERS> rhs_vecs;
 
-  vector<vector<double>> sensitivity_matrices;
-  vector<vector<double>> matrix_buffers;
+  array<vector<double>, MAX_NB_WORKERS> sensitivity_matrices;
+  array<vector<double>, 2 * MAX_NB_WORKERS> matrix_buffers;
+
+  array<NewtonResources, MAX_NB_WORKERS> solver_resources;
 
   vector<double> field_grid;
   vector<double> output_grid;

@@ -1,7 +1,6 @@
 #include "boundary_layer.h"
 #include "dense_direct_solver.h"
 #include "dense_linalg.h"
-#include "newton_solver.h"
 #include "utils.h"
 
 #include "profile_functions_default.h"
@@ -13,14 +12,21 @@
 
 BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel model_functions)
     : _max_nb_steps(max_nb_steps), model_functions(model_functions),
-      state_grids(_max_nb_workers,
-                  vector<double>(BL_RANK * (1 + _max_nb_steps))),
-      eta_grids(_max_nb_workers, vector<double>(1 + _max_nb_steps)),
       field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
-      output_grid(OUTPUT_RANK * (1 + _max_nb_steps)),
-      rhs_vecs(_max_nb_workers, vector<double>(BL_RANK)),
-      sensitivity_matrices(_max_nb_workers, vector<double>(BL_RANK * 2)),
-      matrix_buffers(2 * _max_nb_workers, vector<double>(BL_RANK * BL_RANK)) {}
+      output_grid(OUTPUT_RANK * (1 + _max_nb_steps)) {
+
+  for (int worker_id = 0; worker_id < MAX_NB_WORKERS; worker_id++) {
+    state_grids[worker_id].resize(BL_RANK * (1 + _max_nb_steps));
+    eta_grids[worker_id].resize(1 + _max_nb_steps);
+    rhs_vecs[worker_id].resize(BL_RANK);
+
+    sensitivity_matrices[worker_id].resize(BL_RANK * 2);
+    matrix_buffers[2 * worker_id + 0].resize(BL_RANK * BL_RANK);
+    matrix_buffers[2 * worker_id + 1].resize(BL_RANK * BL_RANK);
+
+    solver_resources[worker_id] = NewtonResources(BL_RANK);
+  }
+}
 
 void BoundaryLayer::InitializeState(ProfileParams &profile_params,
                                     int worker_id) {
@@ -185,7 +191,8 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    vector<vector<double>> lu_resources = AllocateLUResources(2);
+    vector<vector<double>> &lu_resources =
+        solver_resources[worker_id].matrix.GetLU();
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
@@ -311,8 +318,6 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
 
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
 
-  vector<vector<double>> lu_resources = AllocateLUResources(BL_RANK);
-
   int nb_steps = eta_grid.size() - 1;
 
   assert(state_grid.size() / (nb_steps + 1) == BL_RANK);
@@ -383,7 +388,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   }
 
   NewtonParams newton_params;
-  NewtonResources newton_resources(xdim);
+  NewtonResources &newton_resources = solver_resources[worker_id];
 
   // Time loop
   while (step_id < nb_steps) {
@@ -404,23 +409,9 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     }
 
     // Evolve sensitivity forward: (I - delta * J^{n+1}) S^{n+1} = S^{n}
-    compute_rhs_jacobian(state_grid, state_offset + BL_RANK, field_grid,
-                         field_offset, jacobian_buffer_rm, profile_params);
-    int offset = 0;
-    for (int idx = 0; idx < xdim; idx++) {
-      for (int idy = 0; idy < idx; idy++) {
-        jacobian_buffer_rm[offset + idy] *= -eta_step;
-      }
-
-      jacobian_buffer_rm[offset + idx] =
-          1. - eta_step * jacobian_buffer_rm[offset + idx];
-
-      for (int idy = idx + 1; idy < xdim; idy++) {
-        jacobian_buffer_rm[offset + idy] *= -eta_step;
-      }
-      offset += BL_RANK;
-    }
-    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2, lu_resources);
+    //  -> The Jacobian (I - delta * J^{n+1}) is located within NewtonResources
+    LUMatrixSolve(newton_resources.matrix.GetData(), sensitivity, BL_RANK, 2,
+                  newton_resources.matrix.GetLU());
 
     // Update indexing
     state_offset += BL_RANK;
@@ -450,8 +441,6 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
   vector<double> &matrix_buffer_cm = matrix_buffers[2 * worker_id + 1];
-
-  vector<vector<double>> lu_resources = AllocateLUResources(BL_RANK);
 
   int nb_steps = eta_grid.size() - 1;
 
@@ -521,18 +510,17 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   };
 
   vector<double> solution_buffer(xdim, 0.);
+  for (int idx = 0; idx < xdim; idx++) {
+    solution_buffer[idx] = state_grid[idx];
+  }
+
   NewtonParams newton_params;
-  NewtonResources newton_resources(xdim);
+  NewtonResources &newton_resources = solver_resources[worker_id];
 
   // Time loop
   while (step_id < nb_steps) {
 
     // Prepare data for nonlinear solve
-    //   - fill initial guess for next state
-    for (int idx = 0; idx < xdim; idx++) {
-      solution_buffer[idx] = state_grid[idx];
-    }
-
     //   - Pre-compute R(U^{n})
     compute_rhs(state_grid, state_offset, field_grid, field_offset, rhs,
                 profile_params);
@@ -580,27 +568,12 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
     DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm, sensitivity,
                               BL_RANK, 2);
 
-    //    (2 / 3) Evaluate left-hand side matrix
-    compute_rhs_jacobian(state_grid, state_offset + BL_RANK, field_grid,
-                         field_offset, jacobian_buffer_rm, profile_params);
-
-    offset = 0;
-    for (int idx = 0; idx < xdim; idx++) {
-      for (int idy = 0; idy < idx; idy++) {
-        jacobian_buffer_rm[offset + idy] *= -0.5 * eta_step;
-      }
-
-      jacobian_buffer_rm[offset + idx] =
-          1. - 0.5 * eta_step * jacobian_buffer_rm[offset + idx];
-
-      for (int idy = idx + 1; idy < xdim; idy++) {
-        jacobian_buffer_rm[offset + idy] *= -0.5 * eta_step;
-      }
-      offset += BL_RANK;
-    }
+    //    (2 / 3) Left-hand side matrix is the residual Jacobian in the Newton
+    //    solve
 
     //    (3 / 3) Solve for next sensitivity
-    LUMatrixSolve(jacobian_buffer_rm, sensitivity, BL_RANK, 2, lu_resources);
+    LUMatrixSolve(newton_resources.matrix.GetData(), sensitivity, BL_RANK, 2,
+                  newton_resources.matrix.GetLU());
 
     // Update indexing
     state_offset += BL_RANK;
@@ -1193,7 +1166,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   vector<double> score_jacobian(4, 0.); // row_major
   vector<double> delta(2, 0);
 
-  vector<vector<double>> lu_resources = AllocateLUResources(2);
+  vector<vector<double>> &lu_resources =
+      solver_resources[worker_id].matrix.GetLU();
 
   double snorm;
   int best_profile_size = 1;
@@ -1266,10 +1240,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     double ls_norm = vector_norm(score);
     bool ls_pass = ls_norm < snorm;
 
-    if (ls_pass) {
-      snorm = ls_norm;
-      best_profile_size = profile_size;
-    } else {
+    if (!ls_pass) {
       for (int ls_iter = 0; ls_iter < 20; ls_iter++) {
 
         alpha *= 0.5;
@@ -1293,6 +1264,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     }
 
     if (ls_pass) {
+      snorm = ls_norm;
+      best_profile_size = profile_size;
 
       // Save progress to best_guess
       std::copy(guess.begin(), guess.end(), best_guess.begin());
@@ -1364,10 +1337,12 @@ vector<SearchOutcome> BoundaryLayer::Compute(
   return {};
 }
 
-void compute_args_are_consistent(const BoundaryData &boundary_data,
-                                 const vector<vector<double>> &bl_state_grid,
-                                 const vector<vector<double>> &eta_grids,
-                                 const vector<vector<double>> &state_grids) {
+template <std::size_t MAX_NB_WORKERS>
+void compute_args_are_consistent(
+    const BoundaryData &boundary_data,
+    const vector<vector<double>> &bl_state_grid,
+    const array<vector<double>, MAX_NB_WORKERS> &eta_grids,
+    const array<vector<double>, MAX_NB_WORKERS> &state_grids) {
   // Output arrays should have consistent dimensions
   assert(bl_state_grid.size() >= 1);
   int eta_dim = eta_grids[0].size();
@@ -1498,7 +1473,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
   // Data structures
   const int xi_dim = boundary_data.xi_dim;
 
-  assert(nb_workers <= _max_nb_workers);
+  assert(nb_workers <= MAX_NB_WORKERS);
 
   vector<array<double, 2>> guess_buffers(nb_workers, {{0.5, 0.5}});
 

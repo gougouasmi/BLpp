@@ -97,7 +97,7 @@ add_executable(devel_profile
 )
 
 target_link_libraries(devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(devel_profile PRIVATE src/boundary_layer src/physics src/linalg)
+target_include_directories(devel_profile PRIVATE src/boundary_layer src/physics src/linalg src/solvers)
 
 # (BENCH) Search for the initial conditions that develop into
 #         the correct self-similar profile
@@ -107,7 +107,7 @@ add_executable(search_profile
 )
 
 target_link_libraries(search_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(search_profile PRIVATE src/boundary_layer src/physics src/utils)
+target_include_directories(search_profile PRIVATE src/boundary_layer src/physics src/utils src/solvers src/linalg)
 
 # Compute 2D profile
 add_executable(compute_2d_profile
@@ -115,7 +115,7 @@ add_executable(compute_2d_profile
 )
 
 target_link_libraries(compute_2d_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
-target_include_directories(compute_2d_profile PRIVATE src/boundary_layer src/physics src/utils src/cases)
+target_include_directories(compute_2d_profile PRIVATE src/boundary_layer src/physics src/utils src/cases src/solvers src/linalg)
 
 # Compute edge flow from pressure
 add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solvers.cpp)
@@ -127,7 +127,7 @@ target_include_directories(edge_solve PRIVATE src/boundary_layer src/utils src/s
 add_executable(debug_devel_profile src/debug/debug_develop_profile.cpp)
 
 target_link_libraries(debug_devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
-target_include_directories(debug_devel_profile PRIVATE src/boundary_layer src/physics src/utils src/cases)
+target_include_directories(debug_devel_profile PRIVATE src/boundary_layer src/physics src/utils src/cases src/solvers src/linalg)
 
 # (BENCH) Parallel implementation of local-similarity solve
 add_executable(parallel_compute
@@ -135,7 +135,7 @@ add_executable(parallel_compute
 )
 
 target_link_libraries(parallel_compute PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
-target_include_directories(parallel_compute PRIVATE src/boundary_layer src/physics src/utils src/cases)
+target_include_directories(parallel_compute PRIVATE src/boundary_layer src/physics src/utils src/cases src/solvers src/linalg)
 
 # (BENCH) Small-size linear algebra on std::vector vs std::arrays
 add_executable(bench_linalg src/bench/array_vs_vector_linalg.cpp)

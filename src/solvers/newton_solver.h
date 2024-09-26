@@ -23,6 +23,7 @@ struct NewtonResources {
   vector<double> state_varn;
   DenseMatrix matrix;
 
+  NewtonResources() = default;
   NewtonResources(int system_size)
       : residual(system_size, 0.), state_varn(system_size, 0.),
         matrix(system_size, system_size){};
@@ -128,6 +129,8 @@ bool NewtonSolveDirect(vector<double> &initial_guess,
       break;
     }
 
+    jacobian_fun(state, jacobian_matrix);
+
     if (verbose)
       printf("**  NEWTON Iter#%d, ||x|| = %.2e, ||dx|| = %.2e, a = "
              "%.2e, ||R|| = %.2e\n",
@@ -141,7 +144,6 @@ bool NewtonSolveDirect(vector<double> &initial_guess,
     }
 
     iter += 1;
-    jacobian_fun(state, jacobian_matrix);
   }
 
   if (verbose) {

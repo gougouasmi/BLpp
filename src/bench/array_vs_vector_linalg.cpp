@@ -206,8 +206,13 @@ void inline fillArrayWithRandomData(array<double, N> &data, int size) {
   }
 }
 
-int main(int argc, char *argv[]) {
-  constexpr size_t xdim = 5;
+/////
+// Templated benchmark function
+//
+
+template <std::size_t xdim> void run_lu_benchmark() {
+  static_assert(xdim > 1);
+
   constexpr size_t mat_size = xdim * xdim;
 
   constexpr int nb_reps = 10000;
@@ -217,10 +222,10 @@ int main(int argc, char *argv[]) {
   //
 
   array<double, mat_size> matrix_a_data;
-  fillArrayWithRandomData<mat_size>(matrix_a_data, mat_size);
+  fillArrayWithRandomData(matrix_a_data, mat_size);
 
   array<double, xdim> rhs_a;
-  fillArrayWithRandomData<xdim>(rhs_a, xdim);
+  fillArrayWithRandomData(rhs_a, xdim);
 
   constexpr size_t lower_size = xdim * (xdim - 1) / 2;
   constexpr size_t upper_size = xdim * (xdim + 1) / 2;
@@ -228,19 +233,19 @@ int main(int argc, char *argv[]) {
   pair<array<double, lower_size>, array<double, upper_size>> lu_a_resources;
 
   array<double, xdim> solution_a = rhs_a;
-  LUSolve<xdim>(matrix_a_data, solution_a, lu_a_resources);
+  LUSolve(matrix_a_data, solution_a, lu_a_resources);
 
   array<double, xdim> out_a;
   std::fill(out_a.begin(), out_a.end(), 0.);
 
-  DenseMatrixMultiply<xdim>(matrix_a_data, solution_a, out_a);
+  DenseMatrixMultiply(matrix_a_data, solution_a, out_a);
 
-  assert(allClose<xdim>(rhs_a, out_a));
+  assert(allClose(rhs_a, out_a));
 
   // Define task
-  auto array_task = [&matrix_a_data, &solution_a, xdim, &lu_a_resources]() {
+  auto array_task = [&matrix_a_data, &solution_a, &lu_a_resources]() {
     for (int rep = 0; rep < nb_reps; rep++) {
-      LUSolve<xdim>(matrix_a_data, solution_a, lu_a_resources);
+      LUSolve(matrix_a_data, solution_a, lu_a_resources);
     }
   };
 
@@ -265,7 +270,7 @@ int main(int argc, char *argv[]) {
   assert(allClose(rhs_v, out_v, xdim));
 
   // Define task
-  auto vector_task = [&matrix_v_data, &solution_v, xdim, &lu_v_resources]() {
+  auto vector_task = [&matrix_v_data, &solution_v, &lu_v_resources]() {
     for (int rep = 0; rep < nb_reps; rep++) {
       LUSolve(matrix_v_data, solution_v, xdim, lu_v_resources);
     }
@@ -278,8 +283,14 @@ int main(int argc, char *argv[]) {
   auto vector_duration = timeit(vector_task, 10);
   auto array_duration = timeit(array_task, 10);
 
+  std::cout << "\n--- N = " << xdim << " ---\n";
   std::cout << "Vector task took " << vector_duration << " secs.\n";
   std::cout << "Array task took " << array_duration << " secs.\n";
+}
 
-  return 0;
+int main(int argc, char *argv[]) {
+  run_lu_benchmark<2>();
+  run_lu_benchmark<5>();
+  run_lu_benchmark<10>();
+  run_lu_benchmark<15>();
 }

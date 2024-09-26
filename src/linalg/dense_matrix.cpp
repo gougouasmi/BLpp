@@ -12,5 +12,5 @@ void DenseMatrix::Solve(const std::vector<double> &rhs,
     solution[idx] = rhs[idx];
   }
 
-  LUSolve(_data, solution, _Nx, _resources);
+  LUSolve(_data, solution, _Nx, _lu_resources);
 };
