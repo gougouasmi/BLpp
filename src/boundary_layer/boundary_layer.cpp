@@ -1671,24 +1671,17 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
   std::fill(field_grid.begin(), field_grid.end(), 0.);
 
-  const vector<double> &edge_field = boundary_data.edge_field;
-
   const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
 
-  vector<SearchOutcome> search_outcomes(xi_dim);
-
-  //
-  printf("#########################################\n");
-  printf("# Difference-Differential Solve (START) #\n\n");
-
-  //
   vector<double> best_guess(2, 0.5);
+  vector<SearchOutcome> search_outcomes(xi_dim);
 
   search_params.verbose = true;
 
-  for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
-
+  // Worker function
+  auto diff_diff_task = [&boundary_data, &profile_params, &search_params,
+                         &bl_state_grid, &best_guess, this](const int &xi_id) {
     printf("###\n# station #%d - start\n#\n\n", xi_id);
 
     // Set local profile settings
@@ -1696,44 +1689,57 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
                                       xi_id * EDGE_FIELD_RANK);
     profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
 
-    // Compute field
-    if (xi_id > 0) {
-      ComputeFieldGrid(xi_id, eta_dim, edge_field, bl_state_grid, field_grid);
-    } else {
-      profile_params.solve_type = SolveType::SelfSimilar;
-    }
-
     if (!profile_params.AreValid()) {
       printf("Invalid edge conditions. Abort\n");
-      break;
+      return SearchOutcome{false, 0, 1};
     }
 
     // Call search method
     SearchOutcome outcome =
         ProfileSearch(profile_params, search_params, best_guess);
 
-    if (!outcome.success) {
-      printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
-      break;
-    } else {
-      printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
-    }
-
     // Copy profile to output vector
     std::copy(state_grids[outcome.worker_id].begin(),
               state_grids[outcome.worker_id].end(),
               bl_state_grid[xi_id].begin());
 
-    search_outcomes[xi_id] = std::move(outcome);
+    if (!outcome.success) {
+      printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
+    } else {
+      printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
+    }
 
-    //
-    if (xi_id == 0) {
-      profile_params.solve_type = SolveType::DifferenceDifferential;
+    return std::move(outcome);
+  };
+
+  printf("#########################################\n"
+         "# Difference-Differential Solve (START) #\n\n");
+
+  // First solve is self-similar
+  profile_params.solve_type = SolveType::SelfSimilar;
+
+  search_outcomes[0] = diff_diff_task(0);
+
+  if (!search_outcomes[0].success)
+    return std::move(search_outcomes);
+
+  // Remaining solves
+  profile_params.solve_type = SolveType::DifferenceDifferential;
+
+  for (int xi_id = 1; xi_id < xi_dim; xi_id++) {
+    ComputeFieldGrid(xi_id, eta_dim, boundary_data.edge_field, bl_state_grid,
+                     field_grid);
+
+    // Call search method
+    search_outcomes[xi_id] = diff_diff_task(xi_id);
+
+    if (!search_outcomes[xi_id].success) {
+      break;
     }
   }
 
-  printf("\n# Difference-Differential Solve (END) #\n");
-  printf("#######################################\n\n");
+  printf("\n# Difference-Differential Solve (END) #\n"
+         "#######################################\n\n");
 
   return std::move(search_outcomes);
 }
