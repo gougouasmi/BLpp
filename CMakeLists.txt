@@ -137,7 +137,11 @@ add_executable(parallel_compute
 target_link_libraries(parallel_compute PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
 target_include_directories(parallel_compute PRIVATE src/boundary_layer src/physics src/utils src/cases)
 
+# (BENCH) Small-size linear algebra on std::vector vs std::arrays
+add_executable(bench_linalg src/bench/array_vs_vector_linalg.cpp)
 
+target_link_libraries(bench_linalg PRIVATE linalg_lib utils_lib)
+target_include_directories(bench_linalg PRIVATE src/linalg src/utils.h)
 
 ###
 # Tests
