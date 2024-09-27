@@ -1609,15 +1609,13 @@ inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
       double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
       double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
 
-      field_grid[field_offset + 0] = lag0;
-      field_grid[field_offset + 1] = lag1 * fp_im1 + lag2 * fp_im2;
-      field_grid[field_offset + 2] = lag0;
-      field_grid[field_offset + 3] = lag1 * f_im1 + lag1 * f_im2;
+      field_grid[field_offset + FIELD_M0_ID] = lag0;
+      field_grid[field_offset + FIELD_M1_ID] = lag1 * fp_im1 + lag2 * fp_im2;
+      field_grid[field_offset + FIELD_S0_ID] = lag0;
+      field_grid[field_offset + FIELD_S1_ID] = lag1 * f_im1 + lag1 * f_im2;
 
-      field_grid[field_offset + 4] = lag0;
-      field_grid[field_offset + 5] = lag1 * g_im1 + lag2 * g_im2;
-      field_grid[field_offset + 6] = lag0;
-      field_grid[field_offset + 7] = lag1 * f_im1 + lag2 * f_im2;
+      field_grid[field_offset + FIELD_E0_ID] = lag0;
+      field_grid[field_offset + FIELD_E1_ID] = lag1 * g_im1 + lag2 * g_im2;
 
       field_offset += FIELD_RANK;
       state_offset += BL_RANK;
@@ -1632,15 +1630,13 @@ inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
       double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
       double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
 
-      field_grid[field_offset + 0] = be_factor;
-      field_grid[field_offset + 1] = -be_factor * fp_im1;
-      field_grid[field_offset + 2] = be_factor;
-      field_grid[field_offset + 3] = -be_factor * f_im1;
+      field_grid[field_offset + FIELD_M0_ID] = be_factor;
+      field_grid[field_offset + FIELD_M1_ID] = -be_factor * fp_im1;
+      field_grid[field_offset + FIELD_S0_ID] = be_factor;
+      field_grid[field_offset + FIELD_S1_ID] = -be_factor * f_im1;
 
-      field_grid[field_offset + 4] = be_factor;
-      field_grid[field_offset + 5] = -be_factor * g_im1;
-      field_grid[field_offset + 6] = be_factor;
-      field_grid[field_offset + 7] = -be_factor * f_im1;
+      field_grid[field_offset + FIELD_E0_ID] = be_factor;
+      field_grid[field_offset + FIELD_E1_ID] = -be_factor * g_im1;
 
       field_offset += FIELD_RANK;
       state_offset += BL_RANK;
@@ -1720,6 +1716,16 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     search_outcomes[xi_id] = diff_diff_task(xi_id);
 
     if (!search_outcomes[xi_id].success) {
+      // Write field coeffs to file
+
+      static vector<LabelIndex> field_labels = {
+          {"m0", FIELD_M0_ID}, {"m1", FIELD_M1_ID}, {"s0", FIELD_S0_ID},
+          {"s1", FIELD_S1_ID}, {"e0", FIELD_E0_ID}, {"e1", FIELD_E1_ID},
+      };
+
+      WriteH5("field.h5", field_grid, field_labels, _max_nb_steps, FIELD_RANK,
+              "fields");
+
       break;
     }
   }

@@ -25,7 +25,19 @@ constexpr std::array<int, BL_RANK> BL_INDICES{FPP_ID, GP_ID, FP_ID, F_ID, G_ID};
 static_assert(complete_indexing(BL_INDICES));
 
 // Field variable indices (Difference-Differential method)
-constexpr int FIELD_RANK = 8;
+constexpr int FIELD_RANK = 6;
+
+constexpr int FIELD_M0_ID = 0;
+constexpr int FIELD_M1_ID = 1;
+constexpr int FIELD_S0_ID = 2;
+constexpr int FIELD_S1_ID = 3;
+constexpr int FIELD_E0_ID = 4;
+constexpr int FIELD_E1_ID = 5;
+
+constexpr std::array<int, FIELD_RANK> FIELD_INDICES{FIELD_M0_ID, FIELD_M1_ID,
+                                                    FIELD_S0_ID, FIELD_S1_ID,
+                                                    FIELD_E0_ID, FIELD_E1_ID};
+static_assert(complete_indexing(FIELD_INDICES));
 
 // Output field indices
 constexpr int OUTPUT_RANK = 7;

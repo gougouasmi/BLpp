@@ -49,6 +49,7 @@ def view_state(
     FP_ID = state_labels["f'"]
     G_ID = state_labels["g"]
     GP_ID = state_labels["(C/Pr) g'"]
+    F_ID = state_labels["f"]
 
     profile_size = state_grid.shape[1]
 
@@ -85,6 +86,17 @@ def view_state(
     for ax in axes:
         ax.grid(which="both")
         ax.set_ylim([0, np.max(eta_grid)])
+
+    # f
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5,5))
+    
+    fig.suptitle(fig_title)
+
+    ax.plot(state_grid[F_ID, :], eta_grid[:profile_size], color='k')
+    ax.set_title(r"$f(\eta)$")
+
+    ax.grid(which="both")
+    ax.set_ylim([0, np.max(eta_grid)])
 
     plt.show()
 

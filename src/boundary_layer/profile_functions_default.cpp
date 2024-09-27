@@ -162,24 +162,22 @@ double compute_full_rhs_default(const vector<double> &state, int state_offset,
   double c3 = 2. * xi * ue * due_dxi / he;
 
   // momemtum equation coefficients
-  double m00 = field[field_offset + 0];
-  double m01 = field[field_offset + 1];
-  double m10 = field[field_offset + 2];
-  double m11 = field[field_offset + 3];
+  double m0 = field[field_offset + FIELD_M0_ID];
+  double m1 = field[field_offset + FIELD_M1_ID];
+  double s0 = field[field_offset + FIELD_S0_ID];
+  double s1 = field[field_offset + FIELD_S1_ID];
 
   // energy equation coefficients
-  double e00 = field[field_offset + 4];
-  double e01 = field[field_offset + 5];
-  double e10 = field[field_offset + 6];
-  double e11 = field[field_offset + 7];
+  double e0 = field[field_offset + FIELD_E0_ID];
+  double e1 = field[field_offset + FIELD_E1_ID];
 
-  rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - g) + fp * (m00 * fp + m01) -
-                fpp * (m10 * f + m11);
+  rhs[FPP_ID] =
+      -f * fpp + c1 * (fp * fp - g) + fp * (m0 * fp + m1) - fpp * (s0 * f + s1);
   rhs[FP_ID] = fpp;
   rhs[F_ID] = fp;
 
   rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp) + fp * g * (c2 + c3) +
-               fp * (e00 * g + e01) - gp * (e10 * gp * f + e11);
+               fp * (e0 * g + e1) - gp * (s0 * gp * f + s1);
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -347,27 +345,25 @@ void compute_full_rhs_jacobian_default(
   double c3 = 2. * xi * ue * due_dxi / he;
 
   // momemtum equation coefficients
-  double m00 = field[field_offset + 0];
-  double m01 = field[field_offset + 1];
-  double m10 = field[field_offset + 2];
-  double m11 = field[field_offset + 3];
+  double m0 = field[field_offset + FIELD_M0_ID];
+  double m1 = field[field_offset + FIELD_M1_ID];
+  double s0 = field[field_offset + FIELD_S0_ID];
+  double s1 = field[field_offset + FIELD_S1_ID];
 
   // energy equation coefficients
-  double e00 = field[field_offset + 4];
-  double e01 = field[field_offset + 5];
-  double e10 = field[field_offset + 6];
-  double e11 = field[field_offset + 7];
+  double e0 = field[field_offset + FIELD_E0_ID];
+  double e1 = field[field_offset + FIELD_E1_ID];
 
   int mat_offset;
 
   // rhs[FPP_ID] =
   //   - f * fpp +
   //   c1 * (fp * fp - g) +
-  //   fp * (m00 * fp + m01) - fpp * (m10 * f + m11);
+  //   fp * (m0 * fp + m1) - fpp * (s0 * f + s1);
   mat_offset = FPP_ID * BL_RANK;
-  matrix_data[mat_offset + FPP_ID] = -f / romu - (m10 * f + m11) / romu;
-  matrix_data[mat_offset + FP_ID] = 2. * c1 * fp + (2. * m00 * fp + m01);
-  matrix_data[mat_offset + F_ID] = -fpp - m10 * fpp;
+  matrix_data[mat_offset + FPP_ID] = -f / romu - (s0 * f + s1) / romu;
+  matrix_data[mat_offset + FP_ID] = 2. * c1 * fp + (2. * m0 * fp + m1);
+  matrix_data[mat_offset + F_ID] = -fpp - s0 * fpp;
   matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + G_ID] = -c1;
 
@@ -390,14 +386,14 @@ void compute_full_rhs_jacobian_default(
   // rhs[GP_ID] =
   //    -(f * gp + romu * eckert * fpp * fpp) +
   //    fp * g * (c2 + c3) +
-  //    (fp * (e00 * g + e01) - gp * (e10 * f + e11));
+  //    (fp * (e0 * g + e1) - gp * (s0 * f + s1));
   mat_offset = GP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = -eckert * 2. * fpp;
-  matrix_data[mat_offset + FP_ID] = g * (c2 + c3) + (e00 * g + e01);
-  matrix_data[mat_offset + F_ID] = -gp - e10 * gp;
+  matrix_data[mat_offset + FP_ID] = g * (c2 + c3) + (e0 * g + e1);
+  matrix_data[mat_offset + F_ID] = -gp - s0 * gp;
   matrix_data[mat_offset + GP_ID] =
-      -f * prandtl / romu - (e10 * f + e11) * prandtl / romu;
-  matrix_data[mat_offset + G_ID] = fp * (c2 + c3) + e00 * fp;
+      -f * prandtl / romu - (s0 * f + s1) * prandtl / romu;
+  matrix_data[mat_offset + G_ID] = fp * (c2 + c3) + e0 * fp;
 
   // rhs[G_ID] = gp;
   mat_offset = G_ID * BL_RANK;
