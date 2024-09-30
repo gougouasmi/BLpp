@@ -177,7 +177,7 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
     vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
     printf("Sensitivity matrix:\n");
-    print_matrix_column_major(sensitivity, BL_RANK, 2);
+    utils::print_matrix_column_major(sensitivity, BL_RANK, 2);
 
     vector<double> score_jacobian(4, 0.); // row_major
 
@@ -185,7 +185,7 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
                          0, score_jacobian);
 
     printf("Score jacobian:\n");
-    print_matrix_row_major(score_jacobian, 2, 2);
+    utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
 
     vector<double> delta(2, 0);
     delta[0] = -score[0];
@@ -196,7 +196,7 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
     printf("Delta suggestion:\n");
-    print_matrix_column_major(delta, 2, 1);
+    utils::print_matrix_column_major(delta, 2, 1);
   }
 
   return profile_size;
@@ -277,8 +277,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
       printf("g^{%d+1} = nan!, step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = "
              "%.2e.\n",
              step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
-      print_state(rhs, 0, BL_RANK);
-      print_state(state_grid, state_offset, BL_RANK);
+      utils::print_state(rhs, 0, BL_RANK);
+      utils::print_state(state_grid, state_offset, BL_RANK);
       assert(false);
     }
 
@@ -286,8 +286,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
       printf(
           "g^{%d+1} < 0! step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = %.2e.\n",
           step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
-      print_state(rhs, 0, BL_RANK);
-      print_state(state_grid, state_offset, BL_RANK);
+      utils::print_state(rhs, 0, BL_RANK);
+      utils::print_state(state_grid, state_offset, BL_RANK);
       assert(false);
     }
 
@@ -315,8 +315,6 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
-
-  vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
 
   int nb_steps = eta_grid.size() - 1;
 
@@ -694,7 +692,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
               }
               best_guess[0] = fpp0;
               best_guess[1] = gp0;
-              return SearchOutcome{true, worker_id, profile_size};
+              return SearchOutcome{true, worker_id, profile_size, best_guess};
             }
           }
         }
@@ -707,7 +705,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
 
     if (min_res_norm == 1e30) {
       printf("STOP CONDITION: Not a single converged profile, aborting.\n\n");
-      return SearchOutcome{false, worker_id, 1};
+      return SearchOutcome{false, worker_id, 1, best_guess};
     }
 
     // (2 / 2) Define next bounds
@@ -751,7 +749,8 @@ SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
     }
   }
 
-  return SearchOutcome{min_res_norm < rtol, worker_id, best_profile_size};
+  return SearchOutcome{min_res_norm < rtol, worker_id, best_profile_size,
+                       best_guess};
 }
 
 #include <future>
@@ -882,7 +881,7 @@ BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
                best_guess[1]);
       }
 
-      return SearchOutcome{true, best_worker_id, best_profile_size};
+      return SearchOutcome{true, best_worker_id, best_profile_size, best_guess};
     }
 
     // (2 / 2) Define next bounds
@@ -927,7 +926,8 @@ BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
     }
   }
 
-  return SearchOutcome{min_res_norm < rtol, best_worker_id, best_profile_size};
+  return SearchOutcome{min_res_norm < rtol, best_worker_id, best_profile_size,
+                       best_guess};
 }
 
 #include "message_queue.h"
@@ -1095,7 +1095,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(
                best_guess[1]);
       }
       work_queue->stop();
-      return SearchOutcome{true, best_worker_id, best_profile_size};
+      return SearchOutcome{true, best_worker_id, best_profile_size, best_guess};
     }
 
     // (2 / 2) Define next bounds
@@ -1144,7 +1144,8 @@ SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(
   std::for_each(futures.begin(), futures.end(),
                 [](std::future<void> &ftr) { ftr.wait(); });
 
-  return SearchOutcome{min_res_norm < rtol, best_worker_id, best_profile_size};
+  return SearchOutcome{min_res_norm < rtol, best_worker_id, best_profile_size,
+                       best_guess};
 }
 
 SearchOutcome BoundaryLayer::GradientProfileSearch(
@@ -1185,7 +1186,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   if (snorm < rtol) {
     if (verbose)
       printf("  -> Successful search.\n");
-    return SearchOutcome{true, worker_id, profile_size};
+    return SearchOutcome{true, worker_id, profile_size, best_guess};
   }
 
   // Start main loop
@@ -1199,10 +1200,14 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
                          profile_size * BL_RANK, sensitivity, 0,
                          score_jacobian);
 
-    // if (verbose) {
-    //   printf(" -> Score jacobian:\n");
-    //   print_matrix_row_major(score_jacobian, 2, 2);
-    // }
+    if (verbose) {
+      printf(" -> Score: \n");
+      utils::print_state(score, 0, 2, 2);
+      printf(" -> State sentivity: \n");
+      utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
+      printf(" -> Score jacobian:\n");
+      utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
+    }
 
     // Solve linear system
     delta[0] = -score[0];
@@ -1211,12 +1216,13 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
     if (isnan(delta[0]) || isnan(delta[1]))
-      return SearchOutcome{false, worker_id, 1};
+      return SearchOutcome{false, worker_id, 1, best_guess};
 
-    // if (verbose) {
-    //   printf(" -> delta:\n");
-    //   print_matrix_row_major(delta, 1, 2);
-    // }
+    if (verbose) {
+      printf(" -> delta: ");
+      utils::print_state(delta, 0, 2);
+      printf("\n");
+    }
 
     // Line search
     //    (1 / 2) : Lower coeff to meet conditions
@@ -1254,6 +1260,12 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
         ls_norm = vector_norm(score);
 
+        if (verbose) {
+          printf("   LS Iter #%d, score_norm: %.2e, score: ", ls_iter + 1,
+                 ls_norm);
+          utils::print_state(score, 0, 2);
+        }
+
         if (ls_norm < snorm) {
           snorm = ls_norm;
           ls_pass = true;
@@ -1282,13 +1294,15 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
             printf("   -> Yet the run did not complete! (%d / %d)\n",
                    profile_size, _max_nb_steps);
             printf("   -> Final state : ");
-            print_state(state_grids[worker_id], profile_size * BL_RANK,
-                        BL_RANK);
-            printf("   -> Jacobian : ");
-            print_matrix_row_major(matrix_buffers[0], BL_RANK, BL_RANK);
+            utils::print_state(state_grids[worker_id], profile_size * BL_RANK,
+                               BL_RANK);
+            printf("   -> Rhs Jacobian : ");
+            utils::print_matrix_row_major(
+                solver_resources[worker_id].matrix.GetData(), BL_RANK, BL_RANK,
+                2);
           }
         }
-        return SearchOutcome{true, worker_id, best_profile_size};
+        return SearchOutcome{true, worker_id, best_profile_size, best_guess};
       }
 
     } else {
@@ -1311,7 +1325,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     int profile_size = DevelopProfile(profile_params, score, worker_id);
   }
 
-  return SearchOutcome{success, worker_id, best_profile_size};
+  return SearchOutcome{success, worker_id, best_profile_size, best_guess};
 }
 
 //////
@@ -1648,6 +1662,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     const BoundaryData &boundary_data, ProfileParams &profile_params,
     SearchParams &search_params, vector<vector<double>> &bl_state_grid) {
 
+  bool verbose = search_params.verbose;
+
   compute_args_are_consistent(boundary_data, bl_state_grid, eta_grids,
                               state_grids);
 
@@ -1656,43 +1672,45 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
   const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
 
-  array<double, 2> best_guess{{0.5, 0.5}};
   vector<SearchOutcome> search_outcomes(xi_dim);
 
-  search_params.verbose = true;
-
   // Worker function
-  auto diff_diff_task = [&boundary_data, &profile_params, &search_params,
-                         &bl_state_grid, &best_guess, this](const int &xi_id) {
-    printf("###\n# station #%d - start\n#\n\n", xi_id);
+  auto diff_diff_task =
+      [&boundary_data, &profile_params, &search_params, &bl_state_grid, verbose,
+       this](const int &xi_id, array<double, 2> best_guess = {{0.5, 0.5}}) {
+        if (verbose) {
+          printf("###\n# station #%d - start\n#\n\n", xi_id);
+        }
 
-    // Set local profile settings
-    profile_params.ReadEdgeConditions(boundary_data.edge_field,
-                                      xi_id * EDGE_FIELD_RANK);
-    profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
+        // Set local profile settings
+        profile_params.ReadEdgeConditions(boundary_data.edge_field,
+                                          xi_id * EDGE_FIELD_RANK);
+        profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
 
-    if (!profile_params.AreValid()) {
-      printf("Invalid edge conditions. Abort\n");
-      return SearchOutcome{false, 0, 1};
-    }
+        if (!profile_params.AreValid()) {
+          printf("Invalid edge conditions. Abort\n");
+          return SearchOutcome{false, 0, 1, best_guess};
+        }
 
-    // Call search method
-    SearchOutcome outcome =
-        ProfileSearch(profile_params, search_params, best_guess);
+        // Call search method
+        SearchOutcome outcome =
+            ProfileSearch(profile_params, search_params, best_guess);
 
-    // Copy profile to output vector
-    std::copy(state_grids[outcome.worker_id].begin(),
-              state_grids[outcome.worker_id].end(),
-              bl_state_grid[xi_id].begin());
+        // Copy profile to output vector
+        std::copy(state_grids[outcome.worker_id].begin(),
+                  state_grids[outcome.worker_id].end(),
+                  bl_state_grid[xi_id].begin());
 
-    if (!outcome.success) {
-      printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
-    } else {
-      printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
-    }
+        if (verbose) {
+          if (!outcome.success) {
+            printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
+          } else {
+            printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
+          }
+        }
 
-    return std::move(outcome);
-  };
+        return std::move(outcome);
+      };
 
   printf("#########################################\n"
          "# Difference-Differential Solve (START) #\n\n");
@@ -1714,6 +1732,63 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
     // Call search method
     search_outcomes[xi_id] = diff_diff_task(xi_id);
+
+    if (search_outcomes[xi_id].success)
+      continue;
+
+    printf("FAIL at station #%d. Scaling the source term...\n", xi_id);
+
+    // At this point the search wasn't successfull
+    int nb_attemps = 0;
+    double scale = 1.;
+    SearchOutcome temp_outcome;
+
+    // Make the problem easier
+    const int max_nb_attemps = 5;
+    while (nb_attemps < max_nb_attemps) {
+      scale *= 0.5;
+
+      std::transform(field_grid.begin(), field_grid.end(), field_grid.begin(),
+                     [scale](double val) { return val * scale; });
+
+      temp_outcome = diff_diff_task(xi_id);
+      if (temp_outcome.success == true) {
+        printf(" -> Success with a factor %.2e.\n", scale);
+        break;
+      }
+
+      nb_attemps++;
+    }
+
+    // If you found a solvable state
+    if (nb_attemps < max_nb_attemps) {
+
+      // Work your way back up!
+      scale *= 2;
+      while (scale <= 1) {
+        std::transform(field_grid.begin(), field_grid.end(), field_grid.begin(),
+                       [scale](double val) { return val * scale; });
+
+        temp_outcome = diff_diff_task(xi_id, temp_outcome.guess);
+
+        if (!temp_outcome.success) {
+          printf("Couldn't solve back for factor %.2e.\n", scale);
+          break;
+        } else {
+          printf("Solved for factor %.2e.\n", scale);
+        }
+
+        scale *= 2;
+      }
+    } else {
+      printf("Couldn't solve a simpler system.\n");
+    }
+
+    if (scale > 1) {
+      printf("Well done! System solved! f''(0) = %.3e, g'(0) = %.3e\n\n",
+             temp_outcome.guess[0], temp_outcome.guess[1]);
+      search_outcomes[xi_id] = temp_outcome;
+    }
 
     if (!search_outcomes[xi_id].success) {
       // Write field coeffs to file

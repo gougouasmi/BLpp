@@ -109,17 +109,17 @@ def view_station_outputs(station_id: int) -> None:
 # Compute heat flux values
 #
 
-def view_heat_flux(s0: int, s0: int) -> None:
+def view_heat_flux(station_0: int, station_1: int) -> None:
 
-    assert(s0 >= 0)
-    assert(s0 > s0)
+    assert(station_0 >= 0)
+    assert(station_1 > station_0)
 
-    nb_stations = s0 - s0 + 1
+    nb_stations = station_1 - station_0 + 1
 
-    x = x_grid[s0:s0+1]
+    x = x_grid[station_0:station_1+1]
     qw = np.zeros(nb_stations, dtype=float)
 
-    for station_id in range(s0, s0+1):
+    for station_id in range(station_0, station_1+1):
     
         he = he_grid[station_id]
         xi = xi_grid[station_id]
@@ -135,7 +135,7 @@ def view_heat_flux(s0: int, s0: int) -> None:
     
         Q_ID = output_labels["q"]
     
-        qw[station_id-s0] = output_grid[Q_ID, 0] * q_factor
+        qw[station_id-station_0] = output_grid[Q_ID, 0] * q_factor
 
     fig, ax = plt.subplots(figsize=(5,5))
 

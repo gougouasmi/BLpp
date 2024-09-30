@@ -566,7 +566,7 @@ void compute_full_rhs_jacobian_cpg(
   matrix_data[mat_offset + F_ID] = -fpp - s0 * fpp;
   matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + G_ID] =
-      -f * dfpp_dg + c1 * (roe * dro_dg / (ro * ro)) + -(s0 * f + s1) * dfpp_dg;
+      -f * dfpp_dg + c1 * (roe * dro_dg / (ro * ro)) - (s0 * f + s1) * dfpp_dg;
 
   // rhs[FP_ID] = fpp;
   mat_offset = FP_ID * BL_RANK;

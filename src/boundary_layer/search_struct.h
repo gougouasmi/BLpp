@@ -1,9 +1,12 @@
 #ifndef SEARCH_STRUCT_H
 #define SEARCH_STRUCT_H
 
+#include <array>
 #include <cassert>
 #include <iostream>
 #include <vector>
+
+using std::array;
 
 enum class SearchMethod {
   BoxSerial,
@@ -17,6 +20,7 @@ struct SearchOutcome {
   bool success;
   int worker_id;
   int profile_size;
+  array<double, 2> guess{{0.0, 0.0}};
 };
 
 struct SearchWindow {
