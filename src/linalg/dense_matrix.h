@@ -2,8 +2,10 @@
 #define DENSE_MATRIX_H
 
 #include <cassert>
+#include <utility>
 #include <vector>
 
+using std::pair;
 using std::vector;
 
 using MatrixDims = std::tuple<int, int>;
@@ -11,15 +13,15 @@ using MatrixDims = std::tuple<int, int>;
 class DenseMatrix {
 public:
   DenseMatrix() = default;
-  DenseMatrix(int xdim) : _Nx(xdim), _Ny(xdim), _data(xdim * xdim, 0.0) {
-    _lu_resources.emplace_back(0.5 * xdim * (xdim - 1), 0.);
-    _lu_resources.emplace_back(0.5 * xdim * (xdim + 1), 0.);
-  };
+  DenseMatrix(int xdim)
+      : _Nx(xdim), _Ny(xdim), _data(xdim * xdim, 0.0),
+        _lu_resources(std::vector<double>(0.5 * xdim * (xdim - 1), 0.),
+                      std::vector<double>(0.5 * xdim * (xdim + 1), 0.)){};
   DenseMatrix(int xdim, int ydim)
-      : _Nx(xdim), _Ny(ydim), _data(xdim * ydim, 0.0) {
+      : _Nx(xdim), _Ny(ydim), _data(xdim * ydim, 0.0),
+        _lu_resources(std::vector<double>(0.5 * xdim * (xdim - 1), 0.),
+                      std::vector<double>(0.5 * xdim * (xdim + 1), 0.)) {
     assert(xdim == ydim);
-    _lu_resources.emplace_back(0.5 * xdim * (xdim - 1), 0.);
-    _lu_resources.emplace_back(0.5 * xdim * (xdim + 1), 0.);
   };
   DenseMatrix(const DenseMatrix &other_matrix) = delete;
 
@@ -27,13 +29,13 @@ public:
 
   MatrixDims GetDims() const { return MatrixDims(_Nx, _Ny); };
   vector<double> &GetData() { return _data; };
-  vector<vector<double>> &GetLU() { return _lu_resources; };
+  pair<vector<double>, vector<double>> &GetLU() { return _lu_resources; };
 
 private:
   int _Nx;
   int _Ny;
   vector<double> _data;
-  vector<vector<double>> _lu_resources;
+  pair<vector<double>, vector<double>> _lu_resources;
 };
 
 #endif

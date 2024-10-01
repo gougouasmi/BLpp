@@ -259,7 +259,8 @@ template <std::size_t xdim> void run_lu_benchmark() {
   std::copy(matrix_a_data.begin(), matrix_a_data.end(), matrix_v_data.begin());
   std::copy(rhs_a.begin(), rhs_a.end(), rhs_v.begin());
 
-  vector<vector<double>> lu_v_resources = AllocateLUResources(xdim);
+  pair<vector<double>, vector<double>> lu_v_resources =
+      AllocateLUResources(xdim);
 
   vector<double> solution_v = rhs_v;
   LUSolve(matrix_v_data, solution_v, xdim, lu_v_resources);

@@ -5,7 +5,10 @@
 #include "dense_linalg.h"
 #include "testing_utils.h"
 
+#include <array>
 #include <iostream>
+
+using std::array;
 
 void TestReadLowerUpper() {
   const size_t xdim = 5, ydim = 5;
@@ -121,10 +124,9 @@ void TestUpperSolve() {
   assert(allClose(solution, rhs, xdim));
 }
 
-void TestLUSolve() {
-  const size_t xdim = 5;
+template <size_t xdim> void TestLUSolve() {
   vector<double> matrix_data(xdim * xdim, 0.);
-  vector<vector<double>> lu_resources = AllocateLUResources(xdim);
+  pair<vector<double>, vector<double>> lu_resources = AllocateLUResources(xdim);
 
   fillWithRandomData(matrix_data, xdim * xdim);
 
@@ -138,6 +140,42 @@ void TestLUSolve() {
   DenseMatrixMultiply(matrix_data, solution, out, xdim);
 
   assert(allClose(rhs, out, xdim));
+}
+
+void TestLUSolve_LowDeterminant() {
+  //
+  constexpr int xdim = 2;
+
+  constexpr array<double, xdim *xdim> matrix = {
+      {-5.564e-01, 1.148e+00, -1.338e+00, 2.760e+00}};
+  constexpr array<double, xdim> rhs{{-1.6349e-02, -1.4967e-03}};
+
+  constexpr array<double, xdim> solution{{-120.56952333, -58.45055033}};
+
+  printf("%2e vs %2e \n", matrix[0] * solution[0] + matrix[1] * solution[1],
+         rhs[0]);
+
+  assert(
+      isClose(matrix[0] * solution[0] + matrix[1] * solution[1], rhs[0], 1e-3));
+  assert(
+      isClose(matrix[2] * solution[0] + matrix[3] * solution[1], rhs[1], 1e-3));
+
+  //
+  vector<double> matrix_v(xdim * xdim);
+  vector<double> rhs_v(xdim);
+
+  std::copy(matrix.begin(), matrix.end(), matrix_v.begin());
+  std::copy(rhs.begin(), rhs.end(), rhs_v.begin());
+
+  pair<vector<double>, vector<double>> lu_resources = AllocateLUResources(xdim);
+
+  vector<double> solution_v = rhs_v;
+  LUSolve(matrix_v, solution_v, xdim, lu_resources);
+
+  assert(isClose(solution[0], solution_v[0]));
+  assert(isClose(solution[1], solution_v[1]));
+
+  printf("solution = [%.2e, %.2e].\n", solution_v[0], solution_v[1]);
 }
 
 void TestLowerMatrixSolve() {
@@ -234,7 +272,7 @@ void TestLUMatrixSolve() {
 
   const size_t mat_size = xdim * xdim;
 
-  vector<vector<double>> lu_resources = AllocateLUResources(xdim);
+  pair<vector<double>, vector<double>> lu_resources = AllocateLUResources(xdim);
 
   // Problem setup. Random matrix and rhs
   vector<double> matrix_data(mat_size, 0.);
@@ -285,7 +323,22 @@ int main(int argc, char *argv[]) {
   TestReadLowerUpper();
   TestLowerSolve();
   TestUpperSolve();
-  TestLUSolve();
+
+  //
+  TestLUSolve<2>();
+  printf("LU Solve for xdim = 2 passed.\n");
+
+  TestLUSolve<3>();
+  printf("LU Solve for xdim = 3 passed.\n");
+
+  TestLUSolve<4>();
+  printf("LU Solve for xdim = 4 passed.\n");
+
+  TestLUSolve<5>();
+  printf("LU Solve for xdim = 5 passed.\n");
+
+  //
+  TestLUSolve_LowDeterminant();
 
   TestLowerMatrixSolve();
   TestUpperMatrixSolve();

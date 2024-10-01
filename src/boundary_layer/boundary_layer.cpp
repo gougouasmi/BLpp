@@ -144,9 +144,7 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
   TimeScheme time_scheme = profile_params.scheme;
 
   // Clear state grid vector
-  for (size_t nid = 0; nid < BL_RANK * (_max_nb_steps + 1); nid++) {
-    state_grids[worker_id][nid] = 0;
-  }
+  std::fill(state_grids[worker_id].begin(), state_grids[worker_id].end(), 0.);
 
   if (time_scheme == TimeScheme::Explicit) {
     profile_size = DevelopProfileExplicit(profile_params, worker_id);
@@ -191,7 +189,7 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    vector<vector<double>> &lu_resources =
+    pair<vector<double>, vector<double>> &lu_resources =
         solver_resources[worker_id].matrix.GetLU();
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
@@ -214,9 +212,11 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
   vector<double> &rhs = rhs_vecs[worker_id];
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
-  int nb_steps = eta_grid.size() - 1;
+  const int grid_nb_steps = eta_grid.size() - 1;
+  const int max_nb_steps = profile_params.nb_steps;
 
-  assert(state_grid.size() / (nb_steps + 1) == BL_RANK);
+  assert(max_nb_steps > 1);
+  assert(max_nb_steps <= grid_nb_steps);
 
   InitializeState(profile_params, worker_id);
   double max_step = profile_params.max_step;
@@ -235,7 +235,7 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
   int step_id = 0;
   int state_offset = 0;
   int field_offset = 0;
-  while (step_id < nb_steps) {
+  while (step_id < max_nb_steps) {
 
     // Evolve state forward
     double eta_step =
@@ -316,9 +316,11 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   vector<double> &rhs = rhs_vecs[worker_id];
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
-  int nb_steps = eta_grid.size() - 1;
+  const int grid_nb_steps = eta_grid.size() - 1;
+  const int max_nb_steps = profile_params.nb_steps;
 
-  assert(state_grid.size() / (nb_steps + 1) == BL_RANK);
+  assert(max_nb_steps > 1);
+  assert(max_nb_steps <= grid_nb_steps);
 
   InitializeState(profile_params, worker_id);
   double eta_step = profile_params.max_step;
@@ -389,7 +391,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   NewtonResources &newton_resources = solver_resources[worker_id];
 
   // Time loop
-  while (step_id < nb_steps) {
+  while (step_id < max_nb_steps) {
 
     // Evolve state forward by solving the nonlinear system
     bool pass =
@@ -440,9 +442,11 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
   vector<double> &matrix_buffer_cm = matrix_buffers[2 * worker_id + 1];
 
-  int nb_steps = eta_grid.size() - 1;
+  const int grid_nb_steps = eta_grid.size() - 1;
+  const int max_nb_steps = profile_params.nb_steps;
 
-  assert(state_grid.size() / (nb_steps + 1) == BL_RANK);
+  assert(max_nb_steps > 1);
+  assert(max_nb_steps <= grid_nb_steps);
 
   InitializeState(profile_params, worker_id);
   double eta_step = profile_params.max_step;
@@ -516,7 +520,7 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   NewtonResources &newton_resources = solver_resources[worker_id];
 
   // Time loop
-  while (step_id < nb_steps) {
+  while (step_id < max_nb_steps) {
 
     // Prepare data for nonlinear solve
     //   - Pre-compute R(U^{n})
@@ -1167,7 +1171,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   vector<double> score_jacobian(4, 0.); // row_major
   vector<double> delta(2, 0);
 
-  vector<vector<double>> &lu_resources =
+  pair<vector<double>, vector<double>> &lu_resources =
       solver_resources[worker_id].matrix.GetLU();
 
   double snorm;
@@ -1201,6 +1205,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
                          score_jacobian);
 
     if (verbose) {
+      printf("\nIter #%d - START\n", iter + 1);
       printf(" -> Score: \n");
       utils::print_state(score, 0, 2, 2);
       printf(" -> State sentivity: \n");
@@ -1407,10 +1412,14 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
   array<double, 2> best_guess{{0.5, 0.5}};
   vector<SearchOutcome> search_outcomes(xi_dim);
 
+  const bool verbose = search_params.verbose;
+
   // Worker function
   auto lsim_task = [&profile_params, &search_params, &boundary_data,
-                    &best_guess, &bl_state_grid, this](int xi_id) {
-    printf("###\n# station #%d - start\n#\n\n", xi_id);
+                    &bl_state_grid, verbose,
+                    this](int xi_id, array<double, 2> guess = {{0.5, 0.5}}) {
+    if (verbose)
+      printf("###\n# station #%d - start\n#\n\n", xi_id);
 
     // Set local profile settings
     profile_params.ReadEdgeConditions(boundary_data.edge_field,
@@ -1421,16 +1430,19 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
       printf("Invalid edge conditions at station #%d. Abort\n", xi_id);
       return SearchOutcome{false, 0, 0};
     }
-    profile_params.PrintODEFactors();
+
+    if (verbose)
+      profile_params.PrintODEFactors();
 
     // Call search method
-    SearchOutcome outcome =
-        ProfileSearch(profile_params, search_params, best_guess);
+    SearchOutcome outcome = ProfileSearch(profile_params, search_params, guess);
 
-    if (outcome.success) {
-      printf("\n\n# station #%d: SUCCESS.\n###\n\n", xi_id);
-    } else {
-      printf("\n\n# station #%d: FAIL.\n###\n\n", xi_id);
+    if (verbose) {
+      if (outcome.success) {
+        printf("\n\n# station #%d: SUCCESS.\n###\n\n", xi_id);
+      } else {
+        printf("\n\n# station #%d: FAIL.\n###\n\n", xi_id);
+      }
     }
 
     // Copy to output
@@ -1454,18 +1466,40 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
   // Following stations -> Locally-Similar solves
   profile_params.solve_type = SolveType::LocallySimilar;
 
+  printf("# FORWARD LOOP #\n\n");
+
   for (int xi_id = 1; xi_id < xi_dim; xi_id++) {
 
-    SearchOutcome outcome = lsim_task(xi_id);
+    outcome = lsim_task(xi_id, outcome.guess);
 
     // Assign outcome
     search_outcomes[xi_id] = std::move(outcome);
   }
 
+  print_summary(search_outcomes);
+
+  printf("\n# INVERSE LOOP #\n\n");
+
+  for (int xi_id = xi_dim - 2; xi_id > 0; xi_id--) {
+    if (search_outcomes[xi_id].success)
+      continue;
+
+    outcome = lsim_task(xi_id, search_outcomes[xi_id + 1].guess);
+
+    if (outcome.success) {
+      printf("# Station #%d was solved from station %d!\n", xi_id, xi_id + 1);
+      search_outcomes[xi_id] = outcome;
+    } else {
+      printf("# Station #%d could not be solved from station %d!\n", xi_id,
+             xi_id + 1);
+    }
+  }
+
+  printf("\n");
+  print_summary(search_outcomes);
+
   printf("\n# Local-Similarity Solve (END) #\n"
          "################################\n\n");
-
-  print_summary(search_outcomes);
 
   return std::move(search_outcomes);
 }
@@ -1727,14 +1761,24 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
   profile_params.solve_type = SolveType::DifferenceDifferential;
 
   for (int xi_id = 1; xi_id < xi_dim; xi_id++) {
+
+    // Careful to not develop the profile farther than at the previous station
+    // since the xi derivative terms will not be defined.
+    if (profile_params.nb_steps != search_outcomes[xi_id - 1].profile_size) {
+      profile_params.nb_steps = search_outcomes[xi_id - 1].profile_size;
+      printf(" -> Profile size lowered to %d.\n", profile_params.nb_steps);
+    }
+
     ComputeFieldGrid(xi_id, eta_dim, boundary_data.edge_field, bl_state_grid,
                      field_grid);
 
     // Call search method
     search_outcomes[xi_id] = diff_diff_task(xi_id);
 
-    if (search_outcomes[xi_id].success)
+    if (search_outcomes[xi_id].success) {
+      printf("SUCCESS at station #%d.\n", xi_id);
       continue;
+    }
 
     printf("FAIL at station #%d. Scaling the source term...\n", xi_id);
 
@@ -1744,7 +1788,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
     SearchOutcome temp_outcome;
 
     // Make the problem easier
-    const int max_nb_attemps = 5;
+    const int max_nb_attemps = 10;
     while (nb_attemps < max_nb_attemps) {
       scale *= 0.5;
 
