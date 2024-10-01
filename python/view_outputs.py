@@ -28,7 +28,7 @@ def read_eta_file(filename: str = "eta_grid.h5") -> np.ndarray:
 
 def read_outputs(filename: str) -> Tuple[np.ndarray, Dict[str, int]]:
     with h5py.File(filename, 'r') as f:
-        output_factors = np.transpose(f["data"][:])
+        outputs = np.transpose(f["data"][:])
         raw = f["field indices"][:]
         assert(f.attrs["description"] == "output fields")
 
@@ -37,7 +37,7 @@ def read_outputs(filename: str) -> Tuple[np.ndarray, Dict[str, int]]:
         for key_id, key in zip(raw['index'], raw['label'])
     }
 
-    return output_factors, output_labels   
+    return outputs, output_labels   
 
 def view_outputs(
     outputs: np.ndarray,

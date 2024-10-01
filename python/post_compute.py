@@ -12,6 +12,8 @@ from view_edge import read_edge_file
 from view_profile import read_eta_file, read_profile, view_state
 from view_outputs import read_outputs, view_outputs
 
+from typing import List
+
 ###
 # Read eta grid
 #
@@ -105,6 +107,78 @@ def view_station_outputs(station_id: int) -> None:
         f"Station {station_id:d}",
     )
 
+def compare_stations(station_ids: List[int]) -> None:
+    if len(station_ids) > 5:
+        print("compare_stations: no more than 5 station ids.\n")
+        return 
+
+    # Wrt to xi (get a sense of the signs of the diff-diff terms)
+    _, ax_eta_f = plt.subplots(1, figsize=(5,5))
+    _, ax_eta_fp = plt.subplots(1, figsize=(5,5))
+    _, ax_eta_g = plt.subplots(1, figsize=(5,5))
+
+    # Wrt to y (get sense of physical thickness)
+    _, ax_y_f = plt.subplots(1, figsize=(5,5))
+    _, ax_y_fp = plt.subplots(1, figsize=(5,5))
+    _, ax_y_g = plt.subplots(1, figsize=(5,5))
+
+    for station_id in station_ids:
+        # State data
+        filename = f"station_{station_id:d}.h5"
+        state_grid, state_labels = read_profile(filename)
+
+        F_ID = state_labels["f"]
+        FP_ID = state_labels["f'"]
+        G_ID = state_labels["g"]
+ 
+        profile_size = state_grid.shape[1]
+
+        ax_eta_f.plot(state_grid[F_ID], eta_grid[:profile_size], label=f"stat. {station_id:d}")
+        ax_eta_fp.plot(state_grid[FP_ID], eta_grid[:profile_size], label=f"stat. {station_id:d}")
+        ax_eta_g.plot(state_grid[G_ID], eta_grid[:profile_size], label=f"stat. {station_id:d}")
+
+        # Output data
+        filename = f"station_{station_id:d}_outputs.h5"
+        output_grid, output_labels = read_outputs(filename)
+
+        Y_ID = output_labels["y"]
+        y_grid = output_grid[Y_ID, :]
+
+        y_factor = station_0_factors["y_factor"]
+        if station_id > 0:
+            ue = ue_grid[station_id]
+            xi = xi_grid[station_id]
+
+            y_factor = np.sqrt(2. * xi) / ue
+
+        y_grid *= y_factor
+
+        ax_y_f.plot(state_grid[F_ID], y_grid[:profile_size], label=f"stat. {station_id:d}")
+        ax_y_fp.plot(state_grid[FP_ID], y_grid[:profile_size], label=f"stat. {station_id:d}")
+        ax_y_g.plot(state_grid[G_ID], y_grid[:profile_size], label=f"stat. {station_id:d}")
+
+    for ax in [ax_eta_f, ax_eta_fp, ax_eta_g]:
+        ax.set_ylim([0, eta_grid[-1]])
+        ax.set_ylabel(r"$\eta$")
+        ax.grid(which="both")
+        ax.legend()
+
+    for ax in [ax_y_f, ax_y_fp, ax_y_g]:
+        ax.set_ylim([0, None])
+        ax.set_ylabel(r"$y$")
+        ax.grid(which="both")
+        ax.legend()
+
+    ax_eta_f.set_title(r"$f(\xi, \eta)$ profiles")
+    ax_eta_fp.set_title(r"$f'(\xi, \eta)$ profiles")
+    ax_eta_g.set_title(r"$g(\xi, \eta)$ profiles")
+
+    ax_y_f.set_title(r"$f(\xi, y)$ profiles")
+    ax_y_fp.set_title(r"$f'(\xi, y)$ profiles")
+    ax_y_g.set_title(r"$g(\xi, y)$ profiles")
+
+    plt.show()
+    
 ###
 # Compute heat flux values
 #
