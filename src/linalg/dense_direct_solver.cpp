@@ -255,3 +255,17 @@ pair<vector<double>, vector<double>> AllocateLUResources(const size_t xdim) {
 
   return std::move(lu_resources);
 }
+
+//
+double UpperDeterminant(const vector<double> &upper_data, const size_t xdim) {
+  assert(upper_data.size() >= 0.5 * xdim * (xdim + 1));
+
+  double det_val = 1.;
+  int diag_id = 0;
+  for (int row_id = 0; row_id < xdim; row_id++) {
+    det_val *= upper_data[diag_id];
+    diag_id += (xdim - row_id);
+  }
+
+  return det_val;
+}

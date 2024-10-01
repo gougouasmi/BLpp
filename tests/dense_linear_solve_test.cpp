@@ -319,6 +319,26 @@ void TestLUMatrixSolve() {
   assert(allClose(rhs_matrix, matrix_out, xdim * zdim));
 }
 
+void Test_Determinant() {
+  const size_t xdim = 5;
+  const size_t upper_dim = 0.5 * xdim * (xdim + 1);
+
+  vector<double> upper_data(upper_dim, 0.);
+
+  fillWithRandomData(upper_data, upper_dim);
+
+  assert(
+      isClose(UpperDeterminant(upper_data, 2), upper_data[0] * upper_data[2]));
+  assert(isClose(UpperDeterminant(upper_data, 3),
+                 upper_data[0] * upper_data[3] * upper_data[5]));
+  assert(
+      isClose(UpperDeterminant(upper_data, 4),
+              upper_data[0] * upper_data[4] * upper_data[7] * upper_data[9]));
+  assert(isClose(UpperDeterminant(upper_data, 5),
+                 upper_data[0] * upper_data[5] * upper_data[9] *
+                     upper_data[12] * upper_data[14]));
+}
+
 int main(int argc, char *argv[]) {
   TestReadLowerUpper();
   TestLowerSolve();
@@ -339,6 +359,9 @@ int main(int argc, char *argv[]) {
 
   //
   TestLUSolve_LowDeterminant();
+
+  //
+  Test_Determinant();
 
   TestLowerMatrixSolve();
   TestUpperMatrixSolve();

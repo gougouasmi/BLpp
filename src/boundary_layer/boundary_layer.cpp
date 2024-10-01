@@ -1210,7 +1210,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
       utils::print_state(score, 0, 2, 2);
       printf(" -> State sentivity: \n");
       utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
-      printf(" -> Score jacobian:\n");
+      printf(" -> Score Jacobian:\n");
       utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
     }
 
@@ -1226,6 +1226,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     if (verbose) {
       printf(" -> delta: ");
       utils::print_state(delta, 0, 2);
+      printf(" -> Score Jacobian determinant: %.3e.\n",
+             UpperDeterminant(lu_resources.second, 2));
       printf("\n");
     }
 
