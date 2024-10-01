@@ -77,24 +77,25 @@ void BoundaryLayer::WriteEtaGrid(int worker_id) {
 }
 
 void BoundaryLayer::WriteStateGrid(const std::string &file_path,
-                                   int worker_id) {
+                                   int profile_size, int worker_id) {
   static vector<LabelIndex> state_labels = {
       {"C f''", FPP_ID},    {"f'", FP_ID}, {"f", F_ID},
       {"(C/Pr) g'", GP_ID}, {"g", G_ID},
   };
 
-  WriteH5(file_path, state_grids[worker_id], state_labels, (1 + _max_nb_steps),
+  WriteH5(file_path, state_grids[worker_id], state_labels, profile_size,
           BL_RANK, "state fields");
 }
 
 void BoundaryLayer::WriteStateGrid(const std::string &file_path,
-                                   const vector<double> &state_grid) {
+                                   const vector<double> &state_grid,
+                                   int profile_size) {
   static vector<LabelIndex> state_labels = {
       {"C f''", FPP_ID},    {"f'", FP_ID}, {"f", F_ID},
       {"(C/Pr) g'", GP_ID}, {"g", G_ID},
   };
 
-  WriteH5(file_path, state_grid, state_labels, (1 + _max_nb_steps), BL_RANK,
+  WriteH5(file_path, state_grid, state_labels, profile_size, BL_RANK,
           "state fields");
 }
 
@@ -1411,7 +1412,6 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarity(
   // Data structures
   const int xi_dim = boundary_data.xi_dim;
 
-  array<double, 2> best_guess{{0.5, 0.5}};
   vector<SearchOutcome> search_outcomes(xi_dim);
 
   const bool verbose = search_params.verbose;
@@ -1638,60 +1638,61 @@ inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
   const double xi_val = edge_field[xi_offset];
   const double xim1_val = edge_field[xi_offset - EDGE_FIELD_RANK];
 
-  if (xi_id > 1) {
-    const double xim2_val = edge_field[xi_offset - 2 * EDGE_FIELD_RANK];
+  // if (xi_id > 1) {
+  //   const double xim2_val = edge_field[xi_offset - 2 * EDGE_FIELD_RANK];
 
-    // 2nd order backward difference
-    const double lag0 = 2. * xi_val * (2. * xi_val - xim1_val - xim2_val) /
-                        ((xi_val - xim1_val) * (xi_val - xim2_val));
-    const double lag1 = 2. * xi_val * (xim2_val - xi_val) /
-                        ((xi_val - xim1_val) * (xim1_val - xim2_val));
-    const double lag2 = 2. * xi_val * (xi_val - xim1_val) /
-                        ((xi_val - xim2_val) * (xim1_val - xim2_val));
+  //  // 2nd order backward difference
+  //  const double lag0 = 2. * xi_val * (2. * xi_val - xim1_val - xim2_val) /
+  //                      ((xi_val - xim1_val) * (xi_val - xim2_val));
+  //  const double lag1 = 2. * xi_val * (xim2_val - xi_val) /
+  //                      ((xi_val - xim1_val) * (xim1_val - xim2_val));
+  //  const double lag2 = 2. * xi_val * (xi_val - xim1_val) /
+  //                      ((xi_val - xim2_val) * (xim1_val - xim2_val));
 
-    for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+  //  for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
 
-      double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
-      double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
-      double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+  //    double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
+  //    double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
+  //    double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
 
-      double fp_im2 = bl_state_grid[xi_id - 2][state_offset + FP_ID];
-      double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
-      double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
+  //    double fp_im2 = bl_state_grid[xi_id - 2][state_offset + FP_ID];
+  //    double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
+  //    double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
 
-      field_grid[field_offset + FIELD_M0_ID] = lag0;
-      field_grid[field_offset + FIELD_M1_ID] = lag1 * fp_im1 + lag2 * fp_im2;
-      field_grid[field_offset + FIELD_S0_ID] = lag0;
-      field_grid[field_offset + FIELD_S1_ID] = lag1 * f_im1 + lag1 * f_im2;
+  //    field_grid[field_offset + FIELD_M0_ID] = lag0;
+  //    field_grid[field_offset + FIELD_M1_ID] = lag1 * fp_im1 + lag2 * fp_im2;
+  //    field_grid[field_offset + FIELD_S0_ID] = lag0;
+  //    field_grid[field_offset + FIELD_S1_ID] = lag1 * f_im1 + lag1 * f_im2;
 
-      field_grid[field_offset + FIELD_E0_ID] = lag0;
-      field_grid[field_offset + FIELD_E1_ID] = lag1 * g_im1 + lag2 * g_im2;
+  //    field_grid[field_offset + FIELD_E0_ID] = lag0;
+  //    field_grid[field_offset + FIELD_E1_ID] = lag1 * g_im1 + lag2 * g_im2;
 
-      field_offset += FIELD_RANK;
-      state_offset += BL_RANK;
-    }
+  //    field_offset += FIELD_RANK;
+  //    state_offset += BL_RANK;
+  //  }
 
-  } else {
-    // 1st order backward difference
-    const double be_factor = 2. * xi_val / (xi_val - xim1_val);
+  //} else {
 
-    for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
-      double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
-      double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
-      double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+  // 1st order backward difference
+  const double be_factor = 2. * xi_val / (xi_val - xim1_val);
 
-      field_grid[field_offset + FIELD_M0_ID] = be_factor;
-      field_grid[field_offset + FIELD_M1_ID] = -be_factor * fp_im1;
-      field_grid[field_offset + FIELD_S0_ID] = be_factor;
-      field_grid[field_offset + FIELD_S1_ID] = -be_factor * f_im1;
+  for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+    double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
+    double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
+    double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
 
-      field_grid[field_offset + FIELD_E0_ID] = be_factor;
-      field_grid[field_offset + FIELD_E1_ID] = -be_factor * g_im1;
+    field_grid[field_offset + FIELD_M0_ID] = be_factor;
+    field_grid[field_offset + FIELD_M1_ID] = -be_factor * fp_im1;
+    field_grid[field_offset + FIELD_S0_ID] = be_factor;
+    field_grid[field_offset + FIELD_S1_ID] = -be_factor * f_im1;
 
-      field_offset += FIELD_RANK;
-      state_offset += BL_RANK;
-    }
+    field_grid[field_offset + FIELD_E0_ID] = be_factor;
+    field_grid[field_offset + FIELD_E1_ID] = -be_factor * g_im1;
+
+    field_offset += FIELD_RANK;
+    state_offset += BL_RANK;
   }
+  //}
 }
 
 vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
@@ -1704,6 +1705,10 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
                               state_grids);
 
   std::fill(field_grid.begin(), field_grid.end(), 0.);
+
+  // Get local-similarity profiles
+  vector<SearchOutcome> lsim_outcomes = ComputeLocalSimilarity(
+      boundary_data, profile_params, search_params, bl_state_grid);
 
   const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
@@ -1828,6 +1833,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
       }
     } else {
       printf("Couldn't solve a simpler system.\n");
+      if (diff_diff_task(xi_id, lsim_outcomes[xi_id].guess).success)
+        printf("Found a solution from local-sim guess!\n");
     }
 
     if (scale > 1) {
@@ -1844,8 +1851,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
           {"s1", FIELD_S1_ID}, {"e0", FIELD_E0_ID}, {"e1", FIELD_E1_ID},
       };
 
-      WriteH5("field.h5", field_grid, field_labels, _max_nb_steps, FIELD_RANK,
-              "fields");
+      WriteH5("field.h5", field_grid, field_labels, 1 + _max_nb_steps,
+              FIELD_RANK, "fields");
 
       break;
     }

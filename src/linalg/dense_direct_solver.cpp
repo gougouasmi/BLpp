@@ -85,6 +85,10 @@ void FactorizeLU(vector<double> &lower_data, vector<double> &upper_data,
     upper_pivot_offset += (nb_cols - j);
     lower_pivot_offset += (j + 2);
   }
+
+  if (UpperDeterminant(upper_data, xdim) == 0.) {
+    printf("\nWARNING: LU determinant is zero.\n");
+  }
 }
 
 /*

@@ -3,10 +3,13 @@
 
 #include <array>
 #include <cassert>
+#include <fstream>
 #include <iostream>
+#include <string>
 #include <vector>
 
 using std::array;
+using std::string;
 
 enum class SearchMethod {
   BoxSerial,
@@ -14,6 +17,7 @@ enum class SearchMethod {
   BoxParallelQueue,
   GradientSerial
 };
+
 enum class Scoring { Default, Square, SquareSteady, Exp, ExpScaled };
 
 struct SearchOutcome {
@@ -22,6 +26,29 @@ struct SearchOutcome {
   int profile_size;
   array<double, 2> guess{{0.0, 0.0}};
 };
+
+static std::ofstream &operator<<(std::ofstream &s,
+                                 const SearchOutcome &outcome) {
+  s << outcome.success << ", " << outcome.worker_id << ", "
+    << outcome.profile_size << ", " << outcome.guess[0] << ", "
+    << outcome.guess[1] << "\n";
+  return s;
+}
+
+static void WriteOutcomes(const vector<SearchOutcome> &outcomes,
+                          const char *filepath = "search_outcomes.csv") {
+  int nb_outcomes = outcomes.size();
+  assert(nb_outcomes > 0);
+
+  std::ofstream file(filepath);
+  assert(file.is_open());
+
+  for (const auto &outcome : outcomes) {
+    file << outcome;
+  }
+
+  file.close();
+}
 
 struct SearchWindow {
   double fpp_min{0.1};

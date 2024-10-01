@@ -61,14 +61,15 @@ int main(int argc, char *argv[]) {
   }
 
   // Write to file
-  bool write_profiles = true;
+  bool write_profiles = false;
   if (write_profiles) {
     boundary_layer.WriteEtaGrid(0);
     boundary_data.WriteEdgeConditions();
 
     for (int xi_id = 0; xi_id < xi_dim; xi_id++) {
       std::string state_filename("station_" + std::to_string(xi_id) + ".h5");
-      boundary_layer.WriteStateGrid(state_filename, bl_state_grid[xi_id]);
+      boundary_layer.WriteStateGrid(state_filename, bl_state_grid[xi_id],
+                                    search_outcomes[xi_id].profile_size);
 
       std::string output_filename("station_" + std::to_string(xi_id) +
                                   "_outputs.h5");

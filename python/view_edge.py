@@ -86,25 +86,6 @@ def view_edge_conditions(
     
     ax1, ax2, ax3 = axes
     
-    ax1.plot(x_grid, ue_grid, marker='x')
-    ax1.set_title(r"$u_{e}(x)$")
-    
-    ax2.plot(x_grid, he_grid, marker='x')
-    ax2.set_title(r"$h_{e}(x)$")
-    
-    ax3.plot(x_grid, pe_grid, marker='x')
-    ax3.set_title(r"$p_{e}(x)$")
-    
-    for ax in axes:
-        ax.grid(which="both")
-        ax.set_xlim([x0, x1])
-        ax.set_xlabel(r"$x$")
-    
-    #
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
-    
-    ax1, ax2, ax3 = axes
-    
     ax1.plot(xi_grid, dxi_dx_grid, marker='x')
     ax1.set_title(r"$\frac{d\xi}{dx}$")
     

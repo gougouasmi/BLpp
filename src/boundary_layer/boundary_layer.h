@@ -78,9 +78,10 @@ public:
   vector<double> &GetEtaGrid(int worker_id = 0);
   vector<double> &GetStateGrid(int worker_id = 0);
   void WriteEtaGrid(int worker_id = 0);
-  void WriteStateGrid(const std::string &file_path, int worker_id = 0);
+  void WriteStateGrid(const std::string &file_path, int profile_size,
+                      int worker_id = 0);
   void WriteStateGrid(const std::string &file_path,
-                      const vector<double> &state_grid);
+                      const vector<double> &state_grid, int profile_size);
   void WriteOutputGrid(const std::string &file_path,
                        const ProfileParams &profile_params, int profile_size,
                        int worker_id = 0);

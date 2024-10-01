@@ -66,7 +66,7 @@ def view_outputs(
     
     ax.grid(which="both")
     ax.set_ylabel(r"$\eta$")
-    ax.set_ylim([0, np.max(eta_grid[:profile_size])])
+    ax.set_ylim([0, np.max(eta_grid)])
     
     # C, mu, Pr
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
@@ -87,7 +87,7 @@ def view_outputs(
     for ax in axes:
         ax.grid(which="both")
         ax.set_ylabel(r"$\eta$")
-        ax.set_ylim([0, np.max(eta_grid[:profile_size])])
+        ax.set_ylim([0, np.max(eta_grid)])
  
     # y, q, \tau
     if (station_factors is not None):
@@ -103,7 +103,7 @@ def view_outputs(
 
         ax.grid(which='both')
         ax.set_ylabel(r"$\eta$")
-        ax.set_ylim([0, np.max(eta_grid[:profile_size])])
+        ax.set_ylim([0, np.max(eta_grid)])
 
         # tau
         tau_factor = station_factors["tau_factor"]
@@ -117,7 +117,7 @@ def view_outputs(
 
         ax.grid(which='both')
         ax.set_ylabel(r"$\eta$")
-        ax.set_ylim([0, np.max(eta_grid[:profile_size])])
+        ax.set_ylim([0, np.max(eta_grid)])
 
         # q
         q_factor = station_factors["q_factor"]
@@ -131,7 +131,7 @@ def view_outputs(
 
         ax.grid(which='both')
         ax.set_ylabel(r"$\eta$")
-        ax.set_ylim([0, np.max(eta_grid[:profile_size])])
+        ax.set_ylim([0, np.max(eta_grid)])
 
     plt.show()
     
