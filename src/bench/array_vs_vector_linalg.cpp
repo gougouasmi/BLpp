@@ -17,10 +17,10 @@ using std::vector;
 // Linalg routines on arrays
 //
 
-template <std::size_t xdim>
-void ReadLowerUpper(const array<double, xdim * xdim> &matrix_data,
-                    array<double, xdim *(xdim - 1) / 2> &lower_data,
-                    array<double, xdim *(xdim + 1) / 2> &upper_data) {
+template <typename T, std::size_t xdim>
+void ReadLowerUpper(const array<T, xdim * xdim> &matrix_data,
+                    array<T, xdim *(xdim - 1) / 2> &lower_data,
+                    array<T, xdim *(xdim + 1) / 2> &upper_data) {
   constexpr size_t nb_rows = xdim;
   constexpr size_t nb_cols = nb_rows;
 
@@ -44,9 +44,9 @@ void ReadLowerUpper(const array<double, xdim * xdim> &matrix_data,
   }
 }
 
-template <std::size_t xdim>
-void FactorizeLU(array<double, xdim *(xdim - 1) / 2> &lower_data,
-                 array<double, xdim *(xdim + 1) / 2> &upper_data) {
+template <typename T, std::size_t xdim>
+void FactorizeLU(array<T, xdim *(xdim - 1) / 2> &lower_data,
+                 array<T, xdim *(xdim + 1) / 2> &upper_data) {
   constexpr size_t nb_rows = xdim;
   constexpr size_t nb_cols = nb_rows;
 
@@ -56,7 +56,7 @@ void FactorizeLU(array<double, xdim *(xdim - 1) / 2> &lower_data,
   for (int j = 0; j < nb_cols - 1; j++) {
 
     // Compute diagonal term
-    double pivot1 = 1. / upper_data[upper_pivot_offset];
+    T pivot1 = 1. / upper_data[upper_pivot_offset];
 
     int lower_offset = lower_pivot_offset;
     int upper_offset = upper_pivot_offset + (nb_cols - j);
@@ -66,7 +66,7 @@ void FactorizeLU(array<double, xdim *(xdim - 1) / 2> &lower_data,
       // Compute L[i,j]
       lower_data[lower_offset] *= pivot1;
 
-      double gauss_coeff = lower_data[lower_offset];
+      T gauss_coeff = lower_data[lower_offset];
 
       // Compute L[i, j:i]
       for (int jb = j + 1; jb < i; jb++) {
@@ -91,9 +91,9 @@ void FactorizeLU(array<double, xdim *(xdim - 1) / 2> &lower_data,
   }
 }
 
-template <std::size_t xdim>
-void LowerSolve(const array<double, xdim *(xdim - 1) / 2> &lower_data,
-                array<double, xdim> &rhs) {
+template <typename T, std::size_t xdim>
+void LowerSolve(const array<T, xdim *(xdim - 1) / 2> &lower_data,
+                array<T, xdim> &rhs) {
   constexpr size_t nb_rows = xdim;
   int offset = 0;
   for (int i = 0; i < nb_rows; i++) {
@@ -104,9 +104,9 @@ void LowerSolve(const array<double, xdim *(xdim - 1) / 2> &lower_data,
   }
 }
 
-template <std::size_t xdim>
-void UpperSolve(const array<double, xdim *(xdim + 1) / 2> &upper_data,
-                array<double, xdim> &rhs) {
+template <typename T, std::size_t xdim>
+void UpperSolve(const array<T, xdim *(xdim + 1) / 2> &upper_data,
+                array<T, xdim> &rhs) {
   constexpr size_t nb_rows = xdim;
   constexpr size_t last_row_id = nb_rows - 1;
 
@@ -114,7 +114,7 @@ void UpperSolve(const array<double, xdim *(xdim + 1) / 2> &upper_data,
   for (int i = 0; i < nb_rows; i++) {
 
     int row_id = last_row_id - i;
-    double pivot1 = 1. / upper_data[offset];
+    T pivot1 = 1. / upper_data[offset];
 
     for (int j = 1; j < i + 1; j++) {
       rhs[row_id] -= upper_data[offset + j] * rhs[row_id + j];
@@ -125,27 +125,26 @@ void UpperSolve(const array<double, xdim *(xdim + 1) / 2> &upper_data,
   }
 }
 
-template <std::size_t xdim>
-void LUSolve(const array<double, xdim * xdim> &matrix_data,
-             array<double, xdim> &rhs,
-             pair<array<double, xdim *(xdim - 1) / 2>,
-                  array<double, xdim *(xdim + 1) / 2>> &lu_resources) {
+template <typename T, std::size_t xdim>
+void LUSolve(const array<T, xdim * xdim> &matrix_data, array<T, xdim> &rhs,
+             pair<array<T, xdim *(xdim - 1) / 2>,
+                  array<T, xdim *(xdim + 1) / 2>> &lu_resources) {
 
   auto &lower_data = lu_resources.first;
   auto &upper_data = lu_resources.second;
 
-  ReadLowerUpper<xdim>(matrix_data, lower_data, upper_data);
+  ReadLowerUpper<T, xdim>(matrix_data, lower_data, upper_data);
 
-  FactorizeLU<xdim>(lower_data, upper_data);
+  FactorizeLU<T, xdim>(lower_data, upper_data);
 
-  LowerSolve<xdim>(lower_data, rhs);
-  UpperSolve<xdim>(upper_data, rhs);
+  LowerSolve<T, xdim>(lower_data, rhs);
+  UpperSolve<T, xdim>(upper_data, rhs);
 }
 
-template <std::size_t xdim>
-void DenseMatrixMultiply(const array<double, xdim * xdim> &matrix_data_rm,
-                         const array<double, xdim> &input_vector,
-                         array<double, xdim> &output) {
+template <typename T, std::size_t xdim>
+void DenseMatrixMultiply(const array<T, xdim * xdim> &matrix_data_rm,
+                         const array<T, xdim> &input_vector,
+                         array<T, xdim> &output) {
   int offset = 0;
   for (int i = 0; i < xdim; i++) {
     output[i] = 0;
@@ -156,10 +155,10 @@ void DenseMatrixMultiply(const array<double, xdim * xdim> &matrix_data_rm,
   }
 }
 
-template <std::size_t xdim>
-bool inline allClose(const array<double, xdim> &arr1,
-                     const array<double, xdim> &arr2, double rel_tol = 1e-9) {
-  double error = 0., arr1_norm = 0., arr2_norm = 0.;
+template <typename T, std::size_t xdim>
+bool inline allClose(const array<T, xdim> &arr1, const array<T, xdim> &arr2,
+                     T rel_tol = 1e-9) {
+  T error = 0., arr1_norm = 0., arr2_norm = 0.;
   for (int id = 0; id < xdim; id++) {
     error += pow(arr1[id] - arr2[id], 2.0);
     arr1_norm += pow(arr1[id], 2.0);
@@ -170,19 +169,28 @@ bool inline allClose(const array<double, xdim> &arr1,
   arr2_norm = sqrt(arr2_norm);
   error = sqrt(error);
 
-  return error <= rel_tol * std::fmax(arr1_norm, arr2_norm);
+  T max_error = std::fmax(arr1_norm, arr2_norm);
+
+  bool close_enough = error <= rel_tol * max_error;
+
+  // if (!close_enough)
+  //   printf("allClose: relative error %.3e > rtol = %.3e", error / max_error,
+  //          rel_tol);
+
+  return close_enough;
 }
 
 ////
 // Helper functions
 //
 
-bool inline allClose(const vector<double> &vec1, const vector<double> &vec2,
-                     int size, double rel_tol = 1e-9) {
+template <typename T>
+bool inline allClose(const vector<T> &vec1, const vector<T> &vec2, int size,
+                     T rel_tol = 1e-9) {
   assert(vec1.size() >= size);
   assert(vec2.size() >= size);
 
-  double error = 0., vec1_norm = 0., vec2_norm = 0.;
+  T error = 0., vec1_norm = 0., vec2_norm = 0.;
   for (int id = 0; id < size; id++) {
     error += pow(vec1[id] - vec2[id], 2.0);
     vec1_norm += pow(vec1[id], 2.0);
@@ -193,16 +201,24 @@ bool inline allClose(const vector<double> &vec1, const vector<double> &vec2,
   vec2_norm = sqrt(vec2_norm);
   error = sqrt(error);
 
-  return error <= rel_tol * std::fmax(vec1_norm, vec2_norm);
+  T max_error = std::fmax(vec1_norm, vec2_norm);
+
+  bool close_enough = error <= rel_tol * max_error;
+
+  // if (!close_enough)
+  //   printf("allClose: relative error %.3e > rtol = %.3e", error / max_error,
+  //          rel_tol);
+
+  return close_enough;
 }
 
-template <std::size_t N>
-void inline fillArrayWithRandomData(array<double, N> &data, int size) {
+template <typename T, std::size_t N>
+void inline fillArrayWithRandomData(array<T, N> &data, int size) {
   assert(size <= N);
-  double denom = 1. / static_cast<double>(RAND_MAX);
+  T denom = 1. / static_cast<T>(RAND_MAX);
   for (int i = 0; i < size; ++i) {
     int random_val = rand();
-    data[i] = static_cast<double>(random_val) * denom;
+    data[i] = static_cast<T>(random_val) * denom;
   }
 }
 
@@ -250,6 +266,39 @@ template <std::size_t xdim> void run_lu_benchmark() {
   };
 
   ////
+  // (Float) Array setup
+  //
+
+  array<float, mat_size> float_matrix_a_data;
+  std::copy(matrix_a_data.begin(), matrix_a_data.end(),
+            float_matrix_a_data.begin());
+
+  array<float, xdim> float_rhs_a;
+  std::copy(rhs_a.begin(), rhs_a.end(), float_rhs_a.begin());
+
+  pair<array<float, lower_size>, array<float, upper_size>> float_lu_a_resources;
+
+  array<float, xdim> float_solution_a = float_rhs_a;
+  LUSolve(float_matrix_a_data, float_solution_a, float_lu_a_resources);
+
+  array<float, xdim> float_out_a;
+  std::fill(float_out_a.begin(), float_out_a.end(), 0.);
+
+  DenseMatrixMultiply(float_matrix_a_data, float_solution_a, float_out_a);
+
+  // IMPORTANT NOTE! Solution accuracy is significantly lower with float
+  bool float_solution_is_good_enough =
+      allClose<float, xdim>(float_rhs_a, float_out_a);
+
+  // Define task
+  auto float_array_task = [&float_matrix_a_data, &float_solution_a,
+                           &float_lu_a_resources]() {
+    for (int rep = 0; rep < nb_reps; rep++) {
+      LUSolve(float_matrix_a_data, float_solution_a, float_lu_a_resources);
+    }
+  };
+
+  ////
   // Vector setup
   //
 
@@ -283,10 +332,13 @@ template <std::size_t xdim> void run_lu_benchmark() {
 
   auto vector_duration = timeit(vector_task, 10);
   auto array_duration = timeit(array_task, 10);
+  auto float_array_duration = timeit(float_array_task, 10);
 
   std::cout << "\n--- N = " << xdim << " ---\n";
   std::cout << "Vector task took " << vector_duration << " secs.\n";
   std::cout << "Array task took " << array_duration << " secs.\n";
+  std::cout << "Array<float> task took " << float_array_duration
+            << " secs.\n\n";
 }
 
 int main(int argc, char *argv[]) {
