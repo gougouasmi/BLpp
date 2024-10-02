@@ -1625,10 +1625,10 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
-                             const vector<double> &edge_field,
-                             const vector<vector<double>> &bl_state_grid,
-                             vector<double> &field_grid) {
+inline void ComputeFieldGrid_BE(const int &xi_id, const int &eta_dim,
+                                const vector<double> &edge_field,
+                                const vector<vector<double>> &bl_state_grid,
+                                vector<double> &field_grid) {
   assert(xi_id > 0);
 
   int field_offset = 0;
@@ -1637,41 +1637,6 @@ inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
   const int xi_offset = xi_id * EDGE_FIELD_RANK + EDGE_XI_ID;
   const double xi_val = edge_field[xi_offset];
   const double xim1_val = edge_field[xi_offset - EDGE_FIELD_RANK];
-
-  // if (xi_id > 1) {
-  //   const double xim2_val = edge_field[xi_offset - 2 * EDGE_FIELD_RANK];
-
-  //  // 2nd order backward difference
-  //  const double lag0 = 2. * xi_val * (2. * xi_val - xim1_val - xim2_val) /
-  //                      ((xi_val - xim1_val) * (xi_val - xim2_val));
-  //  const double lag1 = 2. * xi_val * (xim2_val - xi_val) /
-  //                      ((xi_val - xim1_val) * (xim1_val - xim2_val));
-  //  const double lag2 = 2. * xi_val * (xi_val - xim1_val) /
-  //                      ((xi_val - xim2_val) * (xim1_val - xim2_val));
-
-  //  for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
-
-  //    double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
-  //    double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
-  //    double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
-
-  //    double fp_im2 = bl_state_grid[xi_id - 2][state_offset + FP_ID];
-  //    double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
-  //    double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
-
-  //    field_grid[field_offset + FIELD_M0_ID] = lag0;
-  //    field_grid[field_offset + FIELD_M1_ID] = lag1 * fp_im1 + lag2 * fp_im2;
-  //    field_grid[field_offset + FIELD_S0_ID] = lag0;
-  //    field_grid[field_offset + FIELD_S1_ID] = lag1 * f_im1 + lag1 * f_im2;
-
-  //    field_grid[field_offset + FIELD_E0_ID] = lag0;
-  //    field_grid[field_offset + FIELD_E1_ID] = lag1 * g_im1 + lag2 * g_im2;
-
-  //    field_offset += FIELD_RANK;
-  //    state_offset += BL_RANK;
-  //  }
-
-  //} else {
 
   // 1st order backward difference
   const double be_factor = 2. * xi_val / (xi_val - xim1_val);
@@ -1692,7 +1657,59 @@ inline void ComputeFieldGrid(const int &xi_id, const int &eta_dim,
     field_offset += FIELD_RANK;
     state_offset += BL_RANK;
   }
-  //}
+}
+
+inline void ComputeFieldGrid_LG2(const int &xi_id, const int &eta_dim,
+                                 const vector<double> &edge_field,
+                                 const vector<vector<double>> &bl_state_grid,
+                                 vector<double> &field_grid) {
+  assert(xi_id > 0);
+
+  int field_offset = 0;
+  int state_offset = 0;
+
+  const int xi_offset = xi_id * EDGE_FIELD_RANK + EDGE_XI_ID;
+  const double xi_val = edge_field[xi_offset];
+  const double xim1_val = edge_field[xi_offset - EDGE_FIELD_RANK];
+
+  if (xi_id == 1) {
+    ComputeFieldGrid_BE(xi_id, eta_dim, edge_field, bl_state_grid, field_grid);
+    return;
+  }
+
+  const double xim2_val = edge_field[xi_offset - 2 * EDGE_FIELD_RANK];
+
+  assert(xi_val > xim1_val && xim1_val > xim2_val);
+
+  // 2nd order backward difference
+  const double lag0 = 2. * xi_val * (2. * xi_val - xim1_val - xim2_val) /
+                      ((xi_val - xim1_val) * (xi_val - xim2_val));
+  const double lag1 = 2. * xi_val * (xim2_val - xi_val) /
+                      ((xi_val - xim1_val) * (xim1_val - xim2_val));
+  const double lag2 = 2. * xi_val * (xi_val - xim1_val) /
+                      ((xi_val - xim2_val) * (xim1_val - xim2_val));
+
+  for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+
+    double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
+    double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
+    double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+
+    double fp_im2 = bl_state_grid[xi_id - 2][state_offset + FP_ID];
+    double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
+    double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
+
+    field_grid[field_offset + FIELD_M0_ID] = lag0;
+    field_grid[field_offset + FIELD_M1_ID] = lag1 * fp_im1 + lag2 * fp_im2;
+    field_grid[field_offset + FIELD_S0_ID] = lag0;
+    field_grid[field_offset + FIELD_S1_ID] = lag1 * f_im1 + lag1 * f_im2;
+
+    field_grid[field_offset + FIELD_E0_ID] = lag0;
+    field_grid[field_offset + FIELD_E1_ID] = lag1 * g_im1 + lag2 * g_im2;
+
+    field_offset += FIELD_RANK;
+    state_offset += BL_RANK;
+  }
 }
 
 vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
@@ -1706,52 +1723,72 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
   std::fill(field_grid.begin(), field_grid.end(), 0.);
 
-  // Get local-similarity profiles
-  vector<SearchOutcome> lsim_outcomes = ComputeLocalSimilarity(
-      boundary_data, profile_params, search_params, bl_state_grid);
-
   const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
 
   vector<SearchOutcome> search_outcomes(xi_dim);
 
   // Worker function
-  auto diff_diff_task =
-      [&boundary_data, &profile_params, &search_params, &bl_state_grid, verbose,
-       this](const int &xi_id, array<double, 2> best_guess = {{0.5, 0.5}}) {
-        if (verbose) {
-          printf("###\n# station #%d - start\n#\n\n", xi_id);
-        }
+  double scale = 1.0;
+  auto diff_diff_task = [&boundary_data, &profile_params, &search_params,
+                         &bl_state_grid, verbose, &scale,
+                         this](const int &xi_id,
+                               array<double, 2> best_guess = {{0.5, 0.5}}) {
+    if (verbose) {
+      printf("###\n# station #%d - start\n#\n\n", xi_id);
+    }
 
-        // Set local profile settings
-        profile_params.ReadEdgeConditions(boundary_data.edge_field,
-                                          xi_id * EDGE_FIELD_RANK);
-        profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
+    // Set local profile settings
+    profile_params.ReadEdgeConditions(boundary_data.edge_field,
+                                      xi_id * EDGE_FIELD_RANK);
+    profile_params.ReadWallConditions(boundary_data.wall_field, xi_id);
 
-        if (!profile_params.AreValid()) {
-          printf("Invalid edge conditions. Abort\n");
-          return SearchOutcome{false, 0, 1, best_guess};
-        }
+    if (!profile_params.AreValid()) {
+      printf("Invalid edge conditions. Abort\n");
+      return SearchOutcome{false, 0, 1, best_guess};
+    }
 
-        // Call search method
-        SearchOutcome outcome =
-            ProfileSearch(profile_params, search_params, best_guess);
+    // Call search method
+    SearchOutcome outcome =
+        ProfileSearch(profile_params, search_params, best_guess);
 
-        // Copy profile to output vector
-        std::copy(state_grids[outcome.worker_id].begin(),
-                  state_grids[outcome.worker_id].end(),
-                  bl_state_grid[xi_id].begin());
+    // If the search converged to a 'trimmed' profile, finish it manually
+    if (outcome.success && outcome.profile_size < _max_nb_steps &&
+        scale == 1.0) {
+      printf("Profile converged but terminated early!\n");
 
-        if (verbose) {
-          if (!outcome.success) {
-            printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
-          } else {
-            printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
-          }
-        }
+      vector<double> &state_grid = state_grids[outcome.worker_id];
 
-        return std::move(outcome);
-      };
+      const int eta_start = outcome.profile_size;
+      const double f_start = state_grid[eta_start * BL_RANK + F_ID];
+      const double fp_ref = state_grid[eta_start * BL_RANK + FP_ID];
+      const double g_ref = state_grid[eta_start * BL_RANK + G_ID];
+
+      for (int eta_id = eta_start; eta_id < _max_nb_steps + 1; eta_id++) {
+        state_grid[eta_id * BL_RANK + F_ID] =
+            f_start + (eta_id - eta_start) * profile_params.max_step * fp_ref;
+        state_grid[eta_id * BL_RANK + G_ID] = g_ref;
+        state_grid[eta_id * BL_RANK + FP_ID] = fp_ref;
+      }
+
+      outcome.profile_size = _max_nb_steps;
+    }
+
+    // Copy profile to output vector
+    std::copy(state_grids[outcome.worker_id].begin(),
+              state_grids[outcome.worker_id].end(),
+              bl_state_grid[xi_id].begin());
+
+    if (verbose) {
+      if (!outcome.success) {
+        printf("\n#\n# station #%d: Unsuccessful search.\n###\n\n", xi_id);
+      } else {
+        printf("\n#\n# station #%d: Successful search.\n###\n\n", xi_id);
+      }
+    }
+
+    return std::move(outcome);
+  };
 
   printf("#########################################\n"
          "# Difference-Differential Solve (START) #\n\n");
@@ -1776,8 +1813,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
       printf(" -> Profile size lowered to %d.\n", profile_params.nb_steps);
     }
 
-    ComputeFieldGrid(xi_id, eta_dim, boundary_data.edge_field, bl_state_grid,
-                     field_grid);
+    ComputeFieldGrid_BE(xi_id, eta_dim, boundary_data.edge_field, bl_state_grid,
+                        field_grid);
 
     // Call search method
     search_outcomes[xi_id] = diff_diff_task(xi_id);
@@ -1791,7 +1828,7 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
     // At this point the search wasn't successfull
     int nb_attemps = 0;
-    double scale = 1.;
+    scale = 1.;
     SearchOutcome temp_outcome;
 
     // Make the problem easier
@@ -1833,8 +1870,6 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
       }
     } else {
       printf("Couldn't solve a simpler system.\n");
-      if (diff_diff_task(xi_id, lsim_outcomes[xi_id].guess).success)
-        printf("Found a solution from local-sim guess!\n");
     }
 
     if (scale > 1) {
