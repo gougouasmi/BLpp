@@ -58,9 +58,13 @@ static_assert(complete_indexing(OUTPUT_INDICES));
 
 //
 enum class WallType { Wall, Adiabatic };
+
 enum class TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
+constexpr array<double, 3> SCHEME_THETA = {{0., 1., 0.5}};
+
 enum class SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
 
+//
 struct ProfileParams {
   int nb_steps{2000};
 

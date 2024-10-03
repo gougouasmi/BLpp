@@ -12,7 +12,7 @@
 
 BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel model_functions)
     : _max_nb_steps(max_nb_steps), model_functions(model_functions),
-      field_grid(FIELD_RANK * (1 + _max_nb_steps), 0.),
+      field_grid(FIELD_RANK * (max_nb_steps), 0.),
       output_grid(OUTPUT_RANK * (1 + _max_nb_steps)) {
 
   for (int worker_id = 0; worker_id < MAX_NB_WORKERS; worker_id++) {
@@ -329,7 +329,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   //
   int step_id = 0;
   int state_offset = 0;
-  int field_offset = FIELD_RANK;
+  int field_offset = 0;
 
   ////
   // Setup nonlinear solver functions
@@ -1625,7 +1625,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeLocalSimilarityParallel(
  *  2. wall properties wrt xi
  *  3. edge properties wrt xi
  */
-inline void ComputeFieldGrid_BE(const int &xi_id, const int &eta_dim,
+inline void ComputeDiffField_BE(const int &xi_id, const int &nb_steps,
+                                const TimeScheme &time_scheme,
                                 const vector<double> &edge_field,
                                 const vector<vector<double>> &bl_state_grid,
                                 vector<double> &field_grid) {
@@ -1638,13 +1639,23 @@ inline void ComputeFieldGrid_BE(const int &xi_id, const int &eta_dim,
   const double xi_val = edge_field[xi_offset];
   const double xim1_val = edge_field[xi_offset - EDGE_FIELD_RANK];
 
+  double theta = SCHEME_THETA[static_cast<int>(time_scheme)];
+
+  const vector<double> &state_grid_m1 = bl_state_grid[xi_id - 1];
+
   // 1st order backward difference
   const double be_factor = 2. * xi_val / (xi_val - xim1_val);
 
-  for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
-    double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
-    double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
-    double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+  for (int step_id = 0; step_id < nb_steps; step_id++) {
+
+    double fp_im1 = (1. - theta) * state_grid_m1[state_offset + FP_ID] +
+                    theta * state_grid_m1[state_offset + BL_RANK + FP_ID];
+
+    double f_im1 = (1. - theta) * state_grid_m1[state_offset + F_ID] +
+                   theta * state_grid_m1[state_offset + BL_RANK + F_ID];
+
+    double g_im1 = (1. - theta) * state_grid_m1[state_offset + G_ID] +
+                   theta * state_grid_m1[state_offset + BL_RANK + G_ID];
 
     field_grid[field_offset + FIELD_M0_ID] = be_factor;
     field_grid[field_offset + FIELD_M1_ID] = -be_factor * fp_im1;
@@ -1659,7 +1670,8 @@ inline void ComputeFieldGrid_BE(const int &xi_id, const int &eta_dim,
   }
 }
 
-inline void ComputeFieldGrid_LG2(const int &xi_id, const int &eta_dim,
+inline void ComputeDiffField_LG2(const int &xi_id, const int &nb_steps,
+                                 const TimeScheme &time_scheme,
                                  const vector<double> &edge_field,
                                  const vector<vector<double>> &bl_state_grid,
                                  vector<double> &field_grid) {
@@ -1672,8 +1684,11 @@ inline void ComputeFieldGrid_LG2(const int &xi_id, const int &eta_dim,
   const double xi_val = edge_field[xi_offset];
   const double xim1_val = edge_field[xi_offset - EDGE_FIELD_RANK];
 
+  double theta = SCHEME_THETA[static_cast<int>(time_scheme)];
+
   if (xi_id == 1) {
-    ComputeFieldGrid_BE(xi_id, eta_dim, edge_field, bl_state_grid, field_grid);
+    ComputeDiffField_BE(xi_id, nb_steps, time_scheme, edge_field, bl_state_grid,
+                        field_grid);
     return;
   }
 
@@ -1689,15 +1704,24 @@ inline void ComputeFieldGrid_LG2(const int &xi_id, const int &eta_dim,
   const double lag2 = 2. * xi_val * (xi_val - xim1_val) /
                       ((xi_val - xim2_val) * (xim1_val - xim2_val));
 
-  for (int eta_id = 0; eta_id < eta_dim; eta_id++) {
+  const vector<double> &state_grid_m1 = bl_state_grid[xi_id - 1];
+  const vector<double> &state_grid_m2 = bl_state_grid[xi_id - 2];
 
-    double fp_im1 = bl_state_grid[xi_id - 1][state_offset + FP_ID];
-    double f_im1 = bl_state_grid[xi_id - 1][state_offset + F_ID];
-    double g_im1 = bl_state_grid[xi_id - 1][state_offset + G_ID];
+  for (int step_id = 0; step_id < nb_steps; step_id++) {
 
-    double fp_im2 = bl_state_grid[xi_id - 2][state_offset + FP_ID];
-    double f_im2 = bl_state_grid[xi_id - 2][state_offset + F_ID];
-    double g_im2 = bl_state_grid[xi_id - 2][state_offset + G_ID];
+    double fp_im1 = (1 - theta) * state_grid_m1[state_offset + FP_ID] +
+                    theta * state_grid_m1[state_offset + BL_RANK + FP_ID];
+    double f_im1 = (1 - theta) * state_grid_m1[state_offset + F_ID] +
+                   theta * state_grid_m1[state_offset + BL_RANK + F_ID];
+    double g_im1 = (1 - theta) * state_grid_m1[state_offset + G_ID] +
+                   theta * state_grid_m1[state_offset + BL_RANK + G_ID];
+
+    double fp_im2 = (1 - theta) * state_grid_m2[state_offset + FP_ID] +
+                    theta * state_grid_m2[state_offset + BL_RANK + FP_ID];
+    double f_im2 = (1 - theta) * state_grid_m2[state_offset + F_ID] +
+                   theta * state_grid_m2[state_offset + BL_RANK + F_ID];
+    double g_im2 = (1 - theta) * state_grid_m2[state_offset + G_ID] +
+                   theta * state_grid_m2[state_offset + BL_RANK + G_ID];
 
     field_grid[field_offset + FIELD_M0_ID] = lag0;
     field_grid[field_offset + FIELD_M1_ID] = lag1 * fp_im1 + lag2 * fp_im2;
@@ -1813,8 +1837,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
       printf(" -> Profile size lowered to %d.\n", profile_params.nb_steps);
     }
 
-    ComputeFieldGrid_BE(xi_id, eta_dim, boundary_data.edge_field, bl_state_grid,
-                        field_grid);
+    ComputeDiffField_BE(xi_id, profile_params.nb_steps, profile_params.scheme,
+                        boundary_data.edge_field, bl_state_grid, field_grid);
 
     // Call search method
     search_outcomes[xi_id] = diff_diff_task(xi_id);
@@ -1886,8 +1910,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
           {"s1", FIELD_S1_ID}, {"e0", FIELD_E0_ID}, {"e1", FIELD_E1_ID},
       };
 
-      WriteH5("field.h5", field_grid, field_labels, 1 + _max_nb_steps,
-              FIELD_RANK, "fields");
+      WriteH5("field.h5", field_grid, field_labels, _max_nb_steps, FIELD_RANK,
+              "fields");
 
       break;
     }
