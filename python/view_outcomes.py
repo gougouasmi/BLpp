@@ -47,7 +47,6 @@ def view_outcomes(outcome_file: str) -> None:
     
     plt.show()
 
-
 if __name__ == "__main__":
 
     import sys
@@ -58,6 +57,6 @@ if __name__ == "__main__":
     
     outcome_file = "search_outcomes.csv"
     if len(sys.argv) == 2:
-        filename = sys.argv[1]
+        outcome_file = sys.argv[1]
     
     view_outcomes(outcome_file)

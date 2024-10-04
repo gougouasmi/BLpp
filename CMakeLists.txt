@@ -120,8 +120,8 @@ target_include_directories(compute_2d_profile PRIVATE src/boundary_layer src/phy
 # Compute edge flow from pressure
 add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solvers.cpp)
 
-target_link_libraries(edge_solve PRIVATE utils_lib linalg_lib)
-target_include_directories(edge_solve PRIVATE src/boundary_layer src/utils src/solvers src/linalg)
+target_link_libraries(edge_solve PRIVATE utils_lib linalg_lib cases_lib)
+target_include_directories(edge_solve PRIVATE src/boundary_layer src/utils src/solvers src/linalg src/cases)
 
 # (DEBUGGING) Develop profile for specific boundary stations
 add_executable(debug_devel_profile src/debug/debug_develop_profile.cpp)

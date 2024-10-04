@@ -261,9 +261,54 @@ def view_edge_conditions(
         ax.grid(which="both")
         ax.set_xlim([0, xi1])
         ax.set_xlabel(r"$\xi$")
-    
-    plt.show()
 
+    # Output factors
+    grid_size = x_grid.shape[0]
+    output_factors = {
+        'tau': np.zeros(grid_size), #,
+        'q': np.zeros(grid_size), #,
+        'y': np.zeros(grid_size), #,
+    }
+
+    dxi_dx_grid = edge_grid[edge_indices["dxi/dx"], :]
+
+    romu_stag = (
+        edge_grid[edge_indices["roe"], 0] *
+        edge_grid[edge_indices["mue"], 0]
+    )
+ 
+    he_stag = he_grid[0]
+    due_dx_stag = (ue_grid[1] - ue_grid[0]) / (x_grid[1] - x_grid[0])
+
+    output_factors["tau"][0] = (romu_stag ** 0.5) * (due_dx_stag ** 1.5) * x_grid[0]
+    output_factors["q"][0]   = he_stag * (romu_stag * due_dx_stag) ** 0.5
+    output_factors["y"][0]   = (romu_stag / due_dx_stag) ** 0.5
+
+    output_factors["tau"][1:] = ue_grid[1:] * dxi_dx_grid[1:] / np.sqrt(2. * xi_grid[1:])
+    output_factors["q"][1:]   = he_grid[1:] * dxi_dx_grid[1:] / np.sqrt(2. * xi_grid[1:])
+    output_factors["y"][1:]   = np.sqrt(2. * xi_grid[1:]) / ue_grid[1:]
+
+    fig5, axes = plt.subplots(nrows=1, ncols=3, figsize=(14, vert_space))
+
+    fig5.suptitle("Output factors")
+
+    ax1, ax2, ax3 = axes
+
+    ax1.plot(x_grid, output_factors["tau"], marker='x')
+    ax1.set_title(r"$\tau$")
+
+    ax2.plot(x_grid, output_factors["q"], marker='x')
+    ax2.set_title(r"$q$")
+
+    ax3.plot(x_grid, output_factors["y"], marker='x')
+    ax3.set_title(r"$y$")
+
+    for ax in axes:
+        ax.grid(which="both")
+        ax.set_xlim([0, x1])
+        ax.set_xlabel(r"$x$")
+
+    plt.show()
 
 ###
 #

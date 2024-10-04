@@ -82,6 +82,13 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
 
 BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
                                   const char *path, bool verbose) {
+  vector<vector<double>> csv_data = ReadCSV(path);
+  return GenFlatNosedCylinder(altitude_km, mach, csv_data, verbose);
+}
+
+BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
+                                  const vector<vector<double>> &csv_data,
+                                  bool verbose) {
   assert(mach > 1);
   assert(altitude_km > 0);
 
@@ -131,12 +138,10 @@ BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
   double v_scale = sqrt(stag_pressure / stag_density);
 
   // (3 / 5) Fetch flow along body eddge
-  vector<vector<double>> csv_data = ReadCSV(path);
-
-  vector<double> &body_grid = csv_data[0];
-  vector<double> &pressure_field = csv_data[1];
-  vector<double> &density_field = csv_data[2];
-  vector<double> &velocity_field = csv_data[3];
+  const vector<double> &body_grid = csv_data[0];
+  const vector<double> &pressure_field = csv_data[1];
+  const vector<double> &density_field = csv_data[2];
+  const vector<double> &velocity_field = csv_data[3];
 
   int grid_size = body_grid.size();
 

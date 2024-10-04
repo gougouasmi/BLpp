@@ -1,21 +1,62 @@
 #include <iostream>
 
+#include "boundary_data_struct.h"
+#include "case_functions.h"
 #include "edge_solvers.h"
 #include "file_io.h"
 
+#include <cassert>
 #include <cmath>
 #include <string>
 #include <vector>
 
 using std::vector;
 
+/*
+ * USAGE: ./edge_solve -p <pressure_file.csv> -e <edge_file.h5> -v
+ *
+ */
+
+void ParseCmdInputs(int argc, char *argv[], string &p_file, string &e_file,
+                    bool &verbose) {
+
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == "-p") {
+      if (i + 1 < argc) {
+        p_file = argv[++i];
+        printf("input pressure file set to %s.\n", p_file.c_str());
+      } else {
+        printf("input pressure file path spec is incomplete.\n");
+      }
+    } else if (arg == "-e") {
+      if (i + 1 < argc) {
+        e_file = argv[++i];
+        printf("output edge file set to %s.\n", e_file.c_str());
+      } else {
+        printf("output edge file path spec is incomplete.\n");
+      }
+    } else if (arg == "-v") {
+      verbose = true;
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
-  string file_path = "pressure_distribution.csv";
-  vector<vector<double>> csv_data = ReadCSV(file_path);
+  string pressure_path = "pressure_distribution.csv";
+  string edge_path = "test_edge_grid.h5";
+  bool verbose = false;
+
+  ParseCmdInputs(argc, argv, pressure_path, edge_path, verbose);
+
+  vector<vector<double>> csv_data = ReadCSV(pressure_path);
 
   int nb_rows, nb_cols;
-  GetDimsCSV(file_path, nb_rows, nb_cols);
-  printf("\nCSV data dims : %d rows, %d columns.\n\n", nb_rows, nb_cols);
+  GetDimsCSV(pressure_path, nb_rows, nb_cols);
+  assert(nb_cols == 2);
+
+  if (verbose)
+    printf("\nCSV data dims : %d rows, %d columns.\n\n", nb_rows, nb_cols);
 
   vector<double> body_grid = csv_data[0];
   vector<double> pressure_field = csv_data[1];
@@ -43,19 +84,24 @@ int main(int argc, char *argv[]) {
 
     double roe = density_field[xid];
     double ue = velocity_field[xid];
-    printf("%d: p = %.3e (dp/ds = %.2e), ro = %.3e, u = %.3e.\n", xid, pe,
-           dp_ds, roe, ue);
+    if (verbose)
+      printf("%d: p = %.3e (dp/ds = %.2e), ro = %.3e, u = %.3e.\n", xid, pe,
+             dp_ds, roe, ue);
   }
 
-  bool write_to_file = true;
-  if (write_to_file) {
-    vector<vector<double>> output_data;
-    output_data.push_back(body_grid);
-    output_data.push_back(pressure_field);
-    output_data.push_back(density_field);
-    output_data.push_back(velocity_field);
+  vector<vector<double>> csv_flow_data;
+  csv_flow_data.push_back(body_grid);
+  csv_flow_data.push_back(pressure_field);
+  csv_flow_data.push_back(density_field);
+  csv_flow_data.push_back(velocity_field);
 
+  BoundaryData boundary_data = GenFlatNosedCylinder(50, 2.0, csv_flow_data);
+
+  boundary_data.WriteEdgeConditions(edge_path);
+
+  bool write_to_file = false;
+  if (write_to_file) {
     const std::string output_path = "output_constant_density.csv";
-    WriteCSV(output_path, output_data);
+    WriteCSV(output_path, csv_flow_data);
   }
 }

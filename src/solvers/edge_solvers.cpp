@@ -221,6 +221,11 @@ int ComputeFromPressureConstantDensity(const vector<double> &pressure_field,
   assert(density_field[0] > 0);
   assert(pressure_field[0] > 0);
 
+  bool scaled_pressure_vals_are_under_one =
+      !std::any_of(pressure_field.begin(), pressure_field.end(),
+                   [](double pval) { return pval > 1.; });
+  assert(scaled_pressure_vals_are_under_one);
+
   double ue;
 
   double gam = gamma_ref;
