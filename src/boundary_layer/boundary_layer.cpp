@@ -1747,10 +1747,16 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
 
   std::fill(field_grid.begin(), field_grid.end(), 0.);
 
-  const int eta_dim = eta_grids[0].size();
   const int xi_dim = boundary_data.xi_dim;
 
   vector<SearchOutcome> search_outcomes(xi_dim);
+
+  // Function to compute Diff-Diff model coefficients
+  using FieldFunction = void (*)(
+      const int &, const int &, const TimeScheme &, const vector<double> &,
+      const vector<vector<double>> &, vector<double> &);
+
+  FieldFunction compute_diff_field = ComputeDiffField_BE;
 
   // Worker function
   double scale = 1.0;
@@ -1837,8 +1843,8 @@ vector<SearchOutcome> BoundaryLayer::ComputeDifferenceDifferential(
       printf(" -> Profile size lowered to %d.\n", profile_params.nb_steps);
     }
 
-    ComputeDiffField_BE(xi_id, profile_params.nb_steps, profile_params.scheme,
-                        boundary_data.edge_field, bl_state_grid, field_grid);
+    compute_diff_field(xi_id, profile_params.nb_steps, profile_params.scheme,
+                       boundary_data.edge_field, bl_state_grid, field_grid);
 
     // Call search method
     search_outcomes[xi_id] = diff_diff_task(xi_id);
