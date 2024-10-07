@@ -109,6 +109,15 @@ struct SearchParams {
 
   SearchParams() = default;
 
+  /*
+   Read search parameters from argument list.
+
+   -maxiter <number_of_iterations> -rtol <residual_tolerance> -v (verbosity)
+   -search_method -scoring_method
+
+   @param argc number of arguments,
+   @param argv list of command line arguments,
+  */
   void ParseCmdInputs(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i];

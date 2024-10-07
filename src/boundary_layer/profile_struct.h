@@ -196,6 +196,16 @@ struct ProfileParams {
     }
   }
 
+  /*
+   Read profile parameters from argument list.
+
+   -n <eta_grid_size> -fpp0 <f''(0)> -gp0 <g'(0)> -g0 <g(0)>
+
+   -eta <eta_step> -walltype -time_scheme -solve_type
+
+   @param argc number of arguments,
+   @param argv list of arguments,
+  */
   void ParseCmdInputs(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i];
