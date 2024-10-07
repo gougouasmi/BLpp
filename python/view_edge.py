@@ -37,6 +37,7 @@ def read_edge_file(
 def view_edge_conditions(
     edge_grid: np.ndarray,
     edge_indices: Dict[str, int],
+    show_gradients: bool=False,
 ) -> None:
 
     EDGE_U_ID = edge_indices["ue"]
@@ -132,63 +133,70 @@ def view_edge_conditions(
         ax.set_xlabel(r"$\xi$")
 
     ## Gradients (physical space)
-    fig5, axes = plt.subplots(nrows=1, ncols=2, figsize=(9, vert_space))
+    if show_gradients:
+        fig5, axes = plt.subplots(nrows=1, ncols=3, figsize=(14, vert_space))
     
-    fig5.suptitle(r"Flow gradients wrt $x$")
+        fig5.suptitle(r"Flow gradients wrt $x$")
 
-    ax1, ax2 = axes
+        ax1, ax2, ax3 = axes
 
-    ax1.plot(x_grid[1:], (ue_grid[1:] - ue_grid[0:-1]) / delta_x, marker='x', label=r"BE")
-    ax1.plot(x_grid[2:], lg2_x0 * ue_grid[2:] - lg2_x1 * ue_grid[1:-1] + lg2_x2 * ue_grid[:-2], marker='x', label=r"LG2")
+        ax1.plot(x_grid[1:], (ue_grid[1:] - ue_grid[0:-1]) / delta_x, marker='x', label=r"BE")
+        #ax1.plot(x_grid[2:], lg2_x0 * ue_grid[2:] - lg2_x1 * ue_grid[1:-1] + lg2_x2 * ue_grid[:-2], marker='x', label=r"LG2")
 
-    ax1.legend()
-    ax1.set_title(r"$\frac{du_{e}}{dx}$")
+        ax1.legend()
+        ax1.set_title(r"$\frac{du_{e}}{dx}$")
     
-    ax2.plot(x_grid[1:], (he_grid[1:] - he_grid[0:-1]) / delta_x, marker='x', label=r"BE")
-    ax2.plot(x_grid[2:], lg2_x0 * he_grid[2:] - lg2_x1 * he_grid[1:-1] + lg2_x2 * he_grid[:-2], marker='x', label=r"LG2")
+        ax2.plot(x_grid[1:], (he_grid[1:] - he_grid[0:-1]) / delta_x, marker='x', label=r"BE")
+        #ax2.plot(x_grid[2:], lg2_x0 * he_grid[2:] - lg2_x1 * he_grid[1:-1] + lg2_x2 * he_grid[:-2], marker='x', label=r"LG2")
 
-    ax2.legend()
-    ax2.set_title(r"$\frac{dh_{e}}{dx}$")
-    
-    for ax in axes:
-        ax.grid(which="both")
-        ax.set_xlim([0, x1])
-        ax.set_xlabel(r"$x$")
+        ax2.legend()
+        ax2.set_title(r"$\frac{dh_{e}}{dx}$")
+
+        ax3.plot(x_grid[1:], (pe_grid[1:] - pe_grid[0:-1]) / delta_x, marker='x', label=r"BE")
+        #ax3.plot(x_grid[2:], lg2_x0 * pe_grid[2:] - lg2_x1 * pe_grid[1:-1] + lg2_x2 * pe_grid[:-2], marker='x', label=r"LG2")
+
+        ax3.legend()
+        ax3.set_title(r"$\frac{dp_{e}}{dx}$")
  
-
+        for ax in axes:
+            ax.grid(which="both")
+            ax.set_xlim([0, x1])
+            ax.set_xlabel(r"$x$")
+ 
     ## Gradients 
-    fig2, axes = plt.subplots(nrows=1, ncols=3, figsize=(14, vert_space))
+    if show_gradients:
+        fig2, axes = plt.subplots(nrows=1, ncols=3, figsize=(14, vert_space))
     
-    fig2.suptitle(r"Flow gradients wrt $\xi$")
+        fig2.suptitle(r"Flow gradients wrt $\xi$")
 
-    ax1, ax2, ax3 = axes
+        ax1, ax2, ax3 = axes
 
-    ax1.plot(xi_grid, dxi_dx_grid, marker='x', label="data")
-    ax1.plot(xi_grid[1:], (xi_grid[1:] - xi_grid[:-1]) / (x_grid[1:] - x_grid[:-1]), label=r"BE")
-    ax1.plot(xi_grid[2:], 1. / (lg2_0 * x_grid[2:] - lg2_1 * x_grid[1:-1] + lg2_2 * x_grid[0:-2]) , label=r"1 / LG2")
-    ax1.plot(xi_grid[2:], (lg2_x0 * xi_grid[2:] - lg2_x1 * xi_grid[1:-1] + lg2_x2 * xi_grid[0:-2]) , label=r"LG2")
+        ax1.plot(xi_grid, dxi_dx_grid, marker='x', label="data")
+        ax1.plot(xi_grid[1:], (xi_grid[1:] - xi_grid[:-1]) / (x_grid[1:] - x_grid[:-1]), label=r"BE")
+        #ax1.plot(xi_grid[2:], 1. / (lg2_0 * x_grid[2:] - lg2_1 * x_grid[1:-1] + lg2_2 * x_grid[0:-2]) , label=r"1 / LG2")
+        #ax1.plot(xi_grid[2:], (lg2_x0 * xi_grid[2:] - lg2_x1 * xi_grid[1:-1] + lg2_x2 * xi_grid[0:-2]) , label=r"LG2")
 
-    ax1.legend()
-    ax1.set_title(r"$\frac{d\xi}{dx}$")
+        ax1.legend()
+        ax1.set_title(r"$\frac{d\xi}{dx}$")
 
-    ax2.plot(xi_grid, due_dxi_grid, marker='x', label=r"data")
-    ax2.plot(xi_grid[1:], (ue_grid[1:] - ue_grid[0:-1]) / delta_xi, marker='x', label=r"BE")
-    ax2.plot(xi_grid[2:], lg2_0 * ue_grid[2:] - lg2_1 * ue_grid[1:-1] + lg2_2 * ue_grid[:-2], marker='x', label=r"LG2")
+        ax2.plot(xi_grid, due_dxi_grid, marker='x', label=r"data")
+        ax2.plot(xi_grid[1:], (ue_grid[1:] - ue_grid[0:-1]) / delta_xi, marker='x', label=r"BE")
+        #ax2.plot(xi_grid[2:], lg2_0 * ue_grid[2:] - lg2_1 * ue_grid[1:-1] + lg2_2 * ue_grid[:-2], marker='x', label=r"LG2")
 
-    ax2.legend()
-    ax2.set_title(r"$\frac{du_{e}}{d\xi}$")
+        ax2.legend()
+        ax2.set_title(r"$\frac{du_{e}}{d\xi}$")
     
-    ax3.plot(xi_grid, dhe_dxi_grid, marker='x', label=r"data")
-    ax3.plot(xi_grid[1:], (he_grid[1:] - he_grid[0:-1]) / delta_xi, marker='x', label=r"BE")
-    ax3.plot(xi_grid[2:], lg2_0 * he_grid[2:] - lg2_1 * he_grid[1:-1] + lg2_2 * he_grid[:-2], marker='x', label=r"LG2")
+        ax3.plot(xi_grid, dhe_dxi_grid, marker='x', label=r"data")
+        ax3.plot(xi_grid[1:], (he_grid[1:] - he_grid[0:-1]) / delta_xi, marker='x', label=r"BE")
+        #ax3.plot(xi_grid[2:], lg2_0 * he_grid[2:] - lg2_1 * he_grid[1:-1] + lg2_2 * he_grid[:-2], marker='x', label=r"LG2")
 
-    ax3.legend()
-    ax3.set_title(r"$\frac{dh_{e}}{d\xi}$")
+        ax3.legend()
+        ax3.set_title(r"$\frac{dh_{e}}{d\xi}$")
     
-    for ax in axes:
-        ax.grid(which="both")
-        ax.set_xlim([xi0, xi1])
-        ax.set_xlabel(r"$\xi$")
+        for ax in axes:
+            ax.grid(which="both")
+            ax.set_xlim([xi0, xi1])
+            ax.set_xlabel(r"$\xi$")
     
     ## Plot ODE coefficients
     c1_grid = 2. * xi_grid[1:] * due_dxi_grid[1:] / ue_grid[1:] 
@@ -217,50 +225,56 @@ def view_edge_conditions(
     ax11, ax12, ax13 = axes
     
     ax11.plot(xi_grid[1:], c1_grid, marker='x', label="data")
-    ax11.plot(xi_grid[1:], c1_grid_be, marker='x', label=r"BE ($u_{e}$)")
-    ax11.plot(xi_grid[2:], c1_grid_lg2, marker='x', label=r"LG2 ($u_{e}$)")
-    ax11.legend()
 
+    ax11.legend()
     ax11.set_title(r"$c_{1}(\xi) := \frac{2 \xi}{u_{e}}\frac{du_{e}}{d\xi}$")
     
     ax12.plot(xi_grid[1:], c2_grid, marker='x', label="data")
-    ax12.plot(xi_grid[1:], c2_grid_be, marker='x', label=r"BE ($h_{e}$)")
-    ax12.plot(xi_grid[2:], c2_grid_lg2, marker='x', label=r"LG2 ($h_{e}$)")
-    ax12.legend()
 
+    ax12.legend()
     ax12.set_title(r"$c_{2}(\xi) = \frac{2 \xi}{h_{e}} \frac{dh_{e}}{d\xi} = - c_{3}(\xi)$")
 
     ax13.plot(xi_grid, ue_grid**2 / he_grid, marker='x')
+
     ax13.set_title(r"$Ec = u_{e}^{2} / h_{e}$")
- 
+
+    if show_gradients:
+        ax11.plot(xi_grid[1:], c1_grid_be, marker='x', label=r"BE ($u_{e}$)")
+        ax11.plot(xi_grid[2:], c1_grid_lg2, marker='x', label=r"LG2 ($u_{e}$)")
+
+        ax12.plot(xi_grid[1:], c2_grid_be, marker='x', label=r"BE ($h_{e}$)")
+        ax12.plot(xi_grid[2:], c2_grid_lg2, marker='x', label=r"LG2 ($h_{e}$)")
+
+
     for ax in axes:
         ax.grid(which="both")
         ax.set_xlim([0, xi1])
         ax.set_xlabel(r"$\xi$")
     
     #
-    fig4, axes = plt.subplots(nrows=1, ncols=2, figsize=(9, vert_space))
+    if show_gradients:
+        fig4, axes = plt.subplots(nrows=1, ncols=2, figsize=(9, vert_space))
 
-    fig4.suptitle(r"$2\xi \ ( \frac{\partial f}{\partial \xi} )$ approximations.")
+        fig4.suptitle(r"$2\xi \ ( \frac{\partial f}{\partial \xi} )$ approximations.")
 
-    ax1, ax2 = axes
+        ax1, ax2 = axes
  
-    ax1.plot(xi_grid[1:], alpha_be, marker='x', label=r"$\alpha_{0}$")
-    ax1.set_title(r"BE : $\alpha_{0} ( f^{n} - f^{n-1} )$")
+        ax1.plot(xi_grid[1:], alpha_be, marker='x', label=r"$\alpha_{0}$")
+        ax1.set_title(r"BE : $\alpha_{0} ( f^{n} - f^{n-1} )$")
 
-    ax2.plot(xi0_grid, 2. * xi0_grid * lg2_0, marker='x', label=r"$\alpha_{0}$")
-    ax2.plot(xi0_grid, 2. * xi0_grid * lg2_1, marker='x', label=r"$\alpha_{1}$")
-    ax2.plot(xi0_grid, 2. * xi0_grid * lg2_2, marker='x', label=r"$\alpha_{2}$")
+        ax2.plot(xi0_grid, 2. * xi0_grid * lg2_0, marker='x', label=r"$\alpha_{0}$")
+        ax2.plot(xi0_grid, 2. * xi0_grid * lg2_1, marker='x', label=r"$\alpha_{1}$")
+        ax2.plot(xi0_grid, 2. * xi0_grid * lg2_2, marker='x', label=r"$\alpha_{2}$")
 
-    ax2.plot(xi0_grid, 2. * xi0_grid * (lg2_0 - lg2_1 + lg2_2), c='k', dashes=(2,2))
+        ax2.plot(xi0_grid, 2. * xi0_grid * (lg2_0 - lg2_1 + lg2_2), c='k', dashes=(2,2))
 
-    ax2.set_title(r"LG2: $\alpha_{0} f^{n} - \alpha_{1} f^{n-1} + \alpha_{2} f^{n-1}$")
+        ax2.set_title(r"LG2: $\alpha_{0} f^{n} - \alpha_{1} f^{n-1} + \alpha_{2} f^{n-1}$")
 
-    for ax in axes:
-        ax.legend()
-        ax.grid(which="both")
-        ax.set_xlim([0, xi1])
-        ax.set_xlabel(r"$\xi$")
+        for ax in axes:
+            ax.legend()
+            ax.grid(which="both")
+            ax.set_xlim([0, xi1])
+            ax.set_xlabel(r"$\xi$")
 
     # Output factors
     grid_size = x_grid.shape[0]
@@ -318,17 +332,17 @@ if __name__ == "__main__":
 
     import sys
     
-    if len(sys.argv) > 2:
-        print("Usage: view_edge.py <edge_data_file.h5>")
+    if len(sys.argv) > 3:
+        print("Usage: view_edge.py <edge_data_file.h5> -wgrad")
         sys.exit(1)
     
     filename = "edge_grid.h5"
-    if len(sys.argv) == 2:
+    if len(sys.argv) >= 2:
         filename = sys.argv[1]
     
     try:
         edge_grid, edge_indices = read_edge_file(filename)
-        view_edge_conditions(edge_grid, edge_indices)
+        view_edge_conditions(edge_grid, edge_indices, '-wgrad' in sys.argv)
     except FileNotFoundError:
         print(f"File {filename:s} not found.")
         sys.exit(1)
