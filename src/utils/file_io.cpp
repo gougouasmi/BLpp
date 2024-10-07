@@ -214,3 +214,80 @@ void WriteH5(const string &filepath, const vector<double> &data,
       file.createAttribute("description", str_dtype, H5S_SCALAR);
   str_attribute.write(str_dtype, description);
 }
+
+bool inline H5_labels_are_consistent(H5::H5File &file,
+                                     const vector<LabelIndex> &data_labels,
+                                     const size_t rank) {
+  // Open the dataset containing the label-index pairs
+  H5::DataSet label_dataset = file.openDataSet("field indices");
+
+  // Create a dataspace for reading the labels
+  H5::DataSpace label_dataspace = label_dataset.getSpace();
+
+  // Get the dimension of the label data
+  hsize_t label_dims[1];
+  label_dataspace.getSimpleExtentDims(label_dims, nullptr);
+
+  assert(label_dims[0] == rank);
+
+  // Read the label-index pairs from the file
+  std::vector<LabelIndex> file_labels(rank);
+
+  // Create the HDF5 compound type for LabelIndex
+  H5::CompType H5_LABEL_INDEX_PAIR(sizeof(LabelIndex));
+  H5_LABEL_INDEX_PAIR.insertMember("index", HOFFSET(LabelIndex, index),
+                                   H5::PredType::NATIVE_INT);
+  H5_LABEL_INDEX_PAIR.insertMember(
+      "label", HOFFSET(LabelIndex, label),
+      H5::StrType(H5::PredType::C_S1, LABEL_CSIZE));
+
+  // Read the data
+  label_dataset.read(file_labels.data(), H5_LABEL_INDEX_PAIR);
+
+  // Compare the labels with the provided data_labels
+  for (size_t i = 0; i < rank; ++i) {
+    if (file_labels[i].index != data_labels[i].index ||
+        std::strncmp(file_labels[i].label, data_labels[i].label, LABEL_CSIZE) !=
+            0) {
+      return false; // Inconsistent labels
+    }
+  }
+
+  return true;
+}
+
+vector<double> ReadH5(const string &filepath,
+                      const vector<LabelIndex> &data_labels,
+                      const size_t rank) {
+  //
+  H5::H5File file(filepath, H5F_ACC_RDONLY);
+
+  assert(H5_labels_are_consistent(file, data_labels, rank));
+
+  //
+  H5::DataSet dataset = file.openDataSet("data");
+  H5::DataSpace dataspace = dataset.getSpace();
+
+  //
+  int ndims = dataspace.getSimpleExtentNdims();
+  bool dataset_is_two_dimensional = (ndims == 2);
+  assert(dataset_is_two_dimensional);
+
+  // Get the dimensions of the dataset
+  hsize_t dims[2];
+  dataspace.getSimpleExtentDims(dims, nullptr);
+
+  const size_t nb_points = dims[0];
+  const size_t file_rank = dims[1];
+
+  //
+  bool consistent_data_dimensions = (file_rank == rank);
+  assert(consistent_data_dimensions);
+
+  // Read the data into a vector<double>
+  std::vector<double> data(nb_points * rank);
+  H5::PredType datatype(H5::PredType::NATIVE_DOUBLE);
+  dataset.read(data.data(), datatype);
+
+  return std::move(data);
+}

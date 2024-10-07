@@ -27,7 +27,7 @@ BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
     edge_field[EDGE_FIELD_RANK * xid + EDGE_DXI_DX_ID] = 0.; // dxi_dx
   }
 
-  return BoundaryData(edge_field, wall_field);
+  return BoundaryData(std::move(edge_field), std::move(wall_field));
 }
 
 BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
@@ -77,7 +77,7 @@ BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
 
   printf("\n");
 
-  return BoundaryData(edge_field, wall_field);
+  return BoundaryData(std::move(edge_field), std::move(wall_field));
 }
 
 BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
@@ -209,5 +209,5 @@ BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
 
   printf("\n");
 
-  return BoundaryData(edge_field, wall_field);
+  return BoundaryData(std::move(edge_field), std::move(wall_field));
 }

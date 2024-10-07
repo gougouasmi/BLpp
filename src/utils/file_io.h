@@ -33,4 +33,7 @@ void WriteH5(const string &filepath, const vector<double> &data,
              const vector<LabelIndex> &data_labels, const size_t nb_points,
              const size_t rank, const string description);
 
+vector<double> ReadH5(const string &filepath,
+                      const vector<LabelIndex> &data_labels, const size_t rank);
+
 #endif

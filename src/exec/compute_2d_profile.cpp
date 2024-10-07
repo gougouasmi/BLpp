@@ -35,6 +35,22 @@
  *   - the entire flow-field
  */
 
+void ParseComputeInputs(int argc, char *argv[], string &edge_file) {
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == "-e") {
+      if (i + 1 < argc) {
+        edge_file = argv[++i];
+        printf("output edge file set to %s.\n", edge_file.c_str());
+        return;
+      } else {
+        printf("output edge file path spec is incomplete.\n");
+        return;
+      }
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   SearchParams search_params;
@@ -49,9 +65,10 @@ int main(int argc, char *argv[]) {
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  const char *flow_path =
-      FLAT_NOSED_CONSTANT_RO_COARSE_PATH; // FLAT_NOSED_CONSTANT_RO_PATH;
-  BoundaryData boundary_data = GenFlatNosedCylinder(50, 2., flow_path, false);
+  string edge_file = "edge_grid.h5";
+  ParseComputeInputs(argc, argv, edge_file);
+
+  BoundaryData boundary_data(edge_file);
 
   const int xi_dim = boundary_data.xi_dim;
 
