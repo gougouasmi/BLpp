@@ -4,6 +4,7 @@
 #include "case_functions.h"
 #include "edge_solvers.h"
 #include "file_io.h"
+#include "parsing.h"
 
 #include <cassert>
 #include <cmath>
@@ -17,37 +18,25 @@ using std::vector;
  *
  */
 
-void ParseCmdInputs(int argc, char *argv[], string &p_file, string &e_file,
-                    bool &verbose) {
+struct ProgramParams {
+  string pressure_path;
+  string edge_path{"edge_grid.h5"};
+  bool verbose;
 
-  for (int i = 1; i < argc; ++i) {
-    std::string arg = argv[i];
-    if (arg == "-p") {
-      if (i + 1 < argc) {
-        p_file = argv[++i];
-        printf("input pressure file set to %s.\n", p_file.c_str());
-      } else {
-        printf("input pressure file path spec is incomplete.\n");
-      }
-    } else if (arg == "-e") {
-      if (i + 1 < argc) {
-        e_file = argv[++i];
-        printf("output edge file set to %s.\n", e_file.c_str());
-      } else {
-        printf("output edge file path spec is incomplete.\n");
-      }
-    } else if (arg == "-v") {
-      verbose = true;
-    }
+  void Parse(int argc, char *argv[]) {
+    ParseValues(argc, argv, {{"-p", &pressure_path}, {"-e", &edge_path}});
+    ParseOptions(argc, argv, {{"-v", &verbose}});
   }
-}
+};
 
 int main(int argc, char *argv[]) {
-  string pressure_path = "pressure_distribution.csv";
-  string edge_path = "test_edge_grid.h5";
-  bool verbose = false;
 
-  ParseCmdInputs(argc, argv, pressure_path, edge_path, verbose);
+  ProgramParams params;
+  params.Parse(argc, argv);
+
+  string pressure_path = params.pressure_path;
+  string edge_path = params.edge_path;
+  bool verbose = params.verbose;
 
   vector<vector<double>> csv_data = ReadCSV(pressure_path);
 

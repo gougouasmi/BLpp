@@ -35,39 +35,32 @@
  *   - the entire flow-field
  */
 
-void ParseComputeInputs(int argc, char *argv[], string &edge_file) {
-  for (int i = 1; i < argc; ++i) {
-    std::string arg = argv[i];
-    if (arg == "-e") {
-      if (i + 1 < argc) {
-        edge_file = argv[++i];
-        printf("output edge file set to %s.\n", edge_file.c_str());
-        return;
-      } else {
-        printf("output edge file path spec is incomplete.\n");
-        return;
-      }
-    }
+struct ComputeParams {
+  SearchParams search_params;
+  ProfileParams profile_params;
+  string edge_file{"edge_grid.h5"};
+
+  void Parse(int argc, char *argv[]) {
+    search_params.ParseCmdInputs(argc, argv);
+    profile_params.ParseCmdInputs(argc, argv);
+    ParseValues(argc, argv, {{"-e", &edge_file}});
   }
-}
+};
 
 int main(int argc, char *argv[]) {
 
-  SearchParams search_params;
-  search_params.ParseCmdInputs(argc, argv);
+  ComputeParams compute_params;
+  compute_params.Parse(argc, argv);
 
-  ProfileParams profile_params;
-  profile_params.ParseCmdInputs(argc, argv);
-
-  int eta_dim = profile_params.nb_steps;
+  SearchParams &search_params = compute_params.search_params;
+  ProfileParams &profile_params = compute_params.profile_params;
+  const string &edge_file = compute_params.edge_file;
 
   // Build class instance
+  int eta_dim = profile_params.nb_steps;
   BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Compute 2D profile
-  string edge_file = "edge_grid.h5";
-  ParseComputeInputs(argc, argv, edge_file);
-
   BoundaryData boundary_data(edge_file);
 
   const int xi_dim = boundary_data.xi_dim;

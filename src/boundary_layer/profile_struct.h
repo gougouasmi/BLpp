@@ -7,6 +7,7 @@
 
 #include "boundary_data_struct.h"
 #include "indexing.h"
+#include "parsing.h"
 #include "search_struct.h"
 
 using std::array;
@@ -207,42 +208,14 @@ struct ProfileParams {
    @param argv list of arguments,
   */
   void ParseCmdInputs(int argc, char *argv[]) {
+    ParseValues(argc, argv, {{"-n", &nb_steps}});
+    ParseValues(
+        argc, argv,
+        {{"-fpp0", &fpp0}, {"-gp0", &gp0}, {"-g0", &g0}, {"-eta", &max_step}});
+
     for (int i = 1; i < argc; ++i) {
       std::string arg = argv[i];
-      if (arg == "-n") {
-        if (i + 1 < argc) {
-          nb_steps = std::stoi(argv[++i]);
-        } else {
-          printf("profile nb_steps spec is incomplete.\n");
-        }
-      } else if (arg == "-fpp0") {
-        if (i + 1 < argc) {
-          fpp0 = std::stod(argv[++i]);
-          printf("f''(0) set to %.2e.\n", fpp0);
-        } else {
-          printf("profile f''(0) spec is incomplete.\n");
-        }
-      } else if (arg == "-gp0") {
-        if (i + 1 < argc) {
-          gp0 = std::stod(argv[++i]);
-          printf("g'(0) set to %.2e.\n", gp0);
-        } else {
-          printf("profile g'(0) spec is incomplete.\n");
-        }
-      } else if (arg == "-g0") {
-        if (i + 1 < argc) {
-          g0 = std::stod(argv[++i]);
-          printf("g(0) set to %.2e.\n", g0);
-        } else {
-          printf("profile g(0) spec is incomplete.\n");
-        }
-      } else if (arg == "-eta") {
-        if (i + 1 < argc) {
-          max_step = std::stod(argv[++i]);
-        } else {
-          printf("profile eta spec is incomplete.\n");
-        }
-      } else if (arg == "-wadiab") {
+      if (arg == "-wadiab") {
         wall_type = WallType::Adiabatic;
       } else if (arg == "-explicit") {
         scheme = TimeScheme::Explicit;

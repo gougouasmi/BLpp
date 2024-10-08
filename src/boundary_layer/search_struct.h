@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "parsing.h"
+
 using std::array;
 using std::string;
 
