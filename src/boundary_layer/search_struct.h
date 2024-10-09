@@ -5,6 +5,8 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,8 +21,34 @@ enum class SearchMethod {
   BoxParallelQueue,
   GradientSerial
 };
+const std::map<string, SearchMethod> SEARCH_KEYS = {
+    {"box_serial", SearchMethod::BoxSerial},
+    {"box_parallel", SearchMethod::BoxParallel},
+    {"box_parallel_queue", SearchMethod::BoxParallelQueue},
+};
+static std::optional<SearchMethod> search_from_string(const string &key) {
+  if (SEARCH_KEYS.count(key)) {
+    SearchMethod search = SEARCH_KEYS.at(key);
+    return search;
+  }
+  return {};
+}
 
+//
 enum class Scoring { Default, Square, SquareSteady, Exp, ExpScaled };
+const std::map<string, Scoring> SCORING_KEYS = {
+    {"square", Scoring::Square},
+    {"square_steady", Scoring::SquareSteady},
+    {"exp", Scoring::Exp},
+    {"exp_scaled", Scoring::ExpScaled},
+};
+static std::optional<Scoring> scoring_from_string(const string &key) {
+  if (SCORING_KEYS.count(key)) {
+    Scoring scoring = SCORING_KEYS.at(key);
+    return scoring;
+  }
+  return {};
+}
 
 struct SearchOutcome {
   bool success;
@@ -69,33 +97,16 @@ struct SearchWindow {
   }
 
   void ParseCmdInputs(int argc, char *argv[]) {
-    for (int i = 1; i < argc; ++i) {
-      std::string arg = argv[i];
-      if (arg == "-fbounds") {
-        if (i + 2 < argc) {
-          fpp_min = std::stod(argv[++i]);
-          fpp_max = std::stod(argv[++i]);
-          assert(fpp_min < fpp_max);
-        } else {
-          printf("fbounds spec is incomplete. Setting default.");
-        }
-      } else if (arg == "-gbounds") {
-        if (i + 2 < argc) {
-          gp_min = std::stod(argv[++i]);
-          gp_max = std::stod(argv[++i]);
-          assert(gp_min < gp_max);
-        } else {
-          printf("gbounds spec is incomplete. Setting default.");
-        }
-      } else if (arg == "-boxdims") {
-        if (i + 2 < argc) {
-          xdim = std::stoi(argv[++i]);
-          ydim = std::stoi(argv[++i]);
-          assert(xdim > 1);
-          assert(ydim > 1);
-        }
-      }
-    }
+    ParseValues(argc, argv, {{"-xdim", &xdim}, {"-ydim", &ydim}});
+    ParseValues(argc, argv,
+                {{"-x0", &fpp_min},
+                 {"-x1", &fpp_max},
+                 {"-y0", &gp_min},
+                 {"-y1", &gp_max}});
+    assert(xdim > 1);
+    assert(ydim > 1);
+    assert(fpp_max > fpp_min);
+    assert(gp_max > gp_min);
   }
 };
 
@@ -121,38 +132,14 @@ struct SearchParams {
    @param argv list of command line arguments,
   */
   void ParseCmdInputs(int argc, char *argv[]) {
-    for (int i = 1; i < argc; ++i) {
-      std::string arg = argv[i];
-      if (arg == "-maxiter") {
-        if (i + 1 < argc) {
-          max_iter = std::stoi(argv[++i]);
-          assert(max_iter >= 1);
-        }
-      } else if (arg == "-rtol") {
-        if (i + 1 < argc) {
-          rtol = std::stod(argv[++i]);
-          assert(rtol > 0);
-        }
-      } else if (arg == "-v") {
-        verbose = true;
-      } else if (arg == "-box_search") {
-        method = SearchMethod::BoxSerial;
-      } else if (arg == "-box_search_parallel") {
-        method = SearchMethod::BoxParallel;
-      } else if (arg == "-box_search_parallel_queue") {
-        method = SearchMethod::BoxParallelQueue;
-      } else if (arg == "-gradient_search") {
-        method = SearchMethod::GradientSerial;
-      } else if (arg == "-score_square") {
-        scoring = Scoring::Square;
-      } else if (arg == "-score_square_steady") {
-        scoring = Scoring::SquareSteady;
-      } else if (arg == "-score_exp") {
-        scoring = Scoring::Exp;
-      } else if (arg == "-score_exp_scaled") {
-        scoring = Scoring::ExpScaled;
-      }
-    }
+    ParseValues<SearchMethod>(argc, argv, {{"-search", &method}},
+                              search_from_string);
+    ParseValues<Scoring>(argc, argv, {{"-scoring", &scoring}},
+                         scoring_from_string);
+    ParseValues(argc, argv, {{"-maxiter", &max_iter}});
+    ParseValues(argc, argv, {{"-rtol", &rtol}});
+    ParseOptions(argc, argv, {{"-v", &verbose}});
+
     window.ParseCmdInputs(argc, argv);
   }
 };

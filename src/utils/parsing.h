@@ -1,6 +1,8 @@
 #ifndef PARSING_H
 #define PARSING_H
 
+#include <cstdlib>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,12 +15,12 @@ template <typename T, typename StringToTFunction>
 void ParseValues(int argc, char *argv[], vector<pair<string, T *>> dict,
                  StringToTFunction convertor) {
   for (int i = 1; i < argc; ++i) {
-    const std::string arg = argv[i];
+    const std::string flag = argv[i];
 
     // See if the key is recognized
     auto itr = std::find_if(dict.begin(), dict.end(),
-                            [&arg](pair<string, T *> &dict_pair) {
-                              return (arg == dict_pair.first);
+                            [&flag](pair<string, T *> &dict_pair) {
+                              return (flag == dict_pair.first);
                             });
 
     // If it is, and the specification is complete
@@ -26,11 +28,19 @@ void ParseValues(int argc, char *argv[], vector<pair<string, T *>> dict,
     if (itr != dict.end()) {
       if (i + 1 < argc) {
         string value = string(argv[++i]);
-        *(itr->second) = convertor(value);
+        std::optional<T> processed = convertor(value);
+        if (!processed) {
+          printf("value %s requested for flag %s is not recognized.\n",
+                 value.c_str(), flag.c_str());
+          std::exit(EXIT_FAILURE);
+        }
+
+        *(itr->second) = processed.value();
         dict.erase(itr);
-        printf("processed (%s, %s) pair.\n", arg.c_str(), value.c_str());
+        printf("processed (%s, %s) pair.\n", flag.c_str(), value.c_str());
       } else {
-        printf("value missing for command line argument %s.\n", arg.c_str());
+        printf("value missing for specified flag %s.\n", flag.c_str());
+        std::exit(EXIT_FAILURE);
       }
     }
   }
@@ -57,9 +67,15 @@ static inline void ParseOptions(int argc, char *argv[],
   }
 }
 
-static int int_from_string(string &str) { return std::stoi(str); }
-static double double_from_string(string &str) { return std::stod(str); }
-static string string_from_string(string &str) { return str; }
+static std::optional<int> int_from_string(const string &str) {
+  return std::stoi(str);
+}
+static std::optional<double> double_from_string(const string &str) {
+  return std::stod(str);
+}
+static std::optional<string> string_from_string(const string &str) {
+  return str;
+}
 
 static inline void ParseValues(int argc, char *argv[],
                                vector<pair<string, int *>> dict) {

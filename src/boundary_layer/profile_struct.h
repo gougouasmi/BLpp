@@ -3,6 +3,7 @@
 
 #include <array>
 #include <iostream>
+#include <map>
 #include <vector>
 
 #include "boundary_data_struct.h"
@@ -59,11 +60,45 @@ static_assert(complete_indexing(OUTPUT_INDICES));
 
 //
 enum class WallType { Wall, Adiabatic };
+const std::map<string, WallType> WALL_STRINGS = {
+    {"adiab", WallType::Adiabatic},
+};
+static std::optional<WallType> wall_type_from_string(const string &key) {
+  if (WALL_STRINGS.count(key)) {
+    WallType wall_type = WALL_STRINGS.at(key);
+    return wall_type;
+  }
+  return {};
+}
 
+//
 enum class TimeScheme { Explicit, Implicit, ImplicitCrankNicolson };
 constexpr array<double, 3> SCHEME_THETA = {{0., 1., 0.5}};
+const std::map<string, TimeScheme> SCHEME_STRINGS = {
+    {"explicit", TimeScheme::Explicit},
+    {"implicit", TimeScheme::Implicit},
+    {"implicit_cn", TimeScheme::ImplicitCrankNicolson}};
+static std::optional<TimeScheme> scheme_from_string(const string &key) {
+  if (SCHEME_STRINGS.count(key)) {
+    TimeScheme scheme = SCHEME_STRINGS.at(key);
+    return scheme;
+  }
+  return {};
+}
 
+//
 enum class SolveType { SelfSimilar, LocallySimilar, DifferenceDifferential };
+const std::map<string, SolveType> SOLVE_TYPE_STRINGS = {
+    {"self_sim", SolveType::SelfSimilar},
+    {"loc_sim", SolveType::LocallySimilar},
+    {"diff_diff", SolveType::DifferenceDifferential}};
+static std::optional<SolveType> solve_type_from_string(const string &key) {
+  if (SOLVE_TYPE_STRINGS.count(key)) {
+    SolveType solve_type = SOLVE_TYPE_STRINGS.at(key);
+    return solve_type;
+  }
+  return {};
+}
 
 //
 struct ProfileParams {
@@ -212,23 +247,12 @@ struct ProfileParams {
     ParseValues(
         argc, argv,
         {{"-fpp0", &fpp0}, {"-gp0", &gp0}, {"-g0", &g0}, {"-eta", &max_step}});
-
-    for (int i = 1; i < argc; ++i) {
-      std::string arg = argv[i];
-      if (arg == "-wadiab") {
-        wall_type = WallType::Adiabatic;
-      } else if (arg == "-explicit") {
-        scheme = TimeScheme::Explicit;
-      } else if (arg == "-implicit") {
-        scheme = TimeScheme::Implicit;
-      } else if (arg == "-implicit_cn") {
-        scheme = TimeScheme::ImplicitCrankNicolson;
-      } else if (arg == "-local_sim") {
-        solve_type = SolveType::LocallySimilar;
-      } else if (arg == "-diff_diff") {
-        solve_type = SolveType::DifferenceDifferential;
-      }
-    }
+    ParseValues<TimeScheme>(argc, argv, {{"-eta_scheme", &scheme}},
+                            scheme_from_string);
+    ParseValues<SolveType>(argc, argv, {{"-solve_type", &solve_type}},
+                           solve_type_from_string);
+    ParseValues<WallType>(argc, argv, {{"-wall", &wall_type}},
+                          wall_type_from_string);
   }
 };
 
