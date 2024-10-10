@@ -1,7 +1,7 @@
 #include <cassert>
 #include <cmath>
 
-#include "shock_relations.h"
+#include "shock_relations.hpp"
 
 void NormalShockRatios() {
   ShockRatios ratios = ComputeShockRatiosCPG(2.0);

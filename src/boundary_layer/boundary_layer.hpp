@@ -1,11 +1,11 @@
 #ifndef BOUNDARY_LAYER_H
 #define BOUNDARY_LAYER_H
 
-#include "bl_model_struct.h"
-#include "boundary_data_struct.h"
-#include "newton_solver.h"
-#include "profile_struct.h"
-#include "search_struct.h"
+#include "bl_model_struct.hpp"
+#include "boundary_data_struct.hpp"
+#include "newton_solver.hpp"
+#include "profile_struct.hpp"
+#include "search_struct.hpp"
 
 #include <array>
 #include <string>

@@ -1,7 +1,7 @@
 #ifndef SCORE_FUNCTIONS_H
 #define SCORE_FUNCTIONS_H
 
-#include "profile_struct.h"
+#include "profile_struct.hpp"
 #include <vector>
 
 using std::vector;

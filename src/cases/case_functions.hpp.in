@@ -1,20 +1,22 @@
 #ifndef CASE_FUNCTIONS_H
 #define CASE_FUNCTIONS_H
 
-#include "boundary_data_struct.h"
+#include "boundary_data_struct.hpp"
 
 BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points);
 BoundaryData GenChapmannRubesinFlatPlate(double mach, int nb_points,
                                          double prandtl = 0.72);
 
-BoundaryData GenFlatNosedCylinder(double altitude, double mach, const char* path, bool verbose = false);
+BoundaryData GenFlatNosedCylinder(double altitude, double mach,
+                                  const char *path, bool verbose = false);
 BoundaryData GenFlatNosedCylinder(double altitude_km, double mach,
                                   const vector<vector<double>> &csv_data,
                                   bool verbose = false);
 
-static const char* FLAT_NOSED_PATH = "@FLAT_NOSED_PATH@";
-static const char* FLAT_NOSED_CONSTANT_RO_PATH = "@FLAT_NOSED_PATH_RO@";
-static const char* FLAT_NOSED_CONSTANT_RO_COARSE_PATH = "@FLAT_NOSED_PATH_RO_COARSE@";
+static const char *FLAT_NOSED_PATH = "@FLAT_NOSED_PATH@";
+static const char *FLAT_NOSED_CONSTANT_RO_PATH = "@FLAT_NOSED_PATH_RO@";
+static const char *FLAT_NOSED_CONSTANT_RO_COARSE_PATH =
+    "@FLAT_NOSED_PATH_RO_COARSE@";
 
 #endif

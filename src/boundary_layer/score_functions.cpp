@@ -1,5 +1,5 @@
-#include "score_functions.h"
-#include "gas_model.h"
+#include "score_functions.hpp"
+#include "gas_model.hpp"
 
 #define COMPUTE_SCORE_CASE(method)                                             \
   case Scoring::method:                                                        \

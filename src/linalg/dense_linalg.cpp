@@ -1,4 +1,4 @@
-#include "dense_linalg.h"
+#include "dense_linalg.hpp"
 
 void DenseMatrixMultiply(const std::vector<double> &matrix_data_rm,
                          const std::vector<double> &input_vector,

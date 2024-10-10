@@ -1,10 +1,10 @@
-#include "boundary_layer.h"
-#include "dense_direct_solver.h"
-#include "dense_linalg.h"
-#include "utils.h"
+#include "boundary_layer.hpp"
+#include "dense_direct_solver.hpp"
+#include "dense_linalg.hpp"
+#include "utils.hpp"
 
-#include "profile_functions_default.h"
-#include "score_functions.h"
+#include "profile_functions_default.hpp"
+#include "score_functions.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -935,7 +935,7 @@ BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
                        best_guess};
 }
 
-#include "message_queue.h"
+#include "message_queue.hpp"
 #include <memory>
 
 SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(

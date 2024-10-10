@@ -1,5 +1,5 @@
-#include "profile_functions_cpg.h"
-#include "gas_model.h"
+#include "profile_functions_cpg.hpp"
+#include "gas_model.hpp"
 
 void initialize_cpg(ProfileParams &profile_params, vector<double> &state) {
   double fpp0 = profile_params.fpp0;

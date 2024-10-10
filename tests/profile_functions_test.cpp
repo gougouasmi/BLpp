@@ -1,7 +1,7 @@
-#include "profile_functions_cpg.h"
-#include "profile_functions_default.h"
-#include "profile_struct.h"
-#include "testing_utils.h"
+#include "profile_functions_cpg.hpp"
+#include "profile_functions_default.hpp"
+#include "profile_struct.hpp"
+#include "testing_utils.hpp"
 #include <cassert>
 
 double vector_norm(const std::vector<double> &x) {

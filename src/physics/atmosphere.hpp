@@ -1,8 +1,8 @@
 #ifndef ATMOSPHERE_H
 #define ATMOSPHERE_H
 
-#include "gas_model.h"
-#include "profile_struct.h"
+#include "gas_model.hpp"
+#include "profile_struct.hpp"
 #include <cassert>
 #include <cmath>
 

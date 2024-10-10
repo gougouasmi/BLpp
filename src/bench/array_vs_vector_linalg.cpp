@@ -9,9 +9,9 @@ using std::array;
 using std::pair;
 using std::vector;
 
-#include "dense_direct_solver.h"
-#include "dense_linalg.h"
-#include "timers.h"
+#include "dense_direct_solver.hpp"
+#include "dense_linalg.hpp"
+#include "timers.hpp"
 
 ////
 // Linalg routines on arrays

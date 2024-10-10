@@ -3,10 +3,10 @@
 #include <iostream>
 #include <string>
 
-#include "atmosphere.h"
-#include "boundary_layer_factory.h"
-#include "search_struct.h"
-#include "timers.h"
+#include "atmosphere.hpp"
+#include "boundary_layer_factory.hpp"
+#include "search_struct.hpp"
+#include "timers.hpp"
 
 using std::array;
 

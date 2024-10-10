@@ -39,8 +39,8 @@ find_file(FLAT_NOSED_PATH_RO_COARSE "flat_nosed_flow_constant_density_coarse.csv
 
 # Configure the template file with all the CSV file paths at once
 configure_file(
-    ${CMAKE_SOURCE_DIR}/src/cases/case_functions.h.in
-    ${CMAKE_SOURCE_DIR}/src/cases/case_functions.h
+    ${CMAKE_SOURCE_DIR}/src/cases/case_functions.hpp.in
+    ${CMAKE_SOURCE_DIR}/src/cases/case_functions.hpp
     @ONLY
 )
 

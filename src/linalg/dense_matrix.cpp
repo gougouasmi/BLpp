@@ -1,5 +1,5 @@
-#include "dense_matrix.h"
-#include "dense_direct_solver.h"
+#include "dense_matrix.hpp"
+#include "dense_direct_solver.hpp"
 
 void DenseMatrix::Solve(const std::vector<double> &rhs,
                         std::vector<double> &solution) {

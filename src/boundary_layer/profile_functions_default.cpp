@@ -1,5 +1,5 @@
-#include "profile_functions_default.h"
-#include "gas_model.h"
+#include "profile_functions_default.hpp"
+#include "gas_model.hpp"
 
 void initialize_default(ProfileParams &profile_params, vector<double> &state) {
   double fpp0 = profile_params.fpp0;

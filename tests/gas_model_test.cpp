@@ -1,8 +1,8 @@
 #include <cassert>
 #include <cstdio>
 
-#include "gas_model.h"
-#include "testing_utils.h"
+#include "gas_model.hpp"
+#include "testing_utils.hpp"
 
 void test_thermo() {
   double rtol = 1e-4;

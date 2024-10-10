@@ -1,9 +1,9 @@
 #include <cassert>
 #include <vector>
 
-#include "dense_direct_solver.h"
-#include "dense_linalg.h"
-#include "testing_utils.h"
+#include "dense_direct_solver.hpp"
+#include "dense_linalg.hpp"
+#include "testing_utils.hpp"
 
 #include <array>
 #include <iostream>

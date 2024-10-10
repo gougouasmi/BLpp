@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include "dense_matrix.h"
+#include "dense_matrix.hpp"
 
 using std::array;
 using std::vector;

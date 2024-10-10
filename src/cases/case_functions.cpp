@@ -1,14 +1,14 @@
-#include "case_functions.h"
+#include "case_functions.hpp"
 
 #include <cassert>
 #include <cmath>
 #include <utility>
 
-#include "atmosphere.h"
-#include "file_io.h"
-#include "gas_model.h"
-#include "shock_relations.h"
-#include "stagnation.h"
+#include "atmosphere.hpp"
+#include "file_io.hpp"
+#include "gas_model.hpp"
+#include "shock_relations.hpp"
+#include "stagnation.hpp"
 
 BoundaryData GenFlatPlateConstant(double ue, double he, double pe, double g0,
                                   int nb_points) {

@@ -1,8 +1,8 @@
 #ifndef PROFILE_FUNCTIONS_CPG_H
 #define PROFILE_FUNCTIONS_CPG_H
 
-#include "bl_model_struct.h"
-#include "profile_struct.h"
+#include "bl_model_struct.hpp"
+#include "profile_struct.hpp"
 
 using std::vector;
 

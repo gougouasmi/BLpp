@@ -3,15 +3,15 @@
 #include <iostream>
 #include <vector>
 
-#include "atmosphere.h"
-#include "boundary_data_struct.h"
-#include "boundary_layer_factory.h"
-#include "case_functions.h"
-#include "file_io.h"
-#include "profile.h"
-#include "search_struct.h"
+#include "atmosphere.hpp"
+#include "boundary_data_struct.hpp"
+#include "boundary_layer_factory.hpp"
+#include "case_functions.hpp"
+#include "file_io.hpp"
+#include "profile_struct.hpp"
+#include "search_struct.hpp"
 
-#include "profile_functions_cpg.h"
+#include "profile_functions_cpg.hpp"
 
 /*
  *

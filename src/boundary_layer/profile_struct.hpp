@@ -6,10 +6,10 @@
 #include <map>
 #include <vector>
 
-#include "boundary_data_struct.h"
-#include "indexing.h"
-#include "parsing.h"
-#include "search_struct.h"
+#include "boundary_data_struct.hpp"
+#include "indexing.hpp"
+#include "parsing.hpp"
+#include "search_struct.hpp"
 
 using std::array;
 using std::vector;

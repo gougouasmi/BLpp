@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include "boundary_data_struct.h"
-#include "case_functions.h"
-#include "edge_solvers.h"
-#include "file_io.h"
-#include "parsing.h"
+#include "boundary_data_struct.hpp"
+#include "case_functions.hpp"
+#include "edge_solvers.hpp"
+#include "file_io.hpp"
+#include "parsing.hpp"
 
 #include <cassert>
 #include <cmath>

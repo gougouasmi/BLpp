@@ -1,9 +1,9 @@
 #include <cassert>
 #include <vector>
 
-#include "dense_matrix.h"
-#include "newton_solver.h"
-#include "testing_utils.h"
+#include "dense_matrix.hpp"
+#include "newton_solver.hpp"
+#include "testing_utils.hpp"
 
 void ScalarSolve() {
   int xdim = 1;

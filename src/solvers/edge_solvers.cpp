@@ -1,5 +1,5 @@
-#include "edge_solvers.h"
-#include "newton_solver.h"
+#include "edge_solvers.hpp"
+#include "newton_solver.hpp"
 
 #include <algorithm>
 #include <cassert>

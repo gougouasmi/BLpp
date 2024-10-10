@@ -3,9 +3,9 @@
 #include <iostream>
 #include <vector>
 
-#include "atmosphere.h"
-#include "boundary_layer_factory.h"
-#include "profile.h"
+#include "atmosphere.hpp"
+#include "boundary_layer_factory.hpp"
+#include "profile_struct.hpp"
 
 /*
  *

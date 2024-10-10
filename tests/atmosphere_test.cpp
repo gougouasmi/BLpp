@@ -1,9 +1,9 @@
 #include <cassert>
 #include <cstdio>
 
-#include "atmosphere.h"
-#include "profile.h"
-#include "testing_utils.h"
+#include "atmosphere.hpp"
+#include "profile_struct.hpp"
+#include "testing_utils.hpp"
 
 void test_entry() {
   double rtol = 1e-4;

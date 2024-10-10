@@ -1,7 +1,7 @@
 #include <cassert>
 #include <cmath>
 
-#include "stagnation.h"
+#include "stagnation.hpp"
 
 void StagnationRatios() {
   double mach, gamma;

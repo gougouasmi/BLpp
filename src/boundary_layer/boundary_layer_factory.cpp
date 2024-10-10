@@ -1,7 +1,7 @@
-#include "boundary_layer_factory.h"
-#include "profile_functions_cpg.h"
-#include "profile_functions_default.h"
-#include "profile_struct.h"
+#include "boundary_layer_factory.hpp"
+#include "profile_functions_cpg.hpp"
+#include "profile_functions_default.hpp"
+#include "profile_struct.hpp"
 
 BoundaryLayer BoundaryLayerFactory(const int grid_size,
                                    const std::string &type) {

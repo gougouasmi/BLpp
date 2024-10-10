@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include "atmosphere.h"
-#include "boundary_layer_factory.h"
-#include "case_functions.h"
-#include "file_io.h"
-#include "profile_struct.h"
-#include "search_struct.h"
-#include "timers.h"
+#include "atmosphere.hpp"
+#include "boundary_layer_factory.hpp"
+#include "case_functions.hpp"
+#include "file_io.hpp"
+#include "profile_struct.hpp"
+#include "search_struct.hpp"
+#include "timers.hpp"
 
 #include <sstream>
 #include <vector>

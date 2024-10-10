@@ -1,7 +1,7 @@
 #ifndef BL_MODEL_H
 #define BL_MODEL_H
 
-#include "profile_struct.h"
+#include "profile_struct.hpp"
 #include <vector>
 
 using std::vector;

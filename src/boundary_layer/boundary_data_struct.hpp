@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "file_io.h"
-#include "indexing.h"
+#include "file_io.hpp"
+#include "indexing.hpp"
 
 using std::vector;
 

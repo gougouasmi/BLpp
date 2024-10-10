@@ -1,8 +1,8 @@
 #ifndef PROFILE_FUNCTIONS_DEFAULT_H
 #define PROFILE_FUNCTIONS_DEFAULT_H
 
-#include "bl_model_struct.h"
-#include "profile_struct.h"
+#include "bl_model_struct.hpp"
+#include "profile_struct.hpp"
 #include <vector>
 
 using std::vector;

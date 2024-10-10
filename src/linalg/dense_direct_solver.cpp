@@ -1,4 +1,4 @@
-#include "dense_direct_solver.h"
+#include "dense_direct_solver.hpp"
 
 #include <cassert>
 
