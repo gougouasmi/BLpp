@@ -1,6 +1,7 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "atmosphere.hpp"
@@ -44,65 +45,31 @@ int main(int argc, char *argv[]) {
       BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
   // Compare search methods
-
-  // (1 / 4) Serial solution (box)
-  array<double, 2> best_guess{{0.5, 0.5}};
-
-  auto serial_task = [&profile_params, &search_params, &best_guess,
-                      &boundary_layer]() {
-    boundary_layer.BoxProfileSearch(profile_params, search_params, best_guess);
+  std::map<SearchMethod, array<double, 2>> guesses{
+      {SearchMethod::BoxSerial, {0.5, 0.5}},
+      {SearchMethod::BoxParallel, {0.5, 0.5}},
+      {SearchMethod::BoxParallelQueue, {0.5, 0.5}},
+      {SearchMethod::GradientSerial, {0.5, 0.5}},
   };
 
-  double avg_duration = timeit(serial_task, 1);
+  for (const SearchMethod &method :
+       {SearchMethod::BoxSerial, SearchMethod::BoxParallel,
+        SearchMethod::BoxParallelQueue, SearchMethod::GradientSerial}) {
+    array<double, 2> &guess = guesses.at(method);
 
-  std::cout << "Serial search took " << avg_duration << " seconds."
-            << std::endl;
-
-  printf("\n");
-
-  // (2 / 4) Parallel solution (box)
-  array<double, 2> parallel_best_guess{{0.5, 0.5}};
-
-  auto parallel_task = [&profile_params, &search_params, &parallel_best_guess,
+    search_params.method = method;
+    auto search_task = [&profile_params, &search_params, &guess,
                         &boundary_layer]() {
-    boundary_layer.BoxProfileSearchParallel(profile_params, search_params,
-                                            parallel_best_guess);
-  };
+      boundary_layer.ProfileSearch(profile_params, search_params, guess);
+    };
 
-  avg_duration = timeit(parallel_task, 1);
+    double avg_duration = timeit(search_task, 1);
 
-  std::cout << "Parallel search took " << avg_duration << " seconds."
-            << std::endl;
+    std::cout << to_string(method) << " search took " << avg_duration
+              << " seconds." << std::endl;
 
-  printf("\n");
-
-  // (3 / 4) Parallel solution with queues (box)
-  array<double, 2> parallel_queues_best_guess{{0.5, 0.5}};
-
-  auto parallel_queues_task = [&profile_params, &search_params,
-                               &parallel_queues_best_guess, &boundary_layer]() {
-    boundary_layer.BoxProfileSearchParallelWithQueues(
-        profile_params, search_params, parallel_queues_best_guess);
-  };
-
-  avg_duration = timeit(parallel_queues_task, 1);
-
-  std::cout << "Parallel search with queues took " << avg_duration
-            << " seconds." << std::endl;
-
-  // (4 / 4) Serial solution (gradient)
-  array<double, 2> gradient_best_guess{{0.5, 0.5}};
-
-  auto gradient_task = [&profile_params, &search_params, &gradient_best_guess,
-                        &boundary_layer]() {
-    boundary_layer.GradientProfileSearch(profile_params, search_params,
-                                         gradient_best_guess);
-  };
-
-  avg_duration = timeit(gradient_task, 1);
-
-  std::cout << "Serial gradient search took " << avg_duration << " seconds."
-            << std::endl;
+    printf("\n");
+  }
 
   return 0;
 }

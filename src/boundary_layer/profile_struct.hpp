@@ -106,7 +106,7 @@ static std::optional<SolveType> solve_type_from_string(const string &key) {
 
 //
 enum class DevelMode { Full, Primal };
-static inline string to_string(DevelMode dev_mode) {
+static inline string to_string(const DevelMode &dev_mode) {
   switch (dev_mode) {
   case DevelMode::Full:
     return "Full";

@@ -33,6 +33,20 @@ static std::optional<SearchMethod> search_from_string(const string &key) {
   }
   return {};
 }
+static inline string to_string(const SearchMethod &method) {
+  switch (method) {
+  case SearchMethod::BoxSerial:
+    return "Box serial";
+  case SearchMethod::BoxParallel:
+    return "Box parallel";
+  case SearchMethod::BoxParallelQueue:
+    return "Box parallel w queues";
+  case SearchMethod::GradientSerial:
+    return "Gradient serial";
+  default:
+    return "method not recognized";
+  }
+}
 
 //
 enum class Scoring { Default, Square, SquareSteady, Exp, ExpScaled };

@@ -118,12 +118,12 @@ target_include_directories(edge_solve PRIVATE src/boundary_layer src/utils src/s
 # (BENCH) Search for the initial conditions that develop into
 #         the correct self-similar profile
 #         using different implementations.
-add_executable(search_profile
+add_executable(bench_search
     src/bench/search_profile.cpp
 )
 
-target_link_libraries(search_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
-target_include_directories(search_profile PRIVATE src/boundary_layer src/physics src/utils src/solvers src/linalg)
+target_link_libraries(bench_search PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)
+target_include_directories(bench_search PRIVATE src/boundary_layer src/physics src/utils src/solvers src/linalg)
 
 # (BENCH) Parallel implementation of local-similarity solve
 add_executable(parallel_compute
