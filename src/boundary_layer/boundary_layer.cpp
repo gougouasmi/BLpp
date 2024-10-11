@@ -305,6 +305,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
                                           int worker_id) {
   assert(profile_params.AreValid());
 
+  const DevelMode devel_mode = profile_params.devel_mode;
+
   RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
   RhsJacobianFunction compute_rhs_jacobian =
       GetJacobianFun(profile_params.solve_type);
@@ -383,15 +385,17 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     }
   };
 
-  vector<double> solution_buffer(xdim, 0.);
-  for (int idx = 0; idx < xdim; idx++) {
-    solution_buffer[idx] = state_grid[idx];
-  }
-
   NewtonParams newton_params;
   NewtonResources &newton_resources = solver_resources[worker_id];
 
+  vector<double> &solution_buffer = newton_resources.state;
+  std::copy(state_grid.begin(), state_grid.begin() + xdim,
+            solution_buffer.begin());
+
+  ////
   // Time loop
+  //
+
   while (step_id < max_nb_steps) {
 
     // Evolve state forward by solving the nonlinear system
@@ -405,14 +409,19 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     // Evolve state/grid forward
     eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
 
-    for (int var_id = 0; var_id < BL_RANK; ++var_id) {
-      state_grid[state_offset + BL_RANK + var_id] = solution_buffer[var_id];
+    for (int idx = 0; idx < xdim; idx++) {
+      state_grid[state_offset + BL_RANK + idx] = solution_buffer[idx];
     }
 
-    // Evolve sensitivity forward: (I - delta * J^{n+1}) S^{n+1} = S^{n}
-    //  -> The Jacobian (I - delta * J^{n+1}) is located within NewtonResources
-    LUMatrixSolve(newton_resources.matrix.GetData(), sensitivity, BL_RANK, 2,
-                  newton_resources.matrix.GetLU());
+    // Tangent
+    if (devel_mode == DevelMode::Full) {
+
+      // Evolve sensitivity forward: (I - delta * J^{n+1}) S^{n+1} = S^{n}
+      //  -> The Jacobian (I - delta * J^{n+1}) is located within
+      //  NewtonResources
+      LUMatrixSolve(newton_resources.matrix.GetData(), sensitivity, BL_RANK, 2,
+                    newton_resources.matrix.GetLU());
+    }
 
     // Update indexing
     state_offset += BL_RANK;
@@ -512,13 +521,13 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
     }
   };
 
-  vector<double> solution_buffer(xdim, 0.);
+  NewtonParams newton_params;
+  NewtonResources &newton_resources = solver_resources[worker_id];
+  vector<double> &solution_buffer = newton_resources.state;
+
   for (int idx = 0; idx < xdim; idx++) {
     solution_buffer[idx] = state_grid[idx];
   }
-
-  NewtonParams newton_params;
-  NewtonResources &newton_resources = solver_resources[worker_id];
 
   // Time loop
   while (step_id < max_nb_steps) {
@@ -1178,9 +1187,15 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   double snorm;
   int best_profile_size = 1;
 
+  // Profiling //
+  static int devel_count = 0;
+  static int devel_with_grad_count = 0;
+
   // Compute initial profile
   profile_params.SetInitialValues(best_guess);
   int profile_size = DevelopProfile(profile_params, score, worker_id);
+
+  devel_count++;
 
   snorm = vector_norm(score);
 
@@ -1199,6 +1214,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
   int iter = 0;
   while (iter < max_iter) {
+
+    devel_with_grad_count++;
 
     // Assemble score jacobian
     ComputeScoreJacobian(profile_params, state_grids[worker_id],
@@ -1251,6 +1268,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     int profile_size = DevelopProfile(profile_params, score, worker_id);
     assert(profile_size > 20);
 
+    devel_count++;
+
     double ls_norm = vector_norm(score);
     bool ls_pass = ls_norm < snorm;
 
@@ -1265,6 +1284,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
         profile_params.SetInitialValues(guess);
         int profile_size = DevelopProfile(profile_params, score, worker_id);
         assert(profile_size > 20);
+
+        devel_count++;
 
         ls_norm = vector_norm(score);
 
@@ -1331,7 +1352,11 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   if (!success) {
     profile_params.SetInitialValues(best_guess);
     int profile_size = DevelopProfile(profile_params, score, worker_id);
+    devel_count++;
   }
+
+  printf("\n\n# So far: %d calls to devel, %d calls with usable gradient #\n\n",
+         devel_count, devel_with_grad_count);
 
   return SearchOutcome{success, worker_id, best_profile_size, best_guess};
 }

@@ -58,6 +58,10 @@ constexpr std::array<int, OUTPUT_RANK> OUTPUT_INDICES{
     OUTPUT_MU_ID,  OUTPUT_PRANDTL_ID, OUTPUT_CHAPMANN_ID};
 static_assert(complete_indexing(OUTPUT_INDICES));
 
+/////
+// Scoped Enums
+//
+
 //
 enum class WallType { Wall, Adiabatic };
 const std::map<string, WallType> WALL_STRINGS = {
@@ -101,6 +105,22 @@ static std::optional<SolveType> solve_type_from_string(const string &key) {
 }
 
 //
+enum class DevelMode { Full, Primal };
+static inline string to_string(DevelMode dev_mode) {
+  switch (dev_mode) {
+  case DevelMode::Full:
+    return "Full";
+  case DevelMode::Primal:
+    return "Primal";
+  default:
+    return "NOT RECOGNIZED";
+  }
+}
+
+//////
+// Struct
+//
+
 struct ProfileParams {
   int nb_steps{2000};
 
@@ -115,6 +135,8 @@ struct ProfileParams {
   double max_step{1e-2};
 
   Scoring scoring{Scoring::Default};
+
+  DevelMode devel_mode{DevelMode::Full};
 
   // Primary edge conditions
   double ue{1.};
