@@ -105,13 +105,15 @@ static std::optional<SolveType> solve_type_from_string(const string &key) {
 }
 
 //
-enum class DevelMode { Full, Primal };
+enum class DevelMode { Full, Primal, Tangent };
 static inline string to_string(const DevelMode &dev_mode) {
   switch (dev_mode) {
   case DevelMode::Full:
     return "Full";
   case DevelMode::Primal:
     return "Primal";
+  case DevelMode::Tangent:
+    return "Tangent";
   default:
     return "NOT RECOGNIZED";
   }

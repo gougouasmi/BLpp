@@ -31,10 +31,11 @@ BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel model_functions)
 void BoundaryLayer::InitializeState(ProfileParams &profile_params,
                                     int worker_id) {
   // State grid
-  model_functions.initialize(profile_params, state_grids[worker_id]);
+  if (profile_params.devel_mode != DevelMode::Tangent)
+    model_functions.initialize(profile_params, state_grids[worker_id]);
 
   // Sensitivity matrix
-  if (profile_params.devel_mode == DevelMode::Full)
+  if (profile_params.devel_mode != DevelMode::Primal)
     model_functions.initialize_sensitivity(profile_params,
                                            sensitivity_matrices[worker_id]);
 }
@@ -71,6 +72,10 @@ vector<double> &BoundaryLayer::GetEtaGrid(int worker_id) {
 
 vector<double> &BoundaryLayer::GetStateGrid(int worker_id) {
   return state_grids[worker_id];
+}
+
+vector<double> &BoundaryLayer::GetSensitivity(int worker_id) {
+  return sensitivity_matrices[worker_id];
 }
 
 void BoundaryLayer::WriteEtaGrid(int worker_id) {
@@ -145,8 +150,10 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
   int profile_size = -1;
   TimeScheme time_scheme = profile_params.scheme;
 
-  // Clear state grid vector
-  std::fill(state_grids[worker_id].begin(), state_grids[worker_id].end(), 0.);
+  // Clear state grid vector, unless you're going
+  // to evolve the sensitivity
+  if (profile_params.devel_mode != DevelMode::Tangent)
+    std::fill(state_grids[worker_id].begin(), state_grids[worker_id].end(), 0.);
 
   if (time_scheme == TimeScheme::Explicit) {
     profile_size = DevelopProfileExplicit(profile_params, worker_id);
@@ -365,8 +372,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   };
 
   // (3 / 3) Jacobian function
-  auto jacobian_fun = [xdim, &eta_step, &state_offset, &field_offset,
-                       &profile_params, compute_rhs_jacobian,
+  auto jacobian_fun = [xdim, &eta_step, &field_offset, &profile_params,
+                       compute_rhs_jacobian,
                        this](const vector<double> &state, DenseMatrix &matrix) {
     vector<double> &matrix_data = matrix.GetData();
 
@@ -405,22 +412,30 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   while (step_id < max_nb_steps) {
 
     // Evolve state forward by solving the nonlinear system
-    bool pass =
-        NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
-                          limit_update_fun, newton_params, newton_resources);
-    if (!pass) {
-      break;
+    if (devel_mode != DevelMode::Tangent) {
+
+      bool pass =
+          NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
+                            limit_update_fun, newton_params, newton_resources);
+      if (!pass) {
+        break;
+      }
+
+      // Evolve state/grid forward
+      eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
+
+      for (int idx = 0; idx < xdim; idx++) {
+        state_grid[state_offset + BL_RANK + idx] = solution_buffer[idx];
+      }
+    } else { // It is a tangent solve
+
+      for (int idx = 0; idx < xdim; idx++) {
+        solution_buffer[idx] = state_grid[state_offset + BL_RANK + idx];
+      }
+      jacobian_fun(solution_buffer, newton_resources.matrix);
     }
 
-    // Evolve state/grid forward
-    eta_grid[step_id + 1] = eta_grid[step_id] + eta_step;
-
-    for (int idx = 0; idx < xdim; idx++) {
-      state_grid[state_offset + BL_RANK + idx] = solution_buffer[idx];
-    }
-
-    // Tangent
-    if (devel_mode == DevelMode::Full) {
+    if (devel_mode != DevelMode::Primal) {
 
       // Evolve sensitivity forward: (I - delta * J^{n+1}) S^{n+1} = S^{n}
       //  -> The Jacobian (I - delta * J^{n+1}) is located within
@@ -1185,6 +1200,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   bool verbose = search_params.verbose;
 
   profile_params.scoring = search_params.scoring;
+  profile_params.devel_mode = DevelMode::Full;
 
   // Get worker id to fetch appropriate resources
   vector<double> &sensitivity = sensitivity_matrices[worker_id];

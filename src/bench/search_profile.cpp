@@ -66,7 +66,8 @@ int main(int argc, char *argv[]) {
     double avg_duration = timeit(search_task, 1);
 
     std::cout << to_string(method) << " search took " << avg_duration
-              << " seconds." << std::endl;
+              << " seconds. Solution = [" << guess[0] << ", " << guess[1] << "]"
+              << std::endl;
 
     printf("\n");
   }

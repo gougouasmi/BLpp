@@ -77,6 +77,8 @@ public:
   // Post-processing
   vector<double> &GetEtaGrid(int worker_id = 0);
   vector<double> &GetStateGrid(int worker_id = 0);
+  vector<double> &GetSensitivity(int worker_id = 0);
+
   void WriteEtaGrid(int worker_id = 0);
   void WriteStateGrid(const std::string &file_path, int profile_size,
                       int worker_id = 0);

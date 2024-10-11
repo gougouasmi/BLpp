@@ -10,6 +10,7 @@
 #include "parsing.hpp"
 #include "profile_struct.hpp"
 #include "timers.hpp"
+#include "utils.hpp"
 
 #include "profile_functions_cpg.hpp"
 
@@ -32,10 +33,11 @@ using std::vector;
  *
  */
 
-bool consistent_outcomes(const vector<double> &score1, int psize_1,
+void consistent_outcomes(const vector<double> &score1, int psize_1,
                          const vector<double> &score2, int psize_2) {
-  return (score1[0] == score2[0]) && (score1[1] == score2[1]) &&
-         (psize_1 == psize_2);
+  assert(psize_1 == psize_2);
+  assert(score1[0] == score2[0]);
+  assert(score1[1] == score2[1]);
 }
 
 struct ProgramParams {
@@ -65,8 +67,8 @@ int main(int argc, char *argv[]) {
   profile_params.ParseCmdInputs(argc, argv);
 
   //
-  BoundaryLayer boundary_layer =
-      BoundaryLayerFactory(profile_params.nb_steps, "cpg");
+  const int eta_dim = profile_params.nb_steps;
+  BoundaryLayer boundary_layer = BoundaryLayerFactory(eta_dim, "cpg");
 
   // Set profile params from station data
   BoundaryData boundary_data(program_params.edge_file);
@@ -86,25 +88,37 @@ int main(int argc, char *argv[]) {
   vector<double> base_score(2);
   int base_psize = boundary_layer.DevelopProfile(profile_params, base_score);
 
+  vector<double> base_sensitivity = boundary_layer.GetSensitivity();
+
   printf("Profile evolved to eta_id=%f, score: [%.5e, %.5e], norm=%.5e.\n\n",
          boundary_layer.GetEtaGrid()[base_psize], base_score[0], base_score[1],
          vector_norm(base_score));
 
   // Data structures for different tasks
-  std::map<DevelMode, vector<double>> scores;
-  scores.insert({DevelMode::Full, {0., 0.}});
-  scores.insert({DevelMode::Primal, {0., 0.}});
+  std::map<DevelMode, vector<double>> scores{
+      {DevelMode::Full, {0., 0.}},
+      {DevelMode::Primal, {0., 0.}},
+      {DevelMode::Tangent, {0., 0.}},
+  };
 
-  std::map<DevelMode, int> psizes;
-  psizes.insert({DevelMode::Full, 0});
-  psizes.insert({DevelMode::Primal, 0});
+  std::map<DevelMode, int> psizes{
+      {DevelMode::Full, 0},
+      {DevelMode::Primal, 0},
+      {DevelMode::Tangent, 0},
+  };
 
   int psize;
   vector<double> score;
 
   // Run devel for different modes
-  for (const DevelMode &dev_mode : {DevelMode::Full, DevelMode::Primal}) {
+  for (const DevelMode &dev_mode :
+       {DevelMode::Full, DevelMode::Primal, DevelMode::Tangent}) {
     profile_params.devel_mode = dev_mode;
+
+    //
+    if (dev_mode == DevelMode::Tangent) {
+      profile_params.nb_steps = base_psize;
+    }
 
     psize = psizes.at(dev_mode);
     score = scores.at(dev_mode);
@@ -125,9 +139,18 @@ int main(int argc, char *argv[]) {
     scores.at(dev_mode) = score;
     psizes.at(dev_mode) = psize;
 
-    assert(consistent_outcomes(base_score, base_psize, scores.at(dev_mode),
-                               psizes.at(dev_mode)));
+    consistent_outcomes(base_score, base_psize, scores.at(dev_mode),
+                        psizes.at(dev_mode));
+
+    if (dev_mode == DevelMode::Tangent) {
+      profile_params.nb_steps = eta_dim;
+
+      utils::print_matrix_column_major(base_sensitivity, BL_RANK, 2);
+      utils::print_matrix_column_major(boundary_layer.GetSensitivity(), BL_RANK,
+                                       2);
+    }
   }
 
+  // Run
   return 0;
 }
