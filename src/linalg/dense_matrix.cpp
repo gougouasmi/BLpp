@@ -13,4 +13,9 @@ void DenseMatrix::Solve(const std::vector<double> &rhs,
   }
 
   LUSolve(_data, solution, _Nx, _lu_resources);
-};
+}
+
+void DenseMatrix::MatrixSolve(vector<double> &solution_matrix_cm,
+                              const size_t xdim, const size_t zdim) {
+  LUMatrixSolve(_data, solution_matrix_cm, xdim, zdim, _lu_resources);
+}

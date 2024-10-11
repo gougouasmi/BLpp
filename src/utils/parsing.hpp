@@ -92,4 +92,13 @@ static inline void ParseValues(int argc, char *argv[],
   ParseValues(argc, argv, dict, string_from_string);
 }
 
+static inline void ParseUsage(int argc, char *argv[], const char *usage) {
+  bool show_usage;
+  ParseOptions(argc, argv, {{"--help", &show_usage}});
+  if (show_usage) {
+    std::cout << usage;
+    std::exit(EXIT_FAILURE);
+  }
+}
+
 #endif

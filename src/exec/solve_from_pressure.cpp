@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,9 @@ using std::vector;
  * USAGE: ./edge_solve -p <pressure_file.csv> -e <edge_file.h5> -v
  *
  */
+constexpr const char *USAGE =
+    "\n** USAGE: ./edge_solve -p <pressure_file.csv> -e "
+    "<edge_file.h5> -v **\n\n";
 
 struct ProgramParams {
   string pressure_path;
@@ -24,6 +28,7 @@ struct ProgramParams {
   bool verbose;
 
   void Parse(int argc, char *argv[]) {
+    ParseUsage(argc, argv, USAGE);
     ParseValues(argc, argv, {{"-p", &pressure_path}, {"-e", &edge_path}});
     ParseOptions(argc, argv, {{"-v", &verbose}});
   }

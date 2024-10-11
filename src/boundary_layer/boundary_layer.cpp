@@ -34,8 +34,9 @@ void BoundaryLayer::InitializeState(ProfileParams &profile_params,
   model_functions.initialize(profile_params, state_grids[worker_id]);
 
   // Sensitivity matrix
-  model_functions.initialize_sensitivity(profile_params,
-                                         sensitivity_matrices[worker_id]);
+  if (profile_params.devel_mode == DevelMode::Full)
+    model_functions.initialize_sensitivity(profile_params,
+                                           sensitivity_matrices[worker_id]);
 }
 
 RhsFunction BoundaryLayer::GetRhsFun(SolveType solve_type) {
@@ -205,6 +206,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
                                           int worker_id) {
   assert(profile_params.AreValid());
 
+  const DevelMode devel_mode = profile_params.devel_mode;
+
   RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
   assert(compute_rhs != nullptr);
 
@@ -250,28 +253,31 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
           state_grid[state_offset + var_id] + eta_step * rhs[var_id];
     }
 
-    // Evolve sensitivity forward: S^{n+1} = (I + dt * J^{n}) S^{n}
-    compute_rhs_jacobian(state_grid, state_offset, field_grid, field_offset,
-                         jacobian_buffer_rm, profile_params);
-    int buf_offset = 0;
-    for (int row_id = 0; row_id < BL_RANK; row_id++) {
-      for (int col_id = 0; col_id < row_id; col_id++) {
-        jacobian_buffer_rm[buf_offset + col_id] *= eta_step;
+    if (devel_mode == DevelMode::Full) {
+      // Evolve sensitivity forward: S^{n+1} = (I + dt * J^{n}) S^{n}
+      compute_rhs_jacobian(state_grid, state_offset, field_grid, field_offset,
+                           jacobian_buffer_rm, profile_params);
+      int buf_offset = 0;
+      for (int row_id = 0; row_id < BL_RANK; row_id++) {
+        for (int col_id = 0; col_id < row_id; col_id++) {
+          jacobian_buffer_rm[buf_offset + col_id] *= eta_step;
+        }
+
+        jacobian_buffer_rm[buf_offset + row_id] =
+            1. + eta_step * jacobian_buffer_rm[buf_offset + row_id];
+
+        for (int col_id = row_id + 1; col_id < BL_RANK; col_id++) {
+          jacobian_buffer_rm[buf_offset + col_id] *= eta_step;
+        }
+
+        buf_offset += BL_RANK;
       }
 
-      jacobian_buffer_rm[buf_offset + row_id] =
-          1. + eta_step * jacobian_buffer_rm[buf_offset + row_id];
-
-      for (int col_id = row_id + 1; col_id < BL_RANK; col_id++) {
-        jacobian_buffer_rm[buf_offset + col_id] *= eta_step;
-      }
-
-      buf_offset += BL_RANK;
+      std::copy(sensitivity.begin(), sensitivity.end(),
+                matrix_buffer_cm.begin());
+      DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm,
+                                sensitivity, BL_RANK, 2);
     }
-
-    std::copy(sensitivity.begin(), sensitivity.end(), matrix_buffer_cm.begin());
-    DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm, sensitivity,
-                              BL_RANK, 2);
 
     // Debugging
     if (isnan(state_grid[state_offset + BL_RANK + G_ID])) {
@@ -418,9 +424,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
 
       // Evolve sensitivity forward: (I - delta * J^{n+1}) S^{n+1} = S^{n}
       //  -> The Jacobian (I - delta * J^{n+1}) is located within
-      //  NewtonResources
-      LUMatrixSolve(newton_resources.matrix.GetData(), sensitivity, BL_RANK, 2,
-                    newton_resources.matrix.GetLU());
+      //  newton_resources
+      newton_resources.matrix.MatrixSolve(sensitivity, BL_RANK, 2);
     }
 
     // Update indexing
@@ -436,6 +441,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
 int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
                                             int worker_id) {
   assert(profile_params.AreValid());
+
+  const DevelMode devel_mode = profile_params.devel_mode;
 
   RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
   RhsJacobianFunction compute_rhs_jacobian =
@@ -554,38 +561,40 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
       state_grid[state_offset + BL_RANK + var_id] = solution_buffer[var_id];
     }
 
-    // Evolve sensitivity forward
-    // dS/dt = J * S,
-    // -> S^{n+1} - S^{n} = 0.5 * step * (J^{n+1} S^{n+1} + J^{n} S^{n})
-    // -> (I - 0.5 * step * J^{n+1}) S^{n+1} = (I + 0.5 * step * J^{n}) S^{n}
+    if (devel_mode == DevelMode::Full) {
+      // Evolve sensitivity forward
+      // dS/dt = J * S,
+      // -> S^{n+1} - S^{n} = 0.5 * step * (J^{n+1} S^{n+1} + J^{n} S^{n})
+      // -> (I - 0.5 * step * J^{n+1}) S^{n+1} = (I + 0.5 * step * J^{n}) S^{n}
 
-    //    (1 / 3) Evaluate right-hand side (matrix-matrix product)
-    compute_rhs_jacobian(state_grid, state_offset, field_grid, field_offset,
-                         jacobian_buffer_rm, profile_params);
-    int offset = 0;
-    for (int idx = 0; idx < xdim; idx++) {
-      for (int idy = 0; idy < idx; idy++) {
-        jacobian_buffer_rm[offset + idy] *= 0.5 * eta_step;
+      //    (1 / 3) Evaluate right-hand side (matrix-matrix product)
+      compute_rhs_jacobian(state_grid, state_offset, field_grid, field_offset,
+                           jacobian_buffer_rm, profile_params);
+      int offset = 0;
+      for (int idx = 0; idx < xdim; idx++) {
+        for (int idy = 0; idy < idx; idy++) {
+          jacobian_buffer_rm[offset + idy] *= 0.5 * eta_step;
+        }
+
+        jacobian_buffer_rm[offset + idx] =
+            1. + 0.5 * eta_step * jacobian_buffer_rm[offset + idx];
+
+        for (int idy = idx + 1; idy < xdim; idy++) {
+          jacobian_buffer_rm[offset + idy] *= 0.5 * eta_step;
+        }
+        offset += BL_RANK;
       }
+      std::copy(sensitivity.begin(), sensitivity.end(),
+                matrix_buffer_cm.begin());
+      DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm,
+                                sensitivity, BL_RANK, 2);
 
-      jacobian_buffer_rm[offset + idx] =
-          1. + 0.5 * eta_step * jacobian_buffer_rm[offset + idx];
+      //    (2 / 3) Left-hand side matrix is the residual Jacobian in the Newton
+      //    solve
 
-      for (int idy = idx + 1; idy < xdim; idy++) {
-        jacobian_buffer_rm[offset + idy] *= 0.5 * eta_step;
-      }
-      offset += BL_RANK;
+      //    (3 / 3) Solve for next sensitivity
+      newton_resources.matrix.MatrixSolve(sensitivity, BL_RANK, 2);
     }
-    std::copy(sensitivity.begin(), sensitivity.end(), matrix_buffer_cm.begin());
-    DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm, sensitivity,
-                              BL_RANK, 2);
-
-    //    (2 / 3) Left-hand side matrix is the residual Jacobian in the Newton
-    //    solve
-
-    //    (3 / 3) Solve for next sensitivity
-    LUMatrixSolve(newton_resources.matrix.GetData(), sensitivity, BL_RANK, 2,
-                  newton_resources.matrix.GetLU());
 
     // Update indexing
     state_offset += BL_RANK;
@@ -635,6 +644,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearch(ProfileParams &profile_params,
   bool verbose = search_params.verbose;
 
   profile_params.scoring = search_params.scoring;
+  profile_params.devel_mode = DevelMode::Primal;
 
   // Fetch search window parameters
   SearchWindow &window = search_params.window;
@@ -780,6 +790,7 @@ BoundaryLayer::BoxProfileSearchParallel(ProfileParams &profile_params,
   bool verbose = search_params.verbose;
 
   profile_params.scoring = search_params.scoring;
+  profile_params.devel_mode = DevelMode::Primal;
 
   // Fetch search window parameters
   SearchWindow &window = search_params.window;
@@ -956,6 +967,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(
   bool verbose = search_params.verbose;
 
   profile_params.scoring = search_params.scoring;
+  profile_params.devel_mode = DevelMode::Primal;
 
   // Fetch search window parameters
   SearchWindow &window = search_params.window;
