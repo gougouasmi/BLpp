@@ -13,16 +13,16 @@ using InitializeSensitivityFunction =
 using RhsFunction = double (*)(const vector<double> &state, int state_offset,
                                const vector<double> &field, int field_offset,
                                vector<double> &rhs,
-                               ProfileParams &profile_params);
+                               const ProfileParams &profile_params);
 using RhsJacobianFunction = void (*)(const vector<double> &state,
                                      int state_offset,
                                      const vector<double> &field,
                                      int field_offset,
                                      vector<double> &matrix_data,
-                                     ProfileParams &profile_params);
+                                     const ProfileParams &profile_params);
 using LimitUpdateFunction = double (*)(const vector<double> &state,
                                        const vector<double> &state_varn,
-                                       ProfileParams &profile_params);
+                                       const ProfileParams &profile_params);
 using ComputeOutputsFunction = void (*)(const vector<double> &state_grid,
                                         const vector<double> &eta_grid,
                                         vector<double> &output_grid,

@@ -58,7 +58,7 @@ void initialize_sensitivity_default(ProfileParams &profile_params,
 
 double limit_update_default(const vector<double> &state,
                             const vector<double> &state_varn,
-                            ProfileParams &profile_params) {
+                            const ProfileParams &profile_params) {
   double alpha = 1.;
 
   // Do not let u become negative
@@ -78,7 +78,7 @@ double limit_update_default(const vector<double> &state,
 
 double compute_rhs_default(const vector<double> &state, int state_offset,
                            const vector<double> &field, int field_offset,
-                           vector<double> &rhs, ProfileParams &params) {
+                           vector<double> &rhs, const ProfileParams &params) {
   double romu = 1.0;
   double prandtl = 1.0;
   double eckert = 1.0;
@@ -104,7 +104,8 @@ double compute_rhs_default(const vector<double> &state, int state_offset,
 
 double compute_lsim_rhs_default(const vector<double> &state, int state_offset,
                                 const vector<double> &field, int field_offset,
-                                vector<double> &rhs, ProfileParams &params) {
+                                vector<double> &rhs,
+                                const ProfileParams &params) {
   double romu = 1.0;
   double prandtl = 1.0;
   double eckert = 1.0;
@@ -138,7 +139,8 @@ double compute_lsim_rhs_default(const vector<double> &state, int state_offset,
 
 double compute_full_rhs_default(const vector<double> &state, int state_offset,
                                 const vector<double> &field, int field_offset,
-                                vector<double> &rhs, ProfileParams &params) {
+                                vector<double> &rhs,
+                                const ProfileParams &params) {
   double romu = 1.0;
   double prandtl = 1.0;
   double eckert = 1.0;
@@ -188,7 +190,7 @@ double compute_full_rhs_default(const vector<double> &state, int state_offset,
 void compute_rhs_jacobian_default(const vector<double> &state, int state_offset,
                                   const vector<double> &field, int field_offset,
                                   vector<double> &matrix_data,
-                                  ProfileParams &params) {
+                                  const ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double romu = 1.0;
@@ -245,9 +247,12 @@ void compute_rhs_jacobian_default(const vector<double> &state, int state_offset,
   matrix_data[offset + G_ID] = 0.;
 }
 
-void compute_lsim_rhs_jacobian_default(
-    const vector<double> &state, int state_offset, const vector<double> &field,
-    int field_offset, vector<double> &matrix_data, ProfileParams &params) {
+void compute_lsim_rhs_jacobian_default(const vector<double> &state,
+                                       int state_offset,
+                                       const vector<double> &field,
+                                       int field_offset,
+                                       vector<double> &matrix_data,
+                                       const ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double romu = 1.0;
@@ -317,9 +322,12 @@ void compute_lsim_rhs_jacobian_default(
   matrix_data[offset + G_ID] = 0.;
 }
 
-void compute_full_rhs_jacobian_default(
-    const vector<double> &state, int state_offset, const vector<double> &field,
-    int field_offset, vector<double> &matrix_data, ProfileParams &params) {
+void compute_full_rhs_jacobian_default(const vector<double> &state,
+                                       int state_offset,
+                                       const vector<double> &field,
+                                       int field_offset,
+                                       vector<double> &matrix_data,
+                                       const ProfileParams &params) {
   assert(matrix_data.size() == BL_RANK * BL_RANK);
 
   double romu = 1.0;

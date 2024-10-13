@@ -15,32 +15,32 @@ void initialize_sensitivity_cpg(ProfileParams &profile_params,
 
 double limit_update_cpg(const vector<double> &state,
                         const vector<double> &state_varn,
-                        ProfileParams &params);
+                        const ProfileParams &params);
 
 double compute_rhs_cpg(const vector<double> &state, int state_offset,
                        const vector<double> &field, int field_offset,
-                       vector<double> &rhs, ProfileParams &params);
+                       vector<double> &rhs, const ProfileParams &params);
 
 double compute_lsim_rhs_cpg(const vector<double> &state, int state_offset,
                             const vector<double> &field, int field_offset,
-                            vector<double> &rhs, ProfileParams &params);
+                            vector<double> &rhs, const ProfileParams &params);
 
 double compute_full_rhs_cpg(const vector<double> &state, int state_offset,
                             const vector<double> &field, int field_offset,
-                            vector<double> &rhs, ProfileParams &params);
+                            vector<double> &rhs, const ProfileParams &params);
 
 void compute_rhs_jacobian_cpg(const vector<double> &state, int state_offset,
                               const vector<double> &field, int field_offset,
                               vector<double> &matrix_data,
-                              ProfileParams &params);
+                              const ProfileParams &params);
 
 void compute_lsim_rhs_jacobian_cpg(
     const vector<double> &state, int state_offset, const vector<double> &field,
-    int field_offset, vector<double> &matrix_data, ProfileParams &params);
+    int field_offset, vector<double> &matrix_data, const ProfileParams &params);
 
 void compute_full_rhs_jacobian_cpg(
     const vector<double> &state, int state_offset, const vector<double> &field,
-    int field_offset, vector<double> &matrix_data, ProfileParams &params);
+    int field_offset, vector<double> &matrix_data, const ProfileParams &params);
 
 void compute_outputs_cpg(const vector<double> &state_grid,
                          const vector<double> &eta_grid,
