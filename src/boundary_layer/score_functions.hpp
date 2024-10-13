@@ -6,51 +6,54 @@
 
 using std::vector;
 
-void ComputeScore(ProfileParams &params, const vector<double> &state,
+void ComputeScore(const ProfileParams &params, const vector<double> &state,
                   int state_offset, vector<double> &score);
-void ComputeScoreJacobian(ProfileParams &params, const vector<double> &state,
-                          int state_offset,
+void ComputeScoreJacobian(const ProfileParams &params,
+                          const vector<double> &state, int state_offset,
                           const vector<double> &sensitivity_cm,
                           int sensitivity_offset,
                           vector<double> &score_jacobian_rm);
 
-void ComputeScoreDefault(ProfileParams &params, const vector<double> &state,
-                         int state_offset, vector<double> &score);
-void ComputeScoreJacobianDefault(ProfileParams &params,
+void ComputeScoreDefault(const ProfileParams &params,
+                         const vector<double> &state, int state_offset,
+                         vector<double> &score);
+void ComputeScoreJacobianDefault(const ProfileParams &params,
                                  const vector<double> &state, int state_offset,
                                  const vector<double> &sensitivity_cm,
                                  int sensitivity_offset,
                                  vector<double> &score_jacobian_rm);
 
-void ComputeScoreSquare(ProfileParams &params, const vector<double> &state,
-                        int state_offset, vector<double> &score);
-void ComputeScoreJacobianSquare(ProfileParams &params,
+void ComputeScoreSquare(const ProfileParams &params,
+                        const vector<double> &state, int state_offset,
+                        vector<double> &score);
+void ComputeScoreJacobianSquare(const ProfileParams &params,
                                 const vector<double> &state, int state_offset,
                                 const vector<double> &sensitivity_cm,
                                 int sensitivity_offset,
                                 vector<double> &score_jacobian_rm);
 
-void ComputeScoreSquareSteady(ProfileParams &params,
+void ComputeScoreSquareSteady(const ProfileParams &params,
                               const vector<double> &state, int state_offset,
                               vector<double> &score);
-void ComputeScoreJacobianSquareSteady(ProfileParams &params,
+void ComputeScoreJacobianSquareSteady(const ProfileParams &params,
                                       const vector<double> &state,
                                       int state_offset,
                                       const vector<double> &sensitivity_cm,
                                       int sensitivity_offset,
                                       vector<double> &score_jacobian_rm);
 
-void ComputeScoreExp(ProfileParams &params, const vector<double> &state,
+void ComputeScoreExp(const ProfileParams &params, const vector<double> &state,
                      int state_offset, vector<double> &score);
-void ComputeScoreJacobianExp(ProfileParams &params, const vector<double> &state,
-                             int state_offset,
+void ComputeScoreJacobianExp(const ProfileParams &params,
+                             const vector<double> &state, int state_offset,
                              const vector<double> &sensitivity_cm,
                              int sensitivity_offset,
                              vector<double> &score_jacobian_rm);
 
-void ComputeScoreExpScaled(ProfileParams &params, const vector<double> &state,
-                           int state_offset, vector<double> &score);
-void ComputeScoreJacobianExpScaled(ProfileParams &params,
+void ComputeScoreExpScaled(const ProfileParams &params,
+                           const vector<double> &state, int state_offset,
+                           vector<double> &score);
+void ComputeScoreJacobianExpScaled(const ProfileParams &params,
                                    const vector<double> &state,
                                    int state_offset,
                                    const vector<double> &sensitivity_cm,

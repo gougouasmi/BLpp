@@ -13,8 +13,9 @@
                                  score_jacobian_rm);                           \
     break;
 
-void ComputeScore(ProfileParams &profile_params, const vector<double> &state,
-                  int state_offset, vector<double> &score) {
+void ComputeScore(const ProfileParams &profile_params,
+                  const vector<double> &state, int state_offset,
+                  vector<double> &score) {
   switch (profile_params.scoring) {
     COMPUTE_SCORE_CASE(Default)
     COMPUTE_SCORE_CASE(Square)
@@ -26,7 +27,7 @@ void ComputeScore(ProfileParams &profile_params, const vector<double> &state,
   }
 }
 
-void ComputeScoreJacobian(ProfileParams &profile_params,
+void ComputeScoreJacobian(const ProfileParams &profile_params,
                           const vector<double> &state, int state_offset,
                           const vector<double> &sensitivity_cm, int svty_offset,
                           vector<double> &score_jacobian_rm) {
@@ -43,14 +44,14 @@ void ComputeScoreJacobian(ProfileParams &profile_params,
 
 //
 
-void ComputeScoreDefault(ProfileParams &profile_params,
+void ComputeScoreDefault(const ProfileParams &profile_params,
                          const vector<double> &state, int state_offset,
                          vector<double> &score) {
   score[0] = state[state_offset + FP_ID] - 1.;
   score[1] = state[state_offset + G_ID] - 1.;
 }
 
-void ComputeScoreJacobianDefault(ProfileParams &profile_params,
+void ComputeScoreJacobianDefault(const ProfileParams &profile_params,
                                  const vector<double> &state, int state_offset,
                                  const vector<double> &sensitivity_cm,
                                  int svty_offset,
@@ -64,7 +65,7 @@ void ComputeScoreJacobianDefault(ProfileParams &profile_params,
 
 //
 
-void ComputeScoreSquare(ProfileParams &profile_params,
+void ComputeScoreSquare(const ProfileParams &profile_params,
                         const vector<double> &state, int state_offset,
                         vector<double> &score) {
   score[0] =
@@ -73,7 +74,7 @@ void ComputeScoreSquare(ProfileParams &profile_params,
       (state[state_offset + G_ID] - 1.) * (state[state_offset + G_ID] - 1.);
 }
 
-void ComputeScoreJacobianSquare(ProfileParams &profile_params,
+void ComputeScoreJacobianSquare(const ProfileParams &profile_params,
                                 const vector<double> &state, int state_offset,
                                 const vector<double> &sensitivity_cm,
                                 int svty_offset,
@@ -91,7 +92,7 @@ void ComputeScoreJacobianSquare(ProfileParams &profile_params,
 
 //
 
-void ComputeScoreSquareSteady(ProfileParams &profile_params,
+void ComputeScoreSquareSteady(const ProfileParams &profile_params,
                               const vector<double> &state, int state_offset,
                               vector<double> &score) {
 
@@ -105,7 +106,7 @@ void ComputeScoreSquareSteady(ProfileParams &profile_params,
   score[1] = g_error * g_error + gp_error * gp_error;
 }
 
-void ComputeScoreJacobianSquareSteady(ProfileParams &profile_params,
+void ComputeScoreJacobianSquareSteady(const ProfileParams &profile_params,
                                       const vector<double> &state,
                                       int state_offset,
                                       const vector<double> &sensitivity_cm,
@@ -135,8 +136,9 @@ void ComputeScoreJacobianSquareSteady(ProfileParams &profile_params,
             gp_error * sensitivity_cm[svty_offset + BL_RANK + GP_ID]);
 }
 
-void ComputeScoreExp(ProfileParams &profile_params, const vector<double> &state,
-                     int state_offset, vector<double> &score) {
+void ComputeScoreExp(const ProfileParams &profile_params,
+                     const vector<double> &state, int state_offset,
+                     vector<double> &score) {
   double g = state[state_offset + G_ID];
   double fp = state[state_offset + FP_ID];
 
@@ -154,7 +156,7 @@ void ComputeScoreExp(ProfileParams &profile_params, const vector<double> &state,
   score[1] = g_error + gp_error;
 }
 
-void ComputeScoreJacobianExp(ProfileParams &profile_params,
+void ComputeScoreJacobianExp(const ProfileParams &profile_params,
                              const vector<double> &state, int state_offset,
                              const vector<double> &sensitivity_cm,
                              int svty_offset,
@@ -192,7 +194,7 @@ void ComputeScoreJacobianExp(ProfileParams &profile_params,
 
 //
 
-void ComputeScoreExpScaled(ProfileParams &profile_params,
+void ComputeScoreExpScaled(const ProfileParams &profile_params,
                            const vector<double> &state, int state_offset,
                            vector<double> &score) {
   double g = state[state_offset + G_ID];
@@ -229,7 +231,7 @@ void ComputeScoreExpScaled(ProfileParams &profile_params,
   score[1] = g_error + gp_error;
 }
 
-void ComputeScoreJacobianExpScaled(ProfileParams &profile_params,
+void ComputeScoreJacobianExpScaled(const ProfileParams &profile_params,
                                    const vector<double> &state,
                                    int state_offset,
                                    const vector<double> &sensitivity_cm,
