@@ -45,19 +45,20 @@ int main(int argc, char *argv[]) {
       BoundaryLayerFactory(profile_params.nb_steps, "cpg");
 
   // Compare search methods
-  std::map<SearchMethod, array<double, 2>> guesses{
+  std::map<SearchMethod, array<double, 2>> search_configs{
       {SearchMethod::BoxSerial, {0.5, 0.5}},
       {SearchMethod::BoxParallel, {0.5, 0.5}},
       {SearchMethod::BoxParallelQueue, {0.5, 0.5}},
       {SearchMethod::GradientSerial, {0.5, 0.5}},
+      {SearchMethod::GradientExp, {0.5, 0.5}},
   };
 
-  for (const SearchMethod &method :
-       {SearchMethod::BoxSerial, SearchMethod::BoxParallel,
-        SearchMethod::BoxParallelQueue, SearchMethod::GradientSerial}) {
-    array<double, 2> &guess = guesses.at(method);
+  for (auto &search_config : search_configs) {
+    SearchMethod method = search_config.first;
+    array<double, 2> &guess = search_config.second;
 
     search_params.method = method;
+
     auto search_task = [&profile_params, &search_params, &guess,
                         &boundary_layer]() {
       boundary_layer.ProfileSearch(profile_params, search_params, guess);

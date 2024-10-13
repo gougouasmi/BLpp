@@ -19,12 +19,15 @@ enum class SearchMethod {
   BoxSerial,
   BoxParallel,
   BoxParallelQueue,
-  GradientSerial
+  GradientSerial,
+  GradientExp,
 };
 const std::map<string, SearchMethod> SEARCH_KEYS = {
     {"box_serial", SearchMethod::BoxSerial},
     {"box_parallel", SearchMethod::BoxParallel},
     {"box_parallel_queue", SearchMethod::BoxParallelQueue},
+    {"gradient", SearchMethod::GradientSerial},
+    {"gradient_exp", SearchMethod::GradientExp},
 };
 static std::optional<SearchMethod> search_from_string(const string &key) {
   if (SEARCH_KEYS.count(key)) {
@@ -43,6 +46,8 @@ static inline string to_string(const SearchMethod &method) {
     return "Box parallel w queues";
   case SearchMethod::GradientSerial:
     return "Gradient serial";
+  case SearchMethod::GradientExp:
+    return "Gradient experimental";
   default:
     return "method not recognized";
   }

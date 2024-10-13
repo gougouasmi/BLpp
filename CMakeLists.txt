@@ -119,7 +119,7 @@ target_include_directories(edge_solve PRIVATE src/boundary_layer src/utils src/s
 #         the correct self-similar profile
 #         using different implementations.
 add_executable(bench_search
-    src/bench/search_profile.cpp
+    src/bench/bench_search_profile.cpp
 )
 
 target_link_libraries(bench_search PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib)

@@ -55,6 +55,11 @@ public:
                                       array<double, 2> &best_guess,
                                       int worker_id = 0);
 
+  SearchOutcome GradientProfileSearch_Exp(ProfileParams &profile_params,
+                                          SearchParams &search_params,
+                                          array<double, 2> &best_guess,
+                                          int worker_id = 0);
+
   // 2D profile calculation
   vector<SearchOutcome> Compute(const BoundaryData &boundary_data,
                                 ProfileParams &profile_params,
