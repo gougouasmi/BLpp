@@ -1209,211 +1209,10 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   int max_iter = search_params.max_iter;
   double rtol = search_params.rtol;
   bool verbose = search_params.verbose;
+  const int verbosity = static_cast<int>(verbose);
 
   profile_params.scoring = search_params.scoring;
   profile_params.devel_mode = DevelMode::Full;
-
-  // Get worker id to fetch appropriate resources
-  vector<double> &sensitivity = sensitivity_matrices[worker_id];
-
-  vector<double> score(2, 0);
-  vector<double> score_jacobian(4, 0.); // row_major
-  vector<double> delta(2, 0);
-
-  pair<vector<double>, vector<double>> &lu_resources =
-      solver_resources[worker_id].matrix.GetLU();
-
-  double snorm;
-  int best_profile_size = 1;
-
-  // Profiling //
-  static int devel_count = 0;
-  static int devel_with_grad_count = 0;
-
-  // Compute initial profile
-  profile_params.SetInitialValues(best_guess);
-  int profile_size = DevelopProfile(profile_params, score, worker_id);
-
-  devel_count++;
-
-  snorm = vector_norm(score);
-
-  if (verbose)
-    printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, %d eta steps.\n",
-           best_guess[0], best_guess[1], snorm, profile_size);
-
-  if (snorm < rtol) {
-    if (verbose)
-      printf("  -> Successful search.\n");
-    return SearchOutcome{true, worker_id, profile_size, best_guess};
-  }
-
-  // Start main loop
-  array<double, 2> guess = {{best_guess[0], best_guess[1]}};
-
-  int iter = 0;
-  while (iter < max_iter) {
-
-    devel_with_grad_count++;
-
-    // Assemble score jacobian
-    ComputeScoreJacobian(profile_params, state_grids[worker_id],
-                         profile_size * BL_RANK, sensitivity, 0,
-                         score_jacobian);
-
-    if (verbose) {
-      printf("\nIter #%d - START\n", iter + 1);
-      printf(" -> Score: \n");
-      utils::print_state(score, 0, 2, 2);
-      printf(" -> State sentivity: \n");
-      utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
-      printf(" -> Score Jacobian:\n");
-      utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
-    }
-
-    // Solve linear system
-    delta[0] = -score[0];
-    delta[1] = -score[1];
-
-    LUSolve(score_jacobian, delta, 2, lu_resources);
-
-    if (isnan(delta[0]) || isnan(delta[1]))
-      return SearchOutcome{false, worker_id, 1, best_guess};
-
-    if (verbose) {
-      printf(" -> delta: ");
-      utils::print_state(delta, 0, 2);
-      printf(" -> Score Jacobian determinant: %.3e.\n",
-             UpperDeterminant(lu_resources.second, 2));
-      printf("\n");
-    }
-
-    // Line search
-    //    (1 / 2) : Lower coeff to meet conditions
-    double alpha = 1;
-    if (delta[0] != 0) {
-      alpha = std::min(alpha, 0.5 * fabs(guess[0] / delta[0]));
-    }
-
-    if (delta[1] != 0) {
-      alpha = std::min(alpha, 0.5 * fabs(guess[1] / delta[1]));
-    }
-
-    //    (2 / 2) : Lower alpha until score drops
-    guess[0] += alpha * delta[0];
-    guess[1] += alpha * delta[1];
-
-    profile_params.SetInitialValues(guess);
-    int profile_size = DevelopProfile(profile_params, score, worker_id);
-    assert(profile_size > 20);
-
-    devel_count++;
-
-    double ls_norm = vector_norm(score);
-    bool ls_pass = ls_norm < snorm;
-
-    if (!ls_pass) {
-      for (int ls_iter = 0; ls_iter < 20; ls_iter++) {
-
-        alpha *= 0.5;
-
-        guess[0] -= alpha * delta[0];
-        guess[1] -= alpha * delta[1];
-
-        profile_params.SetInitialValues(guess);
-        int profile_size = DevelopProfile(profile_params, score, worker_id);
-        assert(profile_size > 20);
-
-        devel_count++;
-
-        ls_norm = vector_norm(score);
-
-        if (verbose) {
-          printf("   LS Iter #%d, score_norm: %.2e, score: ", ls_iter + 1,
-                 ls_norm);
-          utils::print_state(score, 0, 2);
-        }
-
-        if (ls_norm < snorm) {
-          snorm = ls_norm;
-          ls_pass = true;
-          best_profile_size = profile_size;
-          break;
-        }
-      }
-    }
-
-    if (ls_pass) {
-      snorm = ls_norm;
-      best_profile_size = profile_size;
-
-      // Save progress to best_guess
-      std::copy(guess.begin(), guess.end(), best_guess.begin());
-
-      if (verbose)
-        printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
-               "alpha=%.2e.\n",
-               iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha);
-
-      if (snorm < rtol) {
-        if (verbose) {
-          printf("  -> Successful search.\n");
-          if (profile_size < _max_nb_steps) {
-            printf("   -> Yet the run did not complete! (%d / %d)\n",
-                   profile_size, _max_nb_steps);
-            printf("   -> Final state : ");
-            utils::print_state(state_grids[worker_id], profile_size * BL_RANK,
-                               BL_RANK);
-            printf("   -> Rhs Jacobian : ");
-            utils::print_matrix_row_major(
-                solver_resources[worker_id].matrix.GetData(), BL_RANK, BL_RANK,
-                2);
-          }
-        }
-        return SearchOutcome{true, worker_id, best_profile_size, best_guess};
-      }
-
-    } else {
-      if (verbose)
-        printf("Iter #%d, line search failed . Aborting.\n", iter + 1);
-      break;
-    }
-
-    iter++;
-  }
-
-  bool success = (snorm < rtol);
-  if (verbose)
-    printf("  -> %s search.\n", (success) ? "Successful" : "Unsuccesful");
-
-  // If the search did not converge, make sure the profile in
-  // state_grids[worker_id] is that of the best profile found.
-  if (!success) {
-    profile_params.SetInitialValues(best_guess);
-    int profile_size = DevelopProfile(profile_params, score, worker_id);
-    devel_count++;
-  }
-
-  printf("\n\n# So far: %d calls to devel, %d calls with usable gradient #\n\n",
-         devel_count, devel_with_grad_count);
-
-  return SearchOutcome{success, worker_id, best_profile_size, best_guess};
-}
-
-SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
-    ProfileParams &profile_params, SearchParams &search_params,
-    array<double, 2> &best_guess, int worker_id) {
-  assert(array_norm<2>(best_guess) > 0);
-
-  const int base_nb_steps = profile_params.nb_steps;
-  profile_params.devel_mode = DevelMode::Primal;
-
-  // Fetch search parameters
-  int max_iter = search_params.max_iter;
-  double rtol = search_params.rtol;
-  bool verbose = search_params.verbose;
-
-  profile_params.scoring = search_params.scoring;
 
   // Get worker id to fetch appropriate resources
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
@@ -1458,21 +1257,17 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
     devel_with_grad_count++;
 
     // Assemble score jacobian
-    profile_params.devel_mode = DevelMode::Tangent;
-    profile_params.nb_steps = best_profile_size;
-    DevelopProfile(profile_params, score, worker_id);
-
     ComputeScoreJacobian(profile_params, state_grids[worker_id],
                          best_profile_size * BL_RANK, sensitivity, 0,
                          score_jacobian);
 
-    profile_params.devel_mode = DevelMode::Primal;
-    profile_params.nb_steps = base_nb_steps;
-
-    if (verbose) {
+    if (verbosity > 1) {
       printf("\nIter #%d - START\n", iter + 1);
       printf(" -> Score: \n");
       utils::print_state(score, 0, 2, 2);
+      printf(" -> Final state (offset %d * BL_RANK): \n", best_profile_size);
+      utils::print_state(state_grids[worker_id], best_profile_size * BL_RANK,
+                         BL_RANK, 2);
       printf(" -> State sentivity: \n");
       utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
       printf(" -> Score Jacobian:\n");
@@ -1485,14 +1280,10 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
     LUSolve(score_jacobian, delta, 2, lu_resources);
 
-    if (isnan(delta[0]) || isnan(delta[1])) {
-      if (verbose) {
-        printf(" -> Gradient search aborted because of nan variations.\n");
-      }
+    if (isnan(delta[0]) || isnan(delta[1]))
       return SearchOutcome{false, worker_id, 1, best_guess};
-    }
 
-    if (verbose) {
+    if (verbosity > 1) {
       printf(" -> delta: ");
       utils::print_state(delta, 0, 2);
       printf(" -> Score Jacobian determinant: %.3e.\n",
@@ -1500,10 +1291,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
       printf("\n");
     }
 
-    ////
     // Line search
-    //
-
     //    (1 / 2) : Lower coeff to meet conditions
     double alpha = 1;
     for (int k = 0; k < 2; k++) {
@@ -1543,7 +1331,219 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
       ls_norm = vector_norm(score);
 
+      if (verbosity > 2) {
+        printf("   LS Iter #%d, score_norm: %.2e, score: , %d eta steps",
+               ls_iter + 1, ls_norm, profile_size);
+        utils::print_state(score, 0, 2);
+      }
+
+      ls_pass = (ls_norm < snorm);
+    }
+
+    if (ls_pass) {
+      snorm = ls_norm;
+      best_profile_size = profile_size;
+
+      // Save progress to best_guess
+      std::copy(guess.begin(), guess.end(), best_guess.begin());
+
+      if (verbose)
+        printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
+               "alpha=%.2e, %d eta steps.\n",
+               iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha,
+               best_profile_size);
+
+      if (snorm < rtol) {
+        if (verbose) {
+          printf("  -> Successful search.\n");
+          if (profile_size < _max_nb_steps) {
+            printf("   -> Yet the run did not complete! (%d / %d)\n",
+                   profile_size, _max_nb_steps);
+            printf("   -> Final state : ");
+            utils::print_state(state_grids[worker_id], profile_size * BL_RANK,
+                               BL_RANK);
+            printf("   -> Rhs Jacobian : ");
+            utils::print_matrix_row_major(
+                solver_resources[worker_id].matrix.GetData(), BL_RANK, BL_RANK,
+                2);
+          }
+        }
+
+        return SearchOutcome{true, worker_id, best_profile_size, best_guess};
+      }
+
+    } else {
+      if (verbose)
+        printf("Iter #%d, line search failed . Aborting.\n", iter + 1);
+      break;
+    }
+
+    iter++;
+  }
+
+  bool success = (snorm < rtol);
+  if (verbose)
+    printf("  -> %s search.\n", (success) ? "Successful" : "Unsuccesful");
+
+  // If the search did not converge, make sure the profile in
+  // state_grids[worker_id] is that of the best profile found.
+  if (!success) {
+    profile_params.SetInitialValues(best_guess);
+    int profile_size = DevelopProfile(profile_params, score, worker_id);
+    devel_count++;
+  }
+
+  return SearchOutcome{success, worker_id, best_profile_size, best_guess};
+}
+
+SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
+    ProfileParams &profile_params, SearchParams &search_params,
+    array<double, 2> &best_guess, int worker_id) {
+  assert(array_norm<2>(best_guess) > 0);
+
+  const int base_nb_steps = profile_params.nb_steps;
+  profile_params.devel_mode = DevelMode::Primal;
+
+  // Fetch search parameters
+  int max_iter = search_params.max_iter;
+  double rtol = search_params.rtol;
+  bool verbose = search_params.verbose;
+  const int verbosity = static_cast<int>(verbose);
+
+  profile_params.scoring = search_params.scoring;
+
+  // Get worker id to fetch appropriate resources
+  vector<double> &sensitivity = sensitivity_matrices[worker_id];
+
+  vector<double> score(2, 0);
+  vector<double> score_jacobian(4, 0.); // row_major
+  vector<double> delta(2, 0);
+
+  pair<vector<double>, vector<double>> &lu_resources =
+      solver_resources[worker_id].matrix.GetLU();
+
+  double snorm;
+
+  // Profiling //
+  static int devel_primal_count = 0;
+  static int devel_tangent_count = 0;
+
+  // Compute initial profile
+  profile_params.SetInitialValues(best_guess);
+  int best_profile_size = DevelopProfile(profile_params, score, worker_id);
+
+  devel_primal_count++;
+
+  snorm = vector_norm(score);
+
+  if (verbose)
+    printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, %d eta steps.\n",
+           best_guess[0], best_guess[1], snorm, best_profile_size);
+
+  if (snorm < rtol) {
+    if (verbose)
+      printf("  -> Successful search.\n");
+    return SearchOutcome{true, worker_id, best_profile_size, best_guess};
+  }
+
+  // Start main loop
+  array<double, 2> guess = {{best_guess[0], best_guess[1]}};
+
+  int iter = 0;
+  while (iter < max_iter) {
+
+    // Assemble score jacobian
+    profile_params.devel_mode = DevelMode::Tangent;
+    profile_params.nb_steps = best_profile_size;
+    DevelopProfile(profile_params, score, worker_id);
+
+    devel_tangent_count++;
+
+    ComputeScoreJacobian(profile_params, state_grids[worker_id],
+                         best_profile_size * BL_RANK, sensitivity, 0,
+                         score_jacobian);
+
+    profile_params.devel_mode = DevelMode::Primal;
+    profile_params.nb_steps = base_nb_steps;
+
+    if (verbosity > 1) {
+      printf("\nIter #%d - START\n", iter + 1);
+      printf(" -> Score: \n");
+      utils::print_state(score, 0, 2, 2);
+      printf(" -> Final state (offset %d * BL_RANK): \n", best_profile_size);
+      utils::print_state(state_grids[worker_id], best_profile_size * BL_RANK,
+                         BL_RANK, 2);
+      printf(" -> State sentivity: \n");
+      utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
+      printf(" -> Score Jacobian:\n");
+      utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
+    }
+
+    // Solve linear system
+    delta[0] = -score[0];
+    delta[1] = -score[1];
+
+    LUSolve(score_jacobian, delta, 2, lu_resources);
+
+    if (isnan(delta[0]) || isnan(delta[1])) {
       if (verbose) {
+        printf(" -> Gradient search aborted because of nan variations.\n");
+      }
+      return SearchOutcome{false, worker_id, 1, best_guess};
+    }
+
+    if (verbosity > 1) {
+      printf(" -> delta: ");
+      utils::print_state(delta, 0, 2);
+      printf(" -> Score Jacobian determinant: %.3e.\n",
+             UpperDeterminant(lu_resources.second, 2));
+      printf("\n");
+    }
+
+    ////
+    // Line search
+    //
+
+    //    (1 / 2) : Lower coeff to meet conditions
+    double alpha = 1;
+    for (int k = 0; k < 2; k++) {
+      if (delta[k] != 0) {
+        alpha = std::min(alpha, 0.5 * fabs(guess[k] / delta[k]));
+      }
+    }
+
+    //    (2 / 2) : Lower alpha until score drops
+    guess[0] += alpha * delta[0];
+    guess[1] += alpha * delta[1];
+
+    profile_params.SetInitialValues(guess);
+    int profile_size = DevelopProfile(profile_params, score, worker_id);
+    assert(profile_size > 20);
+
+    devel_primal_count++;
+
+    double ls_norm = vector_norm(score);
+    bool ls_pass = ls_norm < snorm;
+
+    for (int ls_iter = 0; ls_iter < 20; ls_iter++) {
+
+      if (ls_pass)
+        break;
+
+      alpha *= 0.5;
+
+      guess[0] -= alpha * delta[0];
+      guess[1] -= alpha * delta[1];
+
+      profile_params.SetInitialValues(guess);
+      profile_size = DevelopProfile(profile_params, score, worker_id);
+      assert(profile_size > 20);
+
+      devel_primal_count++;
+
+      ls_norm = vector_norm(score);
+
+      if (verbosity > 2) {
         printf("   LS Iter #%d, score_norm: %.2e, score: ", ls_iter + 1,
                ls_norm);
         utils::print_state(score, 0, 2);
@@ -1566,8 +1566,9 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
     if (verbose)
       printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
-             "alpha=%.2e.\n",
-             iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha);
+             "alpha=%.2e, %d eta steps.\n",
+             iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha,
+             best_profile_size);
 
     if (snorm < rtol) {
       if (verbose) {
@@ -1599,11 +1600,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
   if (!success) {
     profile_params.SetInitialValues(best_guess);
     DevelopProfile(profile_params, score, worker_id);
-    devel_count++;
+    devel_primal_count++;
   }
-
-  printf("\n\n# So far: %d calls to devel, %d calls with usable gradient #\n\n",
-         devel_count, devel_with_grad_count);
 
   return SearchOutcome{success, worker_id, best_profile_size, best_guess};
 }
@@ -1650,18 +1648,23 @@ void compute_args_are_consistent(
 }
 
 void print_summary(const vector<SearchOutcome> &search_outcomes) {
+  const int nb_stations = search_outcomes.size();
+  printf("# SUMMARY: ");
   if (std::any_of(
           search_outcomes.begin(), search_outcomes.end(),
           [](const SearchOutcome &outcome) { return !outcome.success; })) {
-    printf("Could not solve stations ");
+    printf("Could not solve stations {");
     int station_id = 0;
     for (const SearchOutcome &outcome : search_outcomes) {
       if (!outcome.success)
         printf("%d, ", station_id);
       station_id++;
     }
-    printf("\n");
+    printf("} among %d.\n", nb_stations);
+    return;
   }
+
+  printf("All %d stations successfully solved.\n", nb_stations);
 }
 
 /*
