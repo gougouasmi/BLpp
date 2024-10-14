@@ -28,6 +28,14 @@ find_package(HDF5 REQUIRED COMPONENTS CXX)
 message(STATUS "Don't forget to provide HDF5_INCLUDE_DIRS=${HDF5_INCLUDE_DIRS} to targets")
 message(STATUS "Same for HDF5_LIBRARIES=${HDF5_LIBRARIES}\n")
 
+find_library(PROFILER_LIB profiler)
+
+if(PROFILER_LIB)
+    message(STATUS "Found gperftools profiler: ${PROFILER_LIB}")
+else()
+    message(WARNING "gperftools profiler not found. Profiling will not be enabled.")
+endif()
+
 ###
 # Configure files
 #
@@ -104,8 +112,11 @@ add_executable(compute_2d_profile
     src/exec/compute_2d_profile.cpp
 )
 
-target_link_libraries(compute_2d_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
 target_include_directories(compute_2d_profile PRIVATE src/boundary_layer src/physics src/utils src/cases src/solvers src/linalg)
+target_link_libraries(compute_2d_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
+if (PROFILER_LIB)
+    target_link_libraries(compute_2d_profile PRIVATE ${PROFILER_LIB})
+endif()
 
 # (MAIN) Compute edge flow from pressure
 add_executable(edge_solve src/exec/solve_from_pressure.cpp src/solvers/edge_solvers.cpp)
