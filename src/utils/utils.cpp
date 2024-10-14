@@ -2,8 +2,8 @@
 #include <cassert>
 
 namespace utils {
-void print_state(std::vector<double> &state, int offset, int state_rank,
-                 size_t left_space) {
+void print_vector(std::vector<double> &state, int offset, int state_rank,
+                  size_t left_space) {
 
   auto make_space = [left_space]() {
     for (int space = 0; space < left_space; space++) {

@@ -269,8 +269,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
         printf("g^{%d+1} = nan!, step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = "
                "%.2e.\n",
                step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
-        utils::print_state(rhs, 0, BL_RANK);
-        utils::print_state(state_grid, state_offset, BL_RANK);
+        utils::print_vector(rhs, 0, BL_RANK);
+        utils::print_vector(state_grid, state_offset, BL_RANK);
         assert(false);
       }
 
@@ -278,8 +278,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
         printf("g^{%d+1} < 0! step = %.2e, rhs[G_ID] = %.2e, state[G_ID] = "
                "%.2e.\n",
                step_id, eta_step, rhs[G_ID], state_grid[state_offset + G_ID]);
-        utils::print_state(rhs, 0, BL_RANK);
-        utils::print_state(state_grid, state_offset, BL_RANK);
+        utils::print_vector(rhs, 0, BL_RANK);
+        utils::print_vector(state_grid, state_offset, BL_RANK);
         assert(false);
       }
     }
@@ -1264,10 +1264,10 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     if (verbosity > 1) {
       printf("\nIter #%d - START\n", iter + 1);
       printf(" -> Score: \n");
-      utils::print_state(score, 0, 2, 2);
+      utils::print_vector(score, 0, 2, 2);
       printf(" -> Final state (offset %d * BL_RANK): \n", best_profile_size);
-      utils::print_state(state_grids[worker_id], best_profile_size * BL_RANK,
-                         BL_RANK, 2);
+      utils::print_vector(state_grids[worker_id], best_profile_size * BL_RANK,
+                          BL_RANK, 2);
       printf(" -> State sentivity: \n");
       utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
       printf(" -> Score Jacobian:\n");
@@ -1285,7 +1285,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
     if (verbosity > 1) {
       printf(" -> delta: ");
-      utils::print_state(delta, 0, 2);
+      utils::print_vector(delta, 0, 2);
       printf(" -> Score Jacobian determinant: %.3e.\n",
              UpperDeterminant(lu_resources.second, 2));
       printf("\n");
@@ -1334,7 +1334,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
       if (verbosity > 2) {
         printf("   LS Iter #%d, score_norm: %.2e, score: , %d eta steps",
                ls_iter + 1, ls_norm, profile_size);
-        utils::print_state(score, 0, 2);
+        utils::print_vector(score, 0, 2);
       }
 
       ls_pass = (ls_norm < snorm);
@@ -1360,8 +1360,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
             printf("   -> Yet the run did not complete! (%d / %d)\n",
                    profile_size, _max_nb_steps);
             printf("   -> Final state : ");
-            utils::print_state(state_grids[worker_id], profile_size * BL_RANK,
-                               BL_RANK);
+            utils::print_vector(state_grids[worker_id], profile_size * BL_RANK,
+                                BL_RANK);
             printf("   -> Rhs Jacobian : ");
             utils::print_matrix_row_major(
                 solver_resources[worker_id].matrix.GetData(), BL_RANK, BL_RANK,
@@ -1469,10 +1469,10 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
     if (verbosity > 1) {
       printf("\nIter #%d - START\n", iter + 1);
       printf(" -> Score: \n");
-      utils::print_state(score, 0, 2, 2);
+      utils::print_vector(score, 0, 2, 2);
       printf(" -> Final state (offset %d * BL_RANK): \n", best_profile_size);
-      utils::print_state(state_grids[worker_id], best_profile_size * BL_RANK,
-                         BL_RANK, 2);
+      utils::print_vector(state_grids[worker_id], best_profile_size * BL_RANK,
+                          BL_RANK, 2);
       printf(" -> State sentivity: \n");
       utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
       printf(" -> Score Jacobian:\n");
@@ -1494,7 +1494,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
     if (verbosity > 1) {
       printf(" -> delta: ");
-      utils::print_state(delta, 0, 2);
+      utils::print_vector(delta, 0, 2);
       printf(" -> Score Jacobian determinant: %.3e.\n",
              UpperDeterminant(lu_resources.second, 2));
       printf("\n");
@@ -1546,7 +1546,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
       if (verbosity > 2) {
         printf("   LS Iter #%d, score_norm: %.2e, score: ", ls_iter + 1,
                ls_norm);
-        utils::print_state(score, 0, 2);
+        utils::print_vector(score, 0, 2);
       }
 
       ls_pass = ls_norm < snorm;
@@ -1577,8 +1577,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
           printf("   -> Yet the run did not complete! (%d / %d)\n",
                  profile_size, _max_nb_steps);
           printf("   -> Final state : ");
-          utils::print_state(state_grids[worker_id], profile_size * BL_RANK,
-                             BL_RANK);
+          utils::print_vector(state_grids[worker_id], profile_size * BL_RANK,
+                              BL_RANK);
           printf("   -> Rhs Jacobian : ");
           utils::print_matrix_row_major(
               solver_resources[worker_id].matrix.GetData(), BL_RANK, BL_RANK,
