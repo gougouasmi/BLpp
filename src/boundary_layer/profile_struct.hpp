@@ -124,33 +124,10 @@ static inline string to_string(const DevelMode &dev_mode) {
 //
 
 struct ProfileParams {
-  int nb_steps{2000};
-
-  WallType wall_type{WallType::Wall};
-  double fpp0{0.5};
-  double gp0{0.5};
-  double g0{0.2};
-
-  SolveType solve_type{SolveType::SelfSimilar};
-
-  TimeScheme scheme{TimeScheme::Explicit};
-  double max_step{1e-2};
-
-  Scoring scoring{Scoring::Default};
-
-  DevelMode devel_mode{DevelMode::Full};
-
-  // Primary edge conditions
-  double ue{1.};
+  // Edge conditions are gathered to fit cache lines (8 double)
   double he{1.};
   double pe{1.};
 
-  double xi{0.};
-  double due_dxi{0.};
-  double dhe_dxi{0.};
-
-  // Secondary edge conditions (which
-  // you can compute from primary)
   double roe{1.};
   double mue{1.};
 
@@ -159,6 +136,27 @@ struct ProfileParams {
   double c1{0.};
   double c2{0.};
   double c3{0.};
+
+  double xi{0.};
+
+  double ue{1.};
+  double due_dxi{0.};
+  double dhe_dxi{0.};
+
+  //
+  int nb_steps{2000};
+
+  WallType wall_type{WallType::Wall};
+
+  double fpp0{0.5};
+  double gp0{0.5};
+  double g0{0.2};
+  double max_step{1e-2};
+
+  SolveType solve_type{SolveType::SelfSimilar};
+  TimeScheme scheme{TimeScheme::Explicit};
+  Scoring scoring{Scoring::Default};
+  DevelMode devel_mode{DevelMode::Full};
 
   //
   ProfileParams() = default;
