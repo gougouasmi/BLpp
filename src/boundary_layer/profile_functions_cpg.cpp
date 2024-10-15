@@ -399,19 +399,21 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
 
   double fp = state[state_offset + FP_ID];
   double g = state[state_offset + G_ID];
+  double g1 = 1. / g;
 
   double pe = params.pe;
   double he = params.he;
 
   // ro, temperature, cp = thermo_fun(pe, he * g)
   // mu, k = transport_fun(temperature)
-  double ro = AIR_CPG_RO(g * he, pe);
-  double dro_dg = AIR_CPG_DRO_DH(g * he, pe) * he;
+  double ro = (pe * GAM_GAM1 / he) * g1; // AIR_CPG_RO(g * he, pe);
+  double ro1 = 1. / ro;
+  double dro_dg = -ro * g1; // AIR_CPG_DRO_DH(g * he, pe) * he;
 
-  double cp = AIR_CPG_CP(g * he, pe);
+  double cp = CP_AIR;
 
-  double temperature = pe / (ro * R_AIR);
-  double dtemp_dg = -pe * dro_dg / (ro * ro * R_AIR);
+  double temperature = pe * ro1 * R_AIR_INV;
+  double dtemp_dg = -pe * dro_dg * (ro1 * ro1 * R_AIR_INV);
 
   double mu = AIR_VISC(temperature);
   double k = AIR_COND(temperature);
@@ -423,6 +425,7 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
   double mue = params.mue;
 
   double romu = (ro * mu) / (roe * mue);
+  double romu1 = 1. / romu;
   double dromu_dg = (dro_dg * mu + ro * dmu_dg) / (roe * mue);
 
   double prandtl = mu * cp / k;
@@ -430,16 +433,16 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
 
   double eckert = params.eckert;
 
-  double fpp = state[state_offset + FPP_ID] / romu;
-  double dfpp_dfpp = 1. / romu;
-  double dfpp_dg = -dromu_dg * fpp / romu;
+  double fpp = state[state_offset + FPP_ID] * romu1;
+  double dfpp_dfpp = romu1;
+  double dfpp_dg = -dromu_dg * fpp * romu1;
 
   double f = state[state_offset + F_ID];
 
-  double gp = state[state_offset + GP_ID] / romu * prandtl;
-  double dgp_dgp = prandtl / romu;
-  double dgp_dg = state[state_offset + GP_ID] *
-                  (dprandtl_dg / romu - dromu_dg * prandtl / (romu * romu));
+  double gp = state[state_offset + GP_ID] * romu1 * prandtl;
+  double dgp_dgp = prandtl * romu1;
+  double dgp_dg = state[state_offset + GP_ID] * romu1 *
+                  (dprandtl_dg - dromu_dg * prandtl * romu1);
 
   double c1 = params.c1; // 2. * (xi / ue) * due_dxi;
   double c2 = params.c2; // 2. * xi * dhe_dxi / he;
@@ -453,7 +456,21 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
   matrix_data[offset + FP_ID] = 2. * c1 * fp;
   matrix_data[offset + F_ID] = -fpp;
   matrix_data[offset + GP_ID] = 0.;
-  matrix_data[offset + G_ID] = -f * dfpp_dg + c1 * (roe * dro_dg / (ro * ro));
+  matrix_data[offset + G_ID] = -f * dfpp_dg + c1 * (roe * dro_dg * (ro1 * ro1));
+
+  // rhs[GP_ID] =
+  //   -(f * gp + eckert * romu * fpp * fpp) +
+  //   fp * (c2 * g + c3 * (roe / ro));
+  //
+  offset = GP_ID * BL_RANK;
+  matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
+  matrix_data[offset + FP_ID] = (c2 * g + c3 * (roe * ro1));
+  matrix_data[offset + F_ID] = -gp;
+  matrix_data[offset + GP_ID] = -f * dgp_dgp;
+  matrix_data[offset + G_ID] =
+      -(f * dgp_dg +
+        eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp)) +
+      fp * (c2 - c3 * dro_dg * roe * (ro1 * ro1));
 
   // rhs[FP_ID] = fpp;
   offset = FP_ID * BL_RANK;
@@ -470,20 +487,6 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
   matrix_data[offset + F_ID] = 0.;
   matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = 0.;
-
-  // rhs[GP_ID] =
-  //   -(f * gp + eckert * romu * fpp * fpp) +
-  //   fp * (c2 * g + c3 * (roe / ro));
-  //
-  offset = GP_ID * BL_RANK;
-  matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
-  matrix_data[offset + FP_ID] = (c2 * g + c3 * (roe / ro));
-  matrix_data[offset + F_ID] = -gp;
-  matrix_data[offset + GP_ID] = -f * dgp_dgp;
-  matrix_data[offset + G_ID] =
-      -(f * dgp_dg +
-        eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp)) +
-      fp * (c2 - c3 * dro_dg * roe / (ro * ro));
 
   // rhs[G_ID] = gp;
   offset = G_ID * BL_RANK;
