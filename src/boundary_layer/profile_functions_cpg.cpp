@@ -176,10 +176,9 @@ double compute_rhs_cpg(const vector<double> &state, int state_offset,
   double gp = state[state_offset + GP_ID] / romu * prandtl;
 
   rhs[FPP_ID] = -f * fpp;
+  rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp);
   rhs[FP_ID] = fpp;
   rhs[F_ID] = fp;
-
-  rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp);
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -224,11 +223,10 @@ double compute_lsim_rhs_cpg(const vector<double> &state, int state_offset,
   // printf("c1 = %.2e, c2 = %.2e, c3 = %.2e.\n", c1, c2, c3);
 
   rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - roe / ro);
-  rhs[FP_ID] = fpp;
-  rhs[F_ID] = fp;
-
   rhs[GP_ID] =
       -(f * gp + romu * eckert * fpp * fpp) + fp * (c2 * g + c3 * (roe / ro));
+  rhs[FP_ID] = fpp;
+  rhs[F_ID] = fp;
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -282,12 +280,11 @@ double compute_full_rhs_cpg(const vector<double> &state, int state_offset,
 
   rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - roe / ro) + fp * (m0 * fp + m1) -
                 fpp * (s0 * f + s1);
-  rhs[FP_ID] = fpp;
-  rhs[F_ID] = fp;
-
   rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp) +
                fp * (c2 * g + c3 * (roe / ro)) + fp * (e0 * g + e1) -
                gp * (s0 * f + s1);
+  rhs[FP_ID] = fpp;
+  rhs[F_ID] = fp;
   rhs[G_ID] = gp;
 
   double limit_step = 0.2 * state[state_offset + G_ID] / abs(rhs[G_ID] + 1e-20);
@@ -350,42 +347,42 @@ void compute_rhs_jacobian_cpg(const vector<double> &state, int state_offset,
   // rhs[FPP_ID] = -f * fpp;
   offset = FPP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -f * dfpp_dfpp;
+  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = -fpp;
-  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = -f * dfpp_dg;
 
   // rhs[FP_ID] = fpp;
   offset = FP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = dfpp_dfpp;
+  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
-  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = dfpp_dg;
 
   // rhs[F_ID] = fp;
   offset = F_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0;
+  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + FP_ID] = 1.;
   matrix_data[offset + F_ID] = 0.;
-  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = 0.;
 
   // rhs[GP_ID] = -(f * gp + romu * eckert * fpp * fpp);
   offset = GP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
+  matrix_data[offset + GP_ID] = -f * dgp_dgp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = -gp;
-  matrix_data[offset + GP_ID] = -f * dgp_dgp;
   matrix_data[offset + G_ID] = -(
       f * dgp_dg + eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp));
 
   // rhs[G_ID] = gp;
   offset = G_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0.;
+  matrix_data[offset + GP_ID] = dgp_dgp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
-  matrix_data[offset + GP_ID] = dgp_dgp;
   matrix_data[offset + G_ID] = dgp_dg;
 }
 
@@ -453,9 +450,9 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
   // rhs[FPP_ID] = -f * fpp + c1 * (fp * fp - roe / ro);
   offset = FPP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -f * dfpp_dfpp;
+  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + FP_ID] = 2. * c1 * fp;
   matrix_data[offset + F_ID] = -fpp;
-  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = -f * dfpp_dg + c1 * (roe * dro_dg * (ro1 * ro1));
 
   // rhs[GP_ID] =
@@ -464,9 +461,9 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
   //
   offset = GP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
+  matrix_data[offset + GP_ID] = -f * dgp_dgp;
   matrix_data[offset + FP_ID] = (c2 * g + c3 * (roe * ro1));
   matrix_data[offset + F_ID] = -gp;
-  matrix_data[offset + GP_ID] = -f * dgp_dgp;
   matrix_data[offset + G_ID] =
       -(f * dgp_dg +
         eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp)) +
@@ -475,25 +472,25 @@ void compute_lsim_rhs_jacobian_cpg(const vector<double> &state,
   // rhs[FP_ID] = fpp;
   offset = FP_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = dfpp_dfpp;
+  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
-  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = dfpp_dg;
 
   // rhs[F_ID] = fp;
   offset = F_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0;
+  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + FP_ID] = 1.;
   matrix_data[offset + F_ID] = 0.;
-  matrix_data[offset + GP_ID] = 0.;
   matrix_data[offset + G_ID] = 0.;
 
   // rhs[G_ID] = gp;
   offset = G_ID * BL_RANK;
   matrix_data[offset + FPP_ID] = 0.;
+  matrix_data[offset + GP_ID] = dgp_dgp;
   matrix_data[offset + FP_ID] = 0.;
   matrix_data[offset + F_ID] = 0.;
-  matrix_data[offset + GP_ID] = dgp_dgp;
   matrix_data[offset + G_ID] = dgp_dg;
 }
 
@@ -571,26 +568,26 @@ void compute_full_rhs_jacobian_cpg(const vector<double> &state,
   //     fp * (m0 * fp + m1) - fpp * (s0 * f + s1);
   mat_offset = FPP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = -f * dfpp_dfpp - (s0 * f + s1) * dfpp_dfpp;
+  matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + FP_ID] = 2. * c1 * fp + (2. * m0 * fp + m1);
   matrix_data[mat_offset + F_ID] = -fpp - s0 * fpp;
-  matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + G_ID] =
       -f * dfpp_dg + c1 * (roe * dro_dg / (ro * ro)) - (s0 * f + s1) * dfpp_dg;
 
   // rhs[FP_ID] = fpp;
   mat_offset = FP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = dfpp_dfpp;
+  matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + FP_ID] = 0.;
   matrix_data[mat_offset + F_ID] = 0.;
-  matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + G_ID] = dfpp_dg;
 
   // rhs[F_ID] = fp;
   mat_offset = F_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = 0;
+  matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + FP_ID] = 1.;
   matrix_data[mat_offset + F_ID] = 0.;
-  matrix_data[mat_offset + GP_ID] = 0.;
   matrix_data[mat_offset + G_ID] = 0.;
 
   // rhs[GP_ID] =
@@ -599,9 +596,9 @@ void compute_full_rhs_jacobian_cpg(const vector<double> &state,
   //   fp * (e0 * g + e1) - gp * (s0 * f + s1);
   mat_offset = GP_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = -romu * eckert * 2. * dfpp_dfpp * fpp;
+  matrix_data[mat_offset + GP_ID] = -f * dgp_dgp - dgp_dgp * (s0 * f * s1);
   matrix_data[mat_offset + FP_ID] = (c2 * g + c3 * (roe / ro)) + (e0 * g + e1);
   matrix_data[mat_offset + F_ID] = -gp - s0 * gp;
-  matrix_data[mat_offset + GP_ID] = -f * dgp_dgp - dgp_dgp * (s0 * f * s1);
   matrix_data[mat_offset + G_ID] =
       -(f * dgp_dg +
         eckert * (dromu_dg * fpp * fpp + 2. * romu * dfpp_dg * fpp)) +
@@ -611,9 +608,9 @@ void compute_full_rhs_jacobian_cpg(const vector<double> &state,
   // rhs[G_ID] = gp;
   mat_offset = G_ID * BL_RANK;
   matrix_data[mat_offset + FPP_ID] = 0.;
+  matrix_data[mat_offset + GP_ID] = dgp_dgp;
   matrix_data[mat_offset + FP_ID] = 0.;
   matrix_data[mat_offset + F_ID] = 0.;
-  matrix_data[mat_offset + GP_ID] = dgp_dgp;
   matrix_data[mat_offset + G_ID] = dgp_dg;
 }
 
