@@ -26,12 +26,15 @@ public:
   DenseMatrix(const DenseMatrix &other_matrix) = delete;
 
   void Solve(const vector<double> &rhs, vector<double> &solution);
+  void Solve(vector<double> &solution);
+
   void MatrixSolve(vector<double> &solution_matrix_cm, const size_t xdim,
                    const size_t zdim);
 
   MatrixDims GetDims() const { return MatrixDims(_Nx, _Ny); };
   vector<double> &GetData() { return _data; };
   pair<vector<double>, vector<double>> &GetLU() { return _lu_resources; };
+  double Determinant();
 
 private:
   int _Nx;

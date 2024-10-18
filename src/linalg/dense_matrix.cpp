@@ -15,7 +15,22 @@ void DenseMatrix::Solve(const std::vector<double> &rhs,
   LUSolve(_data, solution, _Nx, _lu_resources);
 }
 
+void DenseMatrix::Solve(std::vector<double> &solution) {
+
+  if (_Nx == 1) {
+    solution[0] /= _data[0];
+    return;
+  }
+
+  LUSolve(_data, solution, _Nx, _lu_resources);
+}
+
 void DenseMatrix::MatrixSolve(vector<double> &solution_matrix_cm,
                               const size_t xdim, const size_t zdim) {
   LUMatrixSolve(_data, solution_matrix_cm, xdim, zdim, _lu_resources);
+}
+
+double DenseMatrix::Determinant() {
+  assert(_Nx == _Ny);
+  return UpperDeterminant(_lu_resources.second, _Nx);
 }

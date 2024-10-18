@@ -186,21 +186,19 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
     printf("Sensitivity matrix:\n");
     utils::print_matrix_column_major(sensitivity, BL_RANK, 2);
 
-    vector<double> score_jacobian(4, 0.); // row_major
+    DenseMatrix score_jacobian(2); // row_major
 
     ComputeScoreJacobian(profile_params, state_grid, state_offset, sensitivity,
-                         0, score_jacobian);
+                         0, score_jacobian.GetData());
 
     printf("Score jacobian:\n");
-    utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
+    utils::print_matrix_row_major(score_jacobian.GetData(), 2, 2, 2);
 
     vector<double> delta(2, 0);
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    pair<vector<double>, vector<double>> &lu_resources =
-        solver_resources[worker_id].matrix.GetLU();
-    LUSolve(score_jacobian, delta, 2, lu_resources);
+    score_jacobian.Solve(delta);
 
     printf("Delta suggestion:\n");
     utils::print_matrix_column_major(delta, 2, 1);
@@ -1218,12 +1216,9 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
   vector<double> score(2, 0);
-  vector<double> score_jacobian(4, 0.); // row_major
   vector<double> delta(2, 0);
 
-  pair<vector<double>, vector<double>> &lu_resources =
-      solver_resources[worker_id].matrix.GetLU();
-
+  DenseMatrix score_jacobian(2); // row_major
   double snorm;
 
   // Profiling //
@@ -1259,7 +1254,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
     // Assemble score jacobian
     ComputeScoreJacobian(profile_params, state_grids[worker_id],
                          best_profile_size * BL_RANK, sensitivity, 0,
-                         score_jacobian);
+                         score_jacobian.GetData());
 
     if (verbosity > 1) {
       printf("\nIter #%d - START\n", iter + 1);
@@ -1271,14 +1266,14 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
       printf(" -> State sentivity: \n");
       utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
       printf(" -> Score Jacobian:\n");
-      utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
+      utils::print_matrix_row_major(score_jacobian.GetData(), 2, 2, 2);
     }
 
     // Solve linear system
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    LUSolve(score_jacobian, delta, 2, lu_resources);
+    score_jacobian.Solve(delta);
 
     if (isnan(delta[0]) || isnan(delta[1]))
       return SearchOutcome{false, worker_id, 1, best_guess};
@@ -1287,7 +1282,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
       printf(" -> delta: ");
       utils::print_vector(delta, 0, 2);
       printf(" -> Score Jacobian determinant: %.3e.\n",
-             UpperDeterminant(lu_resources.second, 2));
+             score_jacobian.Determinant());
       printf("\n");
     }
 
@@ -1416,13 +1411,11 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
   array<double, 2> guess = {{best_guess[0], best_guess[1]}};
+
   vector<double> score(2, 0);
-  vector<double> score_jacobian(4, 0.); // row_major
   vector<double> delta(2, 0);
 
-  pair<vector<double>, vector<double>> &lu_resources =
-      solver_resources[worker_id].matrix.GetLU();
-
+  DenseMatrix score_jacobian(2); // row_major
   double snorm;
 
   // Profiling //
@@ -1461,7 +1454,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
     ComputeScoreJacobian(profile_params, state_grids[worker_id],
                          best_profile_size * BL_RANK, sensitivity, 0,
-                         score_jacobian);
+                         score_jacobian.GetData());
 
     profile_params.devel_mode = DevelMode::Primal;
     profile_params.nb_steps = base_nb_steps;
@@ -1476,14 +1469,14 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
       printf(" -> State sentivity: \n");
       utils::print_matrix_column_major(sensitivity, BL_RANK, 2, 2);
       printf(" -> Score Jacobian:\n");
-      utils::print_matrix_row_major(score_jacobian, 2, 2, 2);
+      utils::print_matrix_row_major(score_jacobian.GetData(), 2, 2, 2);
     }
 
     // Solve linear system
     delta[0] = -score[0];
     delta[1] = -score[1];
 
-    LUSolve(score_jacobian, delta, 2, lu_resources);
+    score_jacobian.Solve(delta);
 
     if (isnan(delta[0]) || isnan(delta[1])) {
       if (verbose) {
@@ -1496,7 +1489,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
       printf(" -> delta: ");
       utils::print_vector(delta, 0, 2);
       printf(" -> Score Jacobian determinant: %.3e.\n",
-             UpperDeterminant(lu_resources.second, 2));
+             score_jacobian.Determinant());
       printf("\n");
     }
 
