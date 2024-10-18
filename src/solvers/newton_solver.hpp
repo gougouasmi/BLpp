@@ -47,8 +47,7 @@ template <std::size_t N> double inline array_norm(const array<double, N> &x) {
 }
 
 template <typename ObjectiveFun, typename JacobianFun, typename LimitUpdateFun>
-bool NewtonSolveDirect(vector<double> &initial_guess,
-                       ObjectiveFun objective_fun, JacobianFun jacobian_fun,
+bool NewtonSolveDirect(ObjectiveFun objective_fun, JacobianFun jacobian_fun,
                        LimitUpdateFun limit_update_fun,
                        const NewtonParams &newton_params,
                        NewtonResources &resources) {
@@ -57,12 +56,12 @@ bool NewtonSolveDirect(vector<double> &initial_guess,
   int max_ls_iter = newton_params.max_ls_iter;
   bool verbose = newton_params.verbose;
 
-  int system_size = initial_guess.size();
-  assert(system_size > 0);
-
-  vector<double> &state = initial_guess;
+  vector<double> &state = resources.state;
   vector<double> &residual = resources.residual;     //(system_size, 0.);
   vector<double> &state_varn = resources.state_varn; //(system_size, 0.);
+
+  int system_size = state.size();
+  assert(system_size > 0);
 
   DenseMatrix &jacobian_matrix = resources.matrix; //(system_size, system_size);
 

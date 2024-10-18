@@ -423,8 +423,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
     if (devel_mode != DevelMode::Tangent) {
 
       bool pass =
-          NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
-                            limit_update_fun, newton_params, newton_resources);
+          NewtonSolveDirect(objective_fun, jacobian_fun, limit_update_fun,
+                            newton_params, newton_resources);
       if (!pass) {
         break;
       }
@@ -570,8 +570,8 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 
       // Evolve state forward by solving the nonlinear system
       bool pass =
-          NewtonSolveDirect(solution_buffer, objective_fun, jacobian_fun,
-                            limit_update_fun, newton_params, newton_resources);
+          NewtonSolveDirect(objective_fun, jacobian_fun, limit_update_fun,
+                            newton_params, newton_resources);
       if (!pass) {
         // printf("unsuccessful solve. Score = [%.2e, %.2e]\n", score[0],
         // score[1]);
@@ -1415,6 +1415,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
   // Get worker id to fetch appropriate resources
   vector<double> &sensitivity = sensitivity_matrices[worker_id];
 
+  array<double, 2> guess = {{best_guess[0], best_guess[1]}};
   vector<double> score(2, 0);
   vector<double> score_jacobian(4, 0.); // row_major
   vector<double> delta(2, 0);
@@ -1447,7 +1448,6 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
   }
 
   // Start main loop
-  array<double, 2> guess = {{best_guess[0], best_guess[1]}};
 
   int iter = 0;
   while (iter < max_iter) {

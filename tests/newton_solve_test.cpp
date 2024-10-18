@@ -19,15 +19,14 @@ void ScalarSolve() {
     matrix_data[0] = 2 * x[0];
   };
 
-  std::vector<double> solution(1, 100.);
-  fillWithRandomData(solution, xdim);
-
   NewtonParams newton_params;
   NewtonResources newton_resources(xdim);
 
-  bool pass =
-      NewtonSolveDirect(solution, objective_fun, jacobian_fun, limit_update_fun,
-                        newton_params, newton_resources);
+  std::vector<double> &solution = newton_resources.state;
+  fillWithRandomData(solution, xdim);
+
+  bool pass = NewtonSolveDirect(objective_fun, jacobian_fun, limit_update_fun,
+                                newton_params, newton_resources);
 
   std::vector<double> residual(xdim, 0.);
   objective_fun(solution, residual);
@@ -63,15 +62,14 @@ void SystemSolve() {
     matrix_data[8] = 1.;
   };
 
-  std::vector<double> solution(xdim, 1.);
+  NewtonResources newton_resources(xdim);
+
+  vector<double> &solution = newton_resources.state;
   fillWithRandomData(solution, xdim);
 
   NewtonParams newton_params;
-  NewtonResources newton_resources(xdim);
-
-  bool pass =
-      NewtonSolveDirect(solution, objective_fun, jacobian_fun, limit_update_fun,
-                        newton_params, newton_resources);
+  bool pass = NewtonSolveDirect(objective_fun, jacobian_fun, limit_update_fun,
+                                newton_params, newton_resources);
 
   std::vector<double> residual(xdim, 0.);
   objective_fun(solution, residual);
