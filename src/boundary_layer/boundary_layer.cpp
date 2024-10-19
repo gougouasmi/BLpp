@@ -1201,7 +1201,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(
 SearchOutcome BoundaryLayer::GradientProfileSearch(
     ProfileParams &profile_params, SearchParams &search_params,
     array<double, 2> &best_guess, int worker_id) {
-  assert(array_norm<2>(best_guess) > 0);
+  assert(vector_norm<2>(best_guess) > 0);
 
   // Fetch search parameters
   int max_iter = search_params.max_iter;
@@ -1394,7 +1394,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
     ProfileParams &profile_params, SearchParams &search_params,
     array<double, 2> &best_guess, int worker_id) {
-  assert(array_norm<2>(best_guess) > 0);
+  assert(vector_norm<2>(best_guess) > 0);
 
   const int base_nb_steps = profile_params.nb_steps;
   profile_params.devel_mode = DevelMode::Primal;

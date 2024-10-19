@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "dense_matrix.hpp"
+#include "generic_vector.hpp"
 
 using std::array;
 using std::vector;
@@ -30,15 +31,8 @@ struct NewtonResources {
         state_varn(system_size, 0.), matrix(system_size){};
 };
 
-double inline vector_norm(const vector<double> &x) {
-  double out = 0.;
-  for (int idx = 0; idx < x.size(); idx++) {
-    out += x[idx] * x[idx];
-  }
-  return sqrt(out);
-}
-
-template <std::size_t N> double inline array_norm(const array<double, N> &x) {
+template <std::size_t ctime_dim = 0>
+double inline vector_norm(const GenericVector<double, ctime_dim> &x) {
   double out = 0.;
   for (int idx = 0; idx < x.size(); idx++) {
     out += x[idx] * x[idx];
