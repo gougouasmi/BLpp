@@ -31,6 +31,5 @@ void DenseMatrix::MatrixSolve(vector<double> &solution_matrix_cm,
 }
 
 double DenseMatrix::Determinant() {
-  assert(_Nx == _Ny);
   return UpperDeterminant(_lu_resources.second, _Nx);
 }

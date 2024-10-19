@@ -79,7 +79,7 @@ add_library(linalg_lib
     src/linalg/dense_linalg.cpp
     src/linalg/dense_direct_solver.cpp
 )
-target_include_directories(linalg_lib PRIVATE src/linalg)
+target_include_directories(linalg_lib PRIVATE src/linalg src/utils)
 
 # Flat Plate functions
 add_library(boundary_layer_lib

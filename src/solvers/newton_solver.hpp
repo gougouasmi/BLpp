@@ -27,7 +27,7 @@ struct NewtonResources {
   NewtonResources() = default;
   NewtonResources(int system_size)
       : residual(system_size, 0.), state(system_size, 0.),
-        state_varn(system_size, 0.), matrix(system_size, system_size){};
+        state_varn(system_size, 0.), matrix(system_size){};
 };
 
 double inline vector_norm(const vector<double> &x) {
