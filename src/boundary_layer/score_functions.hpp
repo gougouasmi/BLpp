@@ -1,5 +1,5 @@
-#ifndef SCORE_FUNCTIONS_H
-#define SCORE_FUNCTIONS_H
+#ifndef SCORE_FUNCTIONS_HPP
+#define SCORE_FUNCTIONS_HPP
 
 #include "profile_struct.hpp"
 #include <vector>

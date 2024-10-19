@@ -1,5 +1,5 @@
-#ifndef INDEXING_H
-#define INDEXING_H
+#ifndef INDEXING_HPP
+#define INDEXING_HPP
 
 #include <array>
 

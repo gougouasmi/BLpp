@@ -1,5 +1,5 @@
-#ifndef TESTING_UTILS_H
-#define TESTING_UTILS_H
+#ifndef TESTING_UTILS_HPP
+#define TESTING_UTILS_HPP
 
 #include <algorithm>
 #include <cassert>

@@ -1,5 +1,5 @@
-#ifndef MESSAGE_QUEUE_H
-#define MESSAGE_QUEUE_H
+#ifndef MESSAGE_QUEUE_HPP
+#define MESSAGE_QUEUE_HPP
 
 #include <mutex>
 #include <queue>

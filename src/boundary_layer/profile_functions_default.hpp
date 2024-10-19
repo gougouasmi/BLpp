@@ -1,5 +1,5 @@
-#ifndef PROFILE_FUNCTIONS_DEFAULT_H
-#define PROFILE_FUNCTIONS_DEFAULT_H
+#ifndef PROFILE_FUNCTIONS_DEFAULT_HPP
+#define PROFILE_FUNCTIONS_DEFAULT_HPP
 
 #include "bl_model_struct.hpp"
 #include "profile_struct.hpp"

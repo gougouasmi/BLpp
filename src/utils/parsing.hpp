@@ -1,5 +1,5 @@
-#ifndef PARSING_H
-#define PARSING_H
+#ifndef PARSING_HPP
+#define PARSING_HPP
 
 #include <cstdlib>
 #include <optional>

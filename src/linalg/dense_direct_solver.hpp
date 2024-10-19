@@ -1,5 +1,5 @@
-#ifndef DENSE_DIRECT_SOLVER_H
-#define DENSE_DIRECT_SOLVER_H
+#ifndef DENSE_DIRECT_SOLVER_HPP
+#define DENSE_DIRECT_SOLVER_HPP
 
 #include <utility>
 #include <vector>

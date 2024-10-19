@@ -1,5 +1,5 @@
-#ifndef SEARCH_STRUCT_H
-#define SEARCH_STRUCT_H
+#ifndef SEARCH_STRUCT_HPP
+#define SEARCH_STRUCT_HPP
 
 #include <array>
 #include <cassert>

@@ -1,5 +1,5 @@
-#ifndef NEWTON_SOLVER_H
-#define NEWTON_SOLVER_H
+#ifndef NEWTON_SOLVER_HPP
+#define NEWTON_SOLVER_HPP
 
 #include <array>
 #include <cmath>

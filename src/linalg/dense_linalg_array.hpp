@@ -1,5 +1,5 @@
-#ifndef DENSE_LINALG_ARRAY_H
-#define DENSE_LINALG_ARRAY_H
+#ifndef DENSE_LINALG_ARRAY_HPP
+#define DENSE_LINALG_ARRAY_HPP
 
 namespace ArrayLinalg {
 

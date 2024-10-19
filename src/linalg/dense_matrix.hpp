@@ -1,5 +1,5 @@
-#ifndef DENSE_MATRIX_H
-#define DENSE_MATRIX_H
+#ifndef DENSE_MATRIX_HPP
+#define DENSE_MATRIX_HPP
 
 #include <cassert>
 #include <utility>

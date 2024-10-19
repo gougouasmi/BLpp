@@ -1,5 +1,5 @@
-#ifndef BOUNDARY_LAYER_H
-#define BOUNDARY_LAYER_H
+#ifndef BOUNDARY_LAYER_HPP
+#define BOUNDARY_LAYER_HPP
 
 #include "bl_model_struct.hpp"
 #include "boundary_data_struct.hpp"

@@ -1,5 +1,5 @@
-#ifndef SHOCK_RELATIONS_H
-#define SHOCK_RELATIONS_H
+#ifndef SHOCK_RELATIONS_HPP
+#define SHOCK_RELATIONS_HPP
 
 #include <cmath>
 

@@ -1,5 +1,5 @@
-#ifndef PROFILE_STRUCT_H
-#define PROFILE_STRUCT_H
+#ifndef PROFILE_STRUCT_HPP
+#define PROFILE_STRUCT_HPP
 
 #include <array>
 #include <iostream>

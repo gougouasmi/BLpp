@@ -1,5 +1,5 @@
-#ifndef EDGE_SOLVER_H
-#define EDGE_SOLVER_H
+#ifndef EDGE_SOLVER_HPP
+#define EDGE_SOLVER_HPP
 
 #include <vector>
 

@@ -1,5 +1,5 @@
-#ifndef CASE_FUNCTIONS_H
-#define CASE_FUNCTIONS_H
+#ifndef CASE_FUNCTIONS_HPP
+#define CASE_FUNCTIONS_HPP
 
 #include "boundary_data_struct.hpp"
 

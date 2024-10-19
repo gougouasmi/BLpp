@@ -1,5 +1,5 @@
-#ifndef STAGNATION_H
-#define STAGNATION_H
+#ifndef STAGNATION_HPP
+#define STAGNATION_HPP
 
 #include <cmath>
 

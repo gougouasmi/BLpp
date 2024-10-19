@@ -1,5 +1,5 @@
-#ifndef TIMERS_H
-#define TIMERS_H
+#ifndef TIMERS_HPP
+#define TIMERS_HPP
 
 #include <chrono>
 #include <ctime>

@@ -1,5 +1,5 @@
-#ifndef ATMOSPHERE_H
-#define ATMOSPHERE_H
+#ifndef ATMOSPHERE_HPP
+#define ATMOSPHERE_HPP
 
 #include "gas_model.hpp"
 #include "profile_struct.hpp"

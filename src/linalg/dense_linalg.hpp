@@ -1,5 +1,5 @@
-#ifndef DENSE_LINALG_H
-#define DENSE_LINALG_H
+#ifndef DENSE_LINALG_HPP
+#define DENSE_LINALG_HPP
 
 #include <vector>
 

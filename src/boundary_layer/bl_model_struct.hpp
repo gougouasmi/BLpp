@@ -1,5 +1,5 @@
-#ifndef BL_MODEL_H
-#define BL_MODEL_H
+#ifndef BL_MODEL_HPP
+#define BL_MODEL_HPP
 
 #include "profile_struct.hpp"
 #include <vector>

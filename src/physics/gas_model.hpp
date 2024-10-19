@@ -1,5 +1,5 @@
-#ifndef GAS_MODEL_H
-#define GAS_MODEL_H
+#ifndef GAS_MODEL_HPP
+#define GAS_MODEL_HPP
 
 #include <cmath>
 

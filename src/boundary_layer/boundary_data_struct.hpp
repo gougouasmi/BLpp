@@ -1,5 +1,5 @@
-#ifndef BOUNDARY_DATA_STRUCT_H
-#define BOUNDARY_DATA_STRUCT_H
+#ifndef BOUNDARY_DATA_STRUCT_HPP
+#define BOUNDARY_DATA_STRUCT_HPP
 
 #include <cassert>
 #include <string>
