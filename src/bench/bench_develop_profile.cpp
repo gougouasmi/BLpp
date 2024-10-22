@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
   printf("Profile evolved to eta_id=%f, score: [%.5e, %.5e], norm=%.5e.\n\n",
          boundary_layer.GetEtaGrid()[base_psize], base_score[0], base_score[1],
-         vector_norm(base_score));
+         Generic::VectorNorm(base_score));
 
   // Data structures for different tasks
   std::map<DevelMode, vector<double>> scores{

@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   int profile_size = boundary_layer.DevelopProfile(profile_params, score);
 
   double s0 = score[0], s1 = score[1];
-  double snorm = vector_norm(score);
+  double snorm = Generic::VectorNorm(score);
   printf("Profile evolved to eta_id=%d, score: [%.5e, %.5e], norm=%.5e.\n",
          profile_size, s0, s1, snorm);
 

@@ -1,54 +1,59 @@
-#ifndef NEWTON_SOLVER_HPP
-#define NEWTON_SOLVER_HPP
+#ifndef GENERIC_NEWTON_SOLVER_HPP
+#define GENERIC_NEWTON_SOLVER_HPP
 
-#include <array>
 #include <cmath>
 #include <iostream>
-#include <vector>
 
-#include "dense_matrix.hpp"
+#include "generic_dense_matrix.hpp"
 #include "generic_vector.hpp"
 #include "newton_struct.hpp"
 
-using std::array;
-using std::vector;
+namespace Generic {
 
-struct NewtonResources {
-  vector<double> residual;
-  vector<double> state;
-  vector<double> state_varn;
-  DenseMatrix matrix;
+template <std::size_t ctime_rank = 0> struct NewtonResources {
+  Generic::Vector<double, ctime_rank> residual;
+  Generic::Vector<double, ctime_rank> state;
+  Generic::Vector<double, ctime_rank> state_varn;
+  Generic::DenseMatrix<ctime_rank> matrix;
 
   NewtonResources() = default;
-  NewtonResources(int system_size)
-      : residual(system_size, 0.), state(system_size, 0.),
-        state_varn(system_size, 0.), matrix(system_size){};
+  NewtonResources(int system_size) : matrix(system_size) {
+    if constexpr (ctime_rank == 0) {
+      residual.resize(system_size);
+      state.resize(system_size);
+      state_varn.resize(system_size);
+    } else {
+      assert(system_size == ctime_rank);
+    }
+  };
 };
 
-template <typename ObjectiveFun, typename JacobianFun, typename LimitUpdateFun>
+template <typename ObjectiveFun, typename JacobianFun, typename LimitUpdateFun,
+          std::size_t ctime_system_rank = 0>
 bool NewtonSolveDirect(ObjectiveFun objective_fun, JacobianFun jacobian_fun,
                        LimitUpdateFun limit_update_fun,
                        const NewtonParams &newton_params,
-                       NewtonResources &resources) {
+                       NewtonResources<ctime_system_rank> &resources) {
   double rtol = newton_params.rtol;
   int max_iter = newton_params.max_iter;
   int max_ls_iter = newton_params.max_ls_iter;
   bool verbose = newton_params.verbose;
 
-  vector<double> &state = resources.state;
-  vector<double> &residual = resources.residual;     //(system_size, 0.);
-  vector<double> &state_varn = resources.state_varn; //(system_size, 0.);
+  Generic::Vector<double, ctime_system_rank> &state = resources.state;
+  Generic::Vector<double, ctime_system_rank> &residual = resources.residual;
+  Generic::Vector<double, ctime_system_rank> &state_varn = resources.state_varn;
 
-  int system_size = state.size();
+  int system_size = (ctime_system_rank == 0) ? state.size() : ctime_system_rank;
   assert(system_size > 0);
 
-  DenseMatrix &jacobian_matrix = resources.matrix; //(system_size, system_size);
+  Generic::DenseMatrix<ctime_system_rank> &jacobian_matrix = resources.matrix;
 
   objective_fun(state, residual);
   jacobian_fun(state, jacobian_matrix);
 
-  double res_norm = Generic::VectorNorm(residual);
-  double jac_norm = Generic::VectorNorm(jacobian_matrix.GetData());
+  double res_norm = Generic::VectorNorm<ctime_system_rank>(residual);
+  double jac_norm = Generic::VectorNorm<ctime_system_rank * ctime_system_rank>(
+      jacobian_matrix.GetData());
 
   if (verbose) {
     printf("\n*************************************\n");
@@ -66,7 +71,7 @@ bool NewtonSolveDirect(ObjectiveFun objective_fun, JacobianFun jacobian_fun,
       state_varn[idx] *= -1;
     };
 
-    double magn_varn = Generic::VectorNorm(state_varn);
+    double magn_varn = Generic::VectorNorm<ctime_system_rank>(state_varn);
 
     // Line Search
     double alpha = limit_update_fun(state, state_varn);
@@ -87,7 +92,7 @@ bool NewtonSolveDirect(ObjectiveFun objective_fun, JacobianFun jacobian_fun,
 
       objective_fun(state, residual);
 
-      double new_res_norm = Generic::VectorNorm(residual);
+      double new_res_norm = Generic::VectorNorm<ctime_system_rank>(residual);
       success = new_res_norm < res_norm;
 
       if (success) {
@@ -113,8 +118,9 @@ bool NewtonSolveDirect(ObjectiveFun objective_fun, JacobianFun jacobian_fun,
     if (verbose)
       printf("**  NEWTON Iter#%d, ||x|| = %.2e, ||dx|| = %.2e, a = "
              "%.2e, ||R|| = %.2e\n",
-             iter + 1, Generic::VectorNorm(state),
-             Generic::VectorNorm(state_varn), alpha, res_norm);
+             iter + 1, Generic::VectorNorm<ctime_system_rank>(state),
+             Generic::VectorNorm<ctime_system_rank>(state_varn), alpha,
+             res_norm);
 
     if (res_norm < rtol) {
       if (verbose)
@@ -132,5 +138,7 @@ bool NewtonSolveDirect(ObjectiveFun objective_fun, JacobianFun jacobian_fun,
 
   return (res_norm < rtol);
 }
+
+} // namespace Generic
 
 #endif

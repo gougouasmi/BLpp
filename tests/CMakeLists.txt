@@ -44,6 +44,11 @@ add_executable(test_newton_solve
 target_include_directories(test_newton_solve PRIVATE ../src/linalg ../src/solvers)
 add_test(NAME TestNewtonSolver COMMAND test_newton_solve)
 
+# Test Generic Newton solve
+add_executable(test_generic_newton_solve generic_newton_solve_test.cpp)
+target_include_directories(test_generic_newton_solve PRIVATE ../src/linalg ../src/solvers)
+add_test(NAME TestGenericNewtonSolver COMMAND test_generic_newton_solve)
+
 # Test profile functions 
 add_executable(test_profile_functions
     profile_functions_test.cpp 

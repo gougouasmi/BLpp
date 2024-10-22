@@ -31,7 +31,7 @@ void ScalarSolve() {
   std::vector<double> residual(xdim, 0.);
   objective_fun(solution, residual);
 
-  assert(vector_norm(residual) < newton_params.rtol);
+  assert(Generic::VectorNorm(residual) < newton_params.rtol);
 }
 
 void SystemSolve() {
@@ -74,7 +74,7 @@ void SystemSolve() {
   std::vector<double> residual(xdim, 0.);
   objective_fun(solution, residual);
 
-  assert(vector_norm(residual) < newton_params.rtol);
+  assert(Generic::VectorNorm(residual) < newton_params.rtol);
 }
 
 int main(int argc, char *argv[]) {

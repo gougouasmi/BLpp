@@ -1201,7 +1201,7 @@ SearchOutcome BoundaryLayer::BoxProfileSearchParallelWithQueues(
 SearchOutcome BoundaryLayer::GradientProfileSearch(
     ProfileParams &profile_params, SearchParams &search_params,
     array<double, 2> &best_guess, int worker_id) {
-  assert(vector_norm<2>(best_guess) > 0);
+  assert(Generic::VectorNorm<2>(best_guess) > 0);
 
   // Fetch search parameters
   int max_iter = search_params.max_iter;
@@ -1231,7 +1231,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
   devel_count++;
 
-  snorm = vector_norm(score);
+  snorm = Generic::VectorNorm(score);
 
   if (verbose)
     printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, %d eta steps.\n",
@@ -1305,7 +1305,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
     devel_count++;
 
-    double ls_norm = vector_norm(score);
+    double ls_norm = Generic::VectorNorm(score);
     bool ls_pass = ls_norm < snorm;
 
     for (int ls_iter = 0; ls_iter < 20; ls_iter++) {
@@ -1324,7 +1324,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 
       devel_count++;
 
-      ls_norm = vector_norm(score);
+      ls_norm = Generic::VectorNorm(score);
 
       if (verbosity > 2) {
         printf("   LS Iter #%d, score_norm: %.2e, score: , %d eta steps",
@@ -1345,8 +1345,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
       if (verbose)
         printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
                "alpha=%.2e, %d eta steps.\n",
-               iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha,
-               best_profile_size);
+               iter + 1, guess[0], guess[1], snorm, Generic::VectorNorm(delta),
+               alpha, best_profile_size);
 
       if (snorm < rtol) {
         if (verbose) {
@@ -1394,7 +1394,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch(
 SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
     ProfileParams &profile_params, SearchParams &search_params,
     array<double, 2> &best_guess, int worker_id) {
-  assert(vector_norm<2>(best_guess) > 0);
+  assert(Generic::VectorNorm<2>(best_guess) > 0);
 
   const int base_nb_steps = profile_params.nb_steps;
   profile_params.devel_mode = DevelMode::Primal;
@@ -1428,7 +1428,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
   devel_primal_count++;
 
-  snorm = vector_norm(score);
+  snorm = Generic::VectorNorm(score);
 
   if (verbose)
     printf("Iter #0, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, %d eta steps.\n",
@@ -1515,7 +1515,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
     devel_primal_count++;
 
-    double ls_norm = vector_norm(score);
+    double ls_norm = Generic::VectorNorm(score);
     bool ls_pass = ls_norm < snorm;
 
     for (int ls_iter = 0; ls_iter < 20; ls_iter++) {
@@ -1534,7 +1534,7 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
 
       devel_primal_count++;
 
-      ls_norm = vector_norm(score);
+      ls_norm = Generic::VectorNorm(score);
 
       if (verbosity > 2) {
         printf("   LS Iter #%d, score_norm: %.2e, score: ", ls_iter + 1,
@@ -1560,8 +1560,8 @@ SearchOutcome BoundaryLayer::GradientProfileSearch_Exp(
     if (verbose)
       printf("Iter #%d, f''(0)=%.5e, g'(0)=%.5e, ||e||=%.5e, ||delta||=%.5e, "
              "alpha=%.2e, %d eta steps.\n",
-             iter + 1, guess[0], guess[1], snorm, vector_norm(delta), alpha,
-             best_profile_size);
+             iter + 1, guess[0], guess[1], snorm, Generic::VectorNorm(delta),
+             alpha, best_profile_size);
 
     if (snorm < rtol) {
       if (verbose) {

@@ -4,14 +4,6 @@
 #include "testing_utils.hpp"
 #include <cassert>
 
-double vector_norm(const std::vector<double> &x) {
-  double out = 0.;
-  for (int idx = 0; idx < x.size(); idx++) {
-    out += x[idx] * x[idx];
-  }
-  return sqrt(out);
-}
-
 template <typename RhsFun, typename JacobianFun>
 void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
   ProfileParams profile_params;
@@ -28,8 +20,8 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
   rhs_fun(state, 0, zero_field, 0., rhs_ref, profile_params);
   jacobian_fun(state, 0, zero_field, 0, jacobian_ref, profile_params);
 
-  double rhs_norm = vector_norm(rhs_ref);
-  double jacobian_norm = vector_norm(jacobian_ref);
+  double rhs_norm = Generic::VectorNorm(rhs_ref);
+  double jacobian_norm = Generic::VectorNorm(jacobian_ref);
 
   assert(rhs_norm > 0);
   assert(jacobian_norm > 0);
@@ -70,7 +62,7 @@ void JacobiansAreCorrect(RhsFun rhs_fun, JacobianFun jacobian_fun) {
       }
     }
 
-    fd_errors[step_id] = vector_norm(jacobian_error);
+    fd_errors[step_id] = Generic::VectorNorm(jacobian_error);
   }
 
   printf("\n||R|| = %.3e, ||A|| = %.3e, e1 = %.3e,  e2 = %.3e, e3 = %.3e.\n",
@@ -99,7 +91,7 @@ void LocalSimilarityIsConsistent() {
   compute_rhs_default(state, 0, zero_field, 0, rhs_self_sim, profile_params);
 
   assert(allClose(rhs_self_sim, rhs_local_sim, BL_RANK));
-  assert(vector_norm(rhs_self_sim) > 0);
+  assert(Generic::VectorNorm(rhs_self_sim) > 0);
 
   // Jacobian functions should be the same
   const int matrix_dim = BL_RANK * BL_RANK;
@@ -112,7 +104,7 @@ void LocalSimilarityIsConsistent() {
                                profile_params);
 
   assert(allClose(jacobian_self_sim, jacobian_lsim, matrix_dim));
-  assert(vector_norm(jacobian_self_sim) > 0);
+  assert(Generic::VectorNorm(jacobian_self_sim) > 0);
 
   // If we introduce gradients, the rhs terms should differ
   profile_params.xi = 1.5;
@@ -156,7 +148,7 @@ void DifferenceDifferentialIsConsistent() {
   compute_full_rhs_default(state, 0, zero_field, 0, rhs_full, profile_params);
 
   assert(allClose(rhs_full, rhs_local_sim, BL_RANK));
-  assert(vector_norm(rhs_full) > 0);
+  assert(Generic::VectorNorm(rhs_full) > 0);
 
   // Jacobian functions should be the same
   const int matrix_dim = BL_RANK * BL_RANK;
@@ -169,7 +161,7 @@ void DifferenceDifferentialIsConsistent() {
                                     profile_params);
 
   assert(allClose(jacobian_lsim, jacobian_full, matrix_dim));
-  assert(vector_norm(jacobian_full) > 0);
+  assert(Generic::VectorNorm(jacobian_full) > 0);
 
   // If we introduce a non-zero field, the rhs terms should differ
   std::vector<double> non_zero_field(FIELD_RANK, 0.);

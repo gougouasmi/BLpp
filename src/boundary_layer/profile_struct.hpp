@@ -278,4 +278,6 @@ struct ProfileParams {
   }
 };
 
+static_assert(sizeof(ProfileParams) == 152); // Check optimal size
+
 #endif
