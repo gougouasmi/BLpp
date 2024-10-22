@@ -1,12 +1,16 @@
 # Equations
 Similarity transform:
+
 $$
 \xi \ := \ \int_{0}^{x} \rho_{e}(\bar{x}) u_{e}(\bar{x}) \mu_{e}(\bar{x}) \ d\bar{x}, \\ \eta \ := \ \frac{u_{e}}{\sqrt{2 \xi}} \int_{0}^{y}\rho(\bar{y}) \ d\bar{y}.
 $$
+
 Introduce new functions $(f, g)$:
+
 $$
   f'(\xi, \eta) \ := \ u(\xi, \eta) / u_{\xi}, \ \ g(\xi, \eta) \ := \ \frac{h(\xi, \eta)}{h_{e}(\xi)},
 $$
+
 where the $'$ superscript denotes differentiation with respect to $\eta$. Pressure is constant in the $\eta$ direction:
 
 $$
@@ -14,14 +18,17 @@ $$
 $$
 
 Momentum equation becomes:
+
 $$
 \begin{gather}
 (Cf'')' \ + \ f f'' \ = \ c_1 \bigg[ \big( f'\big)^{2} \ - \ \frac{\rho_{e}}{\rho}\bigg] \ + \ 2 \xi \bigg[  f' \frac{\partial f'}{\partial \xi}\ - \ f'' \frac{\partial f}{\partial \xi}\bigg], \\ 
 c_{1}(\xi) \ := \ \frac{2 \xi}{u_{e}}\frac{du_{e}}{d\xi}, \ \ C \ := \ \frac{\rho \mu}{\rho_{e} \mu_{e}}.
 \end{gather}
 $$
+
 where C denotes the Chapman-Rubesin factor. 
 Energy equation becomes
+
 $$
 \begin{gather}
 \bigg( \frac{C}{Pr} g' \bigg)' \ + \ f g' \ = \ f' \bigg( c_{2} g \ + \ c_{3} \frac{\rho_{e}}{\rho} \bigg) \ + \  2 \xi \bigg[ f' \frac{\partial g}{\partial \xi}  \ - \ g' \frac{\partial f}{\partial \xi} \bigg] \ - \ C \frac{u_{e}^2}{h_{e}} \big( f''\big)^{2}, \\
@@ -115,7 +122,6 @@ $$
 and the energy source term as:
 
 $$
-
 2 \xi \bigg[ f' \frac{\partial g}{\partial \xi}  \ - \ g' \frac{\partial f}{\partial \xi} \bigg] \ \approx \ f' \big( e_{0} g \ + \ e_{1}) \ - \ g' \big( s_{0} f \ + \ s_{1} \big), 
 $$
 
@@ -125,11 +131,13 @@ $$
 (Cf'')' \ + \ f f'' \ = \ c_{1} \bigg(  \big(f'\big)^{2} \ - \ \frac{\rho_{e}}{\rho} \bigg) + f' \big( m_{0} f' \ + \ m_{1} \big) \ - \ f'' \big( s_{0} f  \ + \ s_{1} \big) , \\
 \bigg( \frac{C}{Pr} g' \bigg)' \ + \ f g' \ = \ f' c_{2} \bigg( g \ - \ \frac{\rho_{e}}{\rho} \bigg) \ - \ C \frac{u_{e}^2}{h_{e}} \big( f''\big)^{2} \ + \ f' \big( e_{0} g \ + \ e_{1}) \ - \ g' \big( s_{0} f \ + \ s_{1} \big).
 $$
+
 # Case Setup
 
 In terms of grid, you likely start with grid points along the $x$ (body surface) coordinate, and flow conditions $(u_{e}, p_{e}, h_{e})$.
 
 Map $x$-grid to $\xi$-grid, compute the gradients:
+
 $$
 \frac{\partial \xi}{\partial x} \ = \ \rho_{e} u_{e} \mu_{e} \ \implies \ \frac{du_{e}}{d\xi} \ = \ \bigg( \frac{d\xi}{dx}\bigg)^{-1} \frac{du_{e}}{dx}, \ \frac{dh_{e}}{d\xi} \ = \ \bigg( \frac{d\xi}{dx}\bigg)^{-1} \frac{dh_{e}}{dx} 
 $$
@@ -140,6 +148,7 @@ After running the algorithm, we have $\big(C f'',\  f', \ f, \ (C/Pr) g', \ g \b
 
 ## Heat and viscous fluxes
 Let's work out the formulas for the viscous and heat fluxes. Define
+
 $$
 F''(\xi, \eta) \ := \ C f''(\xi, \eta), \\  G'(\xi, \eta) \ := \ (C/Pr) g'(\xi, \eta).
 $$
