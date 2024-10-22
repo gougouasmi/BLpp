@@ -81,7 +81,7 @@ add_library(linalg_lib
 )
 target_include_directories(linalg_lib PRIVATE src/linalg src/utils)
 
-# Flat Plate functions
+# Boundary layer functions
 add_library(boundary_layer_lib
     src/boundary_layer/boundary_layer.cpp
     src/boundary_layer/boundary_layer_factory.cpp
@@ -163,7 +163,6 @@ add_executable(debug_devel_profile src/debug/debug_develop_profile.cpp)
 
 target_link_libraries(debug_devel_profile PRIVATE boundary_layer_lib profile_lib utils_lib linalg_lib cases_lib)
 target_include_directories(debug_devel_profile PRIVATE src/boundary_layer src/physics src/utils src/cases src/solvers src/linalg)
-
 
 ###
 # Tests
