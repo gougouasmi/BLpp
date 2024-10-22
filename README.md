@@ -4,4 +4,4 @@ A C++ implementation of boundary layer techniques described in chapter 6 of Ande
 
 This project is not open for contributions (issues, pull requests etc.).
 
-Copyright © Ayoub Gouasmi. All rights reserved.
+Copyright © 2024 Ayoub Gouasmi. All rights reserved.
