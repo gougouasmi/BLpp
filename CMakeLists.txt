@@ -66,7 +66,6 @@ target_link_libraries(utils_lib PRIVATE ${HDF5_LIBRARIES})
 
 # Profile functions
 add_library(profile_lib
-    src/boundary_layer/profile_functions_default.cpp
     src/boundary_layer/profile_functions_cpg.cpp
     src/boundary_layer/score_functions.cpp
 )

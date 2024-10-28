@@ -17,14 +17,14 @@ using std::vector;
 class BoundaryLayer {
 public:
   BoundaryLayer() = delete;
-  BoundaryLayer(int max_nb_steps, BLModel model_functions);
+  BoundaryLayer(int max_nb_steps, BLModel<0> model_functions);
 
   //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
 
   //
-  RhsFunction GetRhsFun(SolveType solve_type);
-  RhsJacobianFunction GetJacobianFun(SolveType solve_type);
+  RhsFunction<0> GetRhsFun(SolveType solve_type);
+  RhsJacobianFunction<0> GetJacobianFun(SolveType solve_type);
 
   // ODE integration (eta)
   int DevelopProfile(ProfileParams &profile_params, vector<double> &score,
@@ -114,7 +114,7 @@ private:
   vector<double> field_grid;
   vector<double> output_grid;
 
-  BLModel model_functions;
+  BLModel<0> model_functions;
 };
 
 #endif

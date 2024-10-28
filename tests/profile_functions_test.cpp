@@ -183,11 +183,11 @@ void DifferenceDifferentialIsConsistent() {
 
 int main(int argc, char *argv[]) {
   // Jacobian implementations are consistent with Frechet derivatives
-  JacobiansAreCorrect(compute_rhs_default, compute_rhs_jacobian_default);
-  JacobiansAreCorrect(compute_lsim_rhs_default,
-                      compute_lsim_rhs_jacobian_default);
-  JacobiansAreCorrect(compute_full_rhs_default,
-                      compute_full_rhs_jacobian_default);
+  JacobiansAreCorrect(compute_rhs_default<0>, compute_rhs_jacobian_default<0>);
+  JacobiansAreCorrect(compute_lsim_rhs_default<0>,
+                      compute_lsim_rhs_jacobian_default<0>);
+  JacobiansAreCorrect(compute_full_rhs_default<0>,
+                      compute_full_rhs_jacobian_default<0>);
 
   // Consistency between Self-Similar, Locally-Similar, and
   // Difference-Differential

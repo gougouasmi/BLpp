@@ -10,7 +10,7 @@
 #include <cassert>
 #include <tuple>
 
-BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel model_functions)
+BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel<0> model_functions)
     : _max_nb_steps(max_nb_steps), model_functions(model_functions),
       field_grid(FIELD_RANK * (max_nb_steps), 0.),
       output_grid(OUTPUT_RANK * (1 + _max_nb_steps)) {
@@ -40,7 +40,7 @@ void BoundaryLayer::InitializeState(ProfileParams &profile_params,
                                            sensitivity_matrices[worker_id]);
 }
 
-RhsFunction BoundaryLayer::GetRhsFun(SolveType solve_type) {
+RhsFunction<0> BoundaryLayer::GetRhsFun(SolveType solve_type) {
   if (solve_type == SolveType::SelfSimilar)
     return model_functions.compute_rhs_self_similar;
 
@@ -53,7 +53,7 @@ RhsFunction BoundaryLayer::GetRhsFun(SolveType solve_type) {
   return nullptr;
 }
 
-RhsJacobianFunction BoundaryLayer::GetJacobianFun(SolveType solve_type) {
+RhsJacobianFunction<0> BoundaryLayer::GetJacobianFun(SolveType solve_type) {
   if (solve_type == SolveType::SelfSimilar)
     return model_functions.compute_rhs_jacobian_self_similar;
 
@@ -213,7 +213,7 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
 
   const DevelMode devel_mode = profile_params.devel_mode;
 
-  RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
+  RhsFunction<0> compute_rhs = GetRhsFun(profile_params.solve_type);
   assert(compute_rhs != nullptr);
 
   vector<double> &state_grid = state_grids[worker_id];
@@ -236,7 +236,7 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
   vector<double> &matrix_buffer_cm = matrix_buffers[2 * worker_id + 1];
 
-  RhsJacobianFunction compute_rhs_jacobian =
+  RhsJacobianFunction<0> compute_rhs_jacobian =
       GetJacobianFun(profile_params.solve_type);
   assert(compute_rhs_jacobian != nullptr);
 
@@ -326,8 +326,8 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
 
   const DevelMode devel_mode = profile_params.devel_mode;
 
-  RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
-  RhsJacobianFunction compute_rhs_jacobian =
+  RhsFunction<0> compute_rhs = GetRhsFun(profile_params.solve_type);
+  RhsJacobianFunction<0> compute_rhs_jacobian =
       GetJacobianFun(profile_params.solve_type);
 
   assert(compute_rhs != nullptr);
@@ -465,8 +465,8 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
 
   const DevelMode devel_mode = profile_params.devel_mode;
 
-  RhsFunction compute_rhs = GetRhsFun(profile_params.solve_type);
-  RhsJacobianFunction compute_rhs_jacobian =
+  RhsFunction<0> compute_rhs = GetRhsFun(profile_params.solve_type);
+  RhsJacobianFunction<0> compute_rhs_jacobian =
       GetJacobianFun(profile_params.solve_type);
 
   assert(compute_rhs != nullptr);
