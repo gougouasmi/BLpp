@@ -1,6 +1,6 @@
 #include "boundary_layer_factory.hpp"
-#include "profile_functions_cpg.hpp"
-#include "profile_functions_default.hpp"
+#include "bl_model_cpg.hpp"
+#include "bl_model_default.hpp"
 #include "profile_struct.hpp"
 
 BoundaryLayer BoundaryLayerFactory(const int grid_size,

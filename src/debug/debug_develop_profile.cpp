@@ -11,7 +11,7 @@
 #include "profile_struct.hpp"
 #include "search_struct.hpp"
 
-#include "profile_functions_cpg.hpp"
+#include "bl_model_cpg.hpp"
 
 /*
  *

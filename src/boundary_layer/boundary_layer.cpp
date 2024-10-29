@@ -3,7 +3,7 @@
 #include "dense_linalg.hpp"
 #include "utils.hpp"
 
-#include "profile_functions_default.hpp"
+#include "bl_model_default.hpp"
 #include "score_functions.hpp"
 
 #include <algorithm>

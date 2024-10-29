@@ -12,7 +12,7 @@
 #include "timers.hpp"
 #include "utils.hpp"
 
-#include "profile_functions_cpg.hpp"
+#include "bl_model_cpg.hpp"
 
 using std::vector;
 

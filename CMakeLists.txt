@@ -65,10 +65,7 @@ target_include_directories(utils_lib PUBLIC src/utils ${HDF5_INCLUDE_DIRS})
 target_link_libraries(utils_lib PRIVATE ${HDF5_LIBRARIES})
 
 # Profile functions
-add_library(profile_lib
-    src/boundary_layer/profile_functions_cpg.cpp
-    src/boundary_layer/score_functions.cpp
-)
+add_library(profile_lib src/boundary_layer/score_functions.cpp)
 target_include_directories(profile_lib PRIVATE src/boundary_layer src/physics)
 target_link_libraries(profile_lib PRIVATE utils_lib)
 
