@@ -65,7 +65,7 @@ void ScalarSolveStack() {
 
   Generic::Vector<double, xdim> &solution = newton_resources.state;
 
-  fillWithRandomData<double, xdim>(solution, xdim);
+  Generic::fillWithRandomData<double, xdim>(solution, xdim);
 
   bool pass =
       Generic::NewtonSolveDirect(objective_fun, jacobian_fun, limit_update_fun,
@@ -160,7 +160,7 @@ void SystemSolveStack() {
   Generic::NewtonResources<xdim> newton_resources;
 
   Generic::Vector<double, xdim> &solution = newton_resources.state;
-  fillWithRandomData<double, xdim>(solution, xdim);
+  Generic::fillWithRandomData<double, xdim>(solution, xdim);
 
   NewtonParams newton_params;
   newton_params.verbose = true;

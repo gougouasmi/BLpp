@@ -8,12 +8,13 @@ using std::pair;
 
 namespace Generic {
 
-template <typename T, std::size_t xdim>
-void ReadLowerUpper(const Generic::Vector<T, xdim * xdim> &matrix_data,
-                    Generic::Vector<T, xdim *(xdim - 1) / 2> &lower_data,
-                    Generic::Vector<T, xdim *(xdim + 1) / 2> &upper_data,
-                    const size_t rank) {
-  const size_t nb_rows = (xdim == 0) ? rank : xdim;
+template <typename T, std::size_t ctime_xdim>
+void ReadLowerUpper(
+    const Generic::Vector<T, ctime_xdim * ctime_xdim> &matrix_data,
+    Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2> &lower_data,
+    Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2> &upper_data,
+    const size_t xdim) {
+  const size_t nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
   const size_t nb_cols = nb_rows;
 
   int upper_offset = 0;
@@ -36,11 +37,12 @@ void ReadLowerUpper(const Generic::Vector<T, xdim * xdim> &matrix_data,
   }
 }
 
-template <typename T, std::size_t xdim>
-void FactorizeLU(Generic::Vector<T, xdim *(xdim - 1) / 2> &lower_data,
-                 Generic::Vector<T, xdim *(xdim + 1) / 2> &upper_data,
-                 const size_t rank) {
-  const size_t nb_rows = (xdim == 0) ? rank : xdim;
+template <typename T, std::size_t ctime_xdim>
+void FactorizeLU(
+    Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2> &lower_data,
+    Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2> &upper_data,
+    const size_t xdim) {
+  const size_t nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
   const size_t nb_cols = nb_rows;
 
   int upper_pivot_offset = 0;
@@ -84,10 +86,11 @@ void FactorizeLU(Generic::Vector<T, xdim *(xdim - 1) / 2> &lower_data,
   }
 }
 
-template <typename T, std::size_t xdim>
-void LowerSolve(const Generic::Vector<T, xdim *(xdim - 1) / 2> &lower_data,
-                Generic::Vector<T, xdim> &rhs, const size_t rank) {
-  const size_t nb_rows = (xdim == 0) ? rank : xdim;
+template <typename T, std::size_t ctime_xdim>
+void LowerSolve(
+    const Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2> &lower_data,
+    Generic::Vector<T, ctime_xdim> &rhs, const size_t xdim) {
+  const size_t nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
 
   int offset = 0;
   for (int i = 0; i < nb_rows; i++) {
@@ -98,10 +101,11 @@ void LowerSolve(const Generic::Vector<T, xdim *(xdim - 1) / 2> &lower_data,
   }
 }
 
-template <typename T, std::size_t xdim>
-void UpperSolve(const Generic::Vector<T, xdim *(xdim + 1) / 2> &upper_data,
-                Generic::Vector<T, xdim> &rhs, const size_t rank) {
-  const size_t nb_rows = (xdim == 0) ? rank : xdim;
+template <typename T, std::size_t ctime_xdim>
+void UpperSolve(
+    const Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2> &upper_data,
+    Generic::Vector<T, ctime_xdim> &rhs, const size_t xdim) {
+  const size_t nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
   const size_t last_row_id = nb_rows - 1;
 
   int offset = nb_rows * (nb_rows + 1) / 2 - 1;
@@ -119,27 +123,28 @@ void UpperSolve(const Generic::Vector<T, xdim *(xdim + 1) / 2> &upper_data,
   }
 }
 
-template <typename T, std::size_t xdim = 0>
-void LUSolve(const Generic::Vector<T, xdim * xdim> &matrix_data,
-             Generic::Vector<T, xdim> &rhs,
-             pair<Generic::Vector<T, xdim *(xdim - 1) / 2>,
-                  Generic::Vector<T, xdim *(xdim + 1) / 2>> &lu_resources,
-             const size_t rank) {
+template <typename T, std::size_t ctime_xdim = 0>
+void LUSolve(
+    const Generic::Vector<T, ctime_xdim * ctime_xdim> &matrix_data,
+    Generic::Vector<T, ctime_xdim> &rhs,
+    pair<Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2>,
+         Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2>> &lu_resources,
+    const size_t xdim) {
   auto &lower_data = lu_resources.first;
   auto &upper_data = lu_resources.second;
 
-  ReadLowerUpper<T, xdim>(matrix_data, lower_data, upper_data, rank);
+  ReadLowerUpper<T, ctime_xdim>(matrix_data, lower_data, upper_data, xdim);
 
-  FactorizeLU<T, xdim>(lower_data, upper_data, rank);
+  FactorizeLU<T, ctime_xdim>(lower_data, upper_data, xdim);
 
-  LowerSolve<T, xdim>(lower_data, rhs, rank);
-  UpperSolve<T, xdim>(upper_data, rhs, rank);
+  LowerSolve<T, ctime_xdim>(lower_data, rhs, xdim);
+  UpperSolve<T, ctime_xdim>(upper_data, rhs, xdim);
 }
 
-template <typename T, std::size_t xdim = 0>
-double UpperDeterminant(const Generic::Vector<T, xdim> &upper_data,
-                        const size_t rank) {
-  const int nb_rows = (xdim == 0) ? rank : xdim;
+template <typename T, std::size_t ctime_xdim = 0>
+double UpperDeterminant(const Generic::Vector<T, ctime_xdim> &upper_data,
+                        const size_t xdim) {
+  const int nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
 
   assert(2 * upper_data.size() >= nb_rows * (nb_rows + 1));
 
@@ -152,6 +157,98 @@ double UpperDeterminant(const Generic::Vector<T, xdim> &upper_data,
 
   return det_val;
 }
+
+// Matrix-Matrix
+
+template <typename T, std::size_t ctime_xdim = 0, std::size_t ctime_zdim = 0>
+void LowerMatrixSolve(
+    const Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2> &lower_data,
+    Generic::Vector<T, ctime_xdim * ctime_zdim> &rhs_matrix_cm, size_t xdim,
+    size_t zdim) {
+  const size_t nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
+  const size_t nb_cols = (ctime_zdim == 0) ? zdim : ctime_zdim;
+
+  int cm_offset = 0;
+
+  for (int k = 0; k < nb_cols; k++) {
+    int offset = 0;
+    for (int i = 0; i < nb_rows; i++) {
+      for (int j = 0; j < i; j++) {
+        rhs_matrix_cm[cm_offset + i] -=
+            lower_data[offset + j] * rhs_matrix_cm[cm_offset + j];
+      }
+      offset += i;
+    }
+    cm_offset += nb_rows;
+  }
+};
+
+template <typename T, std::size_t ctime_xdim = 0, std::size_t ctime_zdim = 0>
+void UpperMatrixSolve(
+    const Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2> &upper_data,
+    Generic::Vector<T, ctime_xdim * ctime_zdim> &rhs_matrix_cm, size_t xdim,
+    size_t zdim) {
+  const size_t nb_rows = (ctime_xdim == 0) ? xdim : ctime_xdim;
+  const size_t nb_cols = (ctime_zdim == 0) ? zdim : ctime_zdim;
+
+  const size_t last_row_id = nb_rows - 1;
+
+  int cm_offset = 0;
+
+  for (int k = 0; k < nb_cols; k++) {
+    int offset = nb_rows * (nb_rows + 1) / 2 - 1;
+
+    for (int i = 0; i < nb_rows; i++) {
+
+      int row_id = last_row_id - i;
+      T pivot1 = 1. / upper_data[offset];
+
+      for (int j = 1; j < i + 1; j++) {
+        rhs_matrix_cm[cm_offset + row_id] -=
+            upper_data[offset + j] * rhs_matrix_cm[cm_offset + row_id + j];
+      }
+      rhs_matrix_cm[cm_offset + row_id] *= pivot1;
+
+      offset -= (i + 2);
+    }
+    cm_offset += nb_rows;
+  }
+};
+
+template <typename T, std::size_t ctime_xdim = 0, std::size_t ctime_zdim = 0>
+void LUMatrixSolve(
+    const Generic::Vector<T, ctime_xdim * ctime_xdim> &matrix_data,
+    Generic::Vector<T, ctime_xdim * ctime_zdim> &rhs_matrix_cm,
+    pair<Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2>,
+         Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2>> &lu_resources,
+    size_t xdim, size_t zdim) {
+
+  assert(xdim > 1);
+  assert(zdim > 1);
+
+  assert(matrix_data.size() >= xdim * xdim);
+  assert(rhs_matrix_cm.size() >= xdim * zdim);
+
+  const size_t lower_size = xdim * (xdim - 1) / 2;
+  const size_t upper_size = xdim * (xdim + 1) / 2;
+
+  Generic::Vector<T, ctime_xdim *(ctime_xdim - 1) / 2> &lower_data =
+      lu_resources.first;
+  Generic::Vector<T, ctime_xdim *(ctime_xdim + 1) / 2> &upper_data =
+      lu_resources.second;
+
+  assert(lower_data.size() >= lower_size);
+  assert(upper_data.size() >= upper_size);
+
+  ReadLowerUpper<T, ctime_xdim>(matrix_data, lower_data, upper_data, xdim);
+
+  FactorizeLU<T, ctime_xdim>(lower_data, upper_data, xdim);
+
+  LowerMatrixSolve<T, ctime_xdim, ctime_zdim>(lower_data, rhs_matrix_cm, xdim,
+                                              zdim);
+  UpperMatrixSolve<T, ctime_xdim, ctime_zdim>(upper_data, rhs_matrix_cm, xdim,
+                                              zdim);
+};
 
 } // namespace Generic
 

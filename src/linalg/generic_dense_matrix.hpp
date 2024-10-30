@@ -46,6 +46,14 @@ public:
     Solve(solution);
   }
 
+  template <std::size_t ctime_zdim>
+  void MatrixSolve(
+      Generic::Vector<double, ctime_xdim * ctime_zdim> &solution_matrix_cm,
+      size_t xrank, size_t zrank) {
+    Generic::LUMatrixSolve<double, ctime_xdim, ctime_zdim>(
+        _data, solution_matrix_cm, _lu_resources, xrank, zrank);
+  }
+
   Generic::Vector<double, ctime_xdim * ctime_xdim> &GetData() { return _data; };
   LUPair &GetLU() { return _lu_resources; };
   double Determinant() {
