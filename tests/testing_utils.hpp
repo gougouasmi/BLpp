@@ -106,7 +106,7 @@ bool allClose(const Generic::Vector<T, ctime_x1dim> &arr1,
   return close_enough;
 }
 
-template <typename T = double, std::size_t ctime_xdim = 0>
+template <typename T, std::size_t ctime_xdim = 0>
 void inline fillWithRandomData(Generic::Vector<T, ctime_xdim> &data, int size) {
   assert(size <= data.size());
   T denom = 1. / static_cast<T>(RAND_MAX);
@@ -114,6 +114,15 @@ void inline fillWithRandomData(Generic::Vector<T, ctime_xdim> &data, int size) {
     int random_val = rand();
     data[i] = static_cast<T>(random_val) * denom;
   }
+}
+
+template <typename T, std::size_t ctime_xdim = 0>
+void inline print_vec(Generic::Vector<T, ctime_xdim> &vec, int xdim) {
+  std::cout << "[";
+  for (const T &val : vec) {
+    std::cout << val << ", ";
+  }
+  std::cout << "].\n";
 }
 
 } // namespace Generic

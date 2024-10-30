@@ -39,6 +39,7 @@ add_test(NAME TestDenseSolver COMMAND test_dense_solve)
 add_executable(test_generic_dense_solve
     generic_dense_linear_solve_test.cpp
     ../src/linalg/dense_direct_solver.cpp
+    ../src/linalg/dense_linalg.cpp
 )
 target_include_directories(test_generic_dense_solve PRIVATE ../src/linalg)
 add_test(NAME TestGenericDenseSolver COMMAND test_generic_dense_solve)

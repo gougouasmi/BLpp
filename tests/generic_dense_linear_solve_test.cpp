@@ -1,7 +1,9 @@
 #include <cassert>
 
 #include "dense_direct_solver.hpp"
+#include "dense_linalg.hpp"
 #include "generic_dense_direct_solver.hpp"
+#include "generic_dense_linalg.hpp"
 #include "testing_utils.hpp"
 
 #include <iostream>
@@ -321,6 +323,95 @@ void TestLUMatrixSolve(size_t xdim, size_t zdim) {
   assert(same_solutions);
 }
 
+template <size_t ctime_xdim> void TestDenseMultiply(const size_t xdim) {
+  assert(xdim > 1);
+
+  if constexpr (ctime_xdim != 0)
+    assert(ctime_xdim == xdim && "Compile-time dimension is inconsistent");
+
+  //
+  std::vector<double> matrix_data(xdim * xdim);
+  fillWithRandomData(matrix_data, xdim * xdim);
+
+  std::vector<double> input(xdim);
+  fillWithRandomData(input, xdim);
+
+  std::vector<double> output(xdim);
+
+  //
+  Generic::Vector<double, ctime_xdim * ctime_xdim> generic_matrix_data;
+  Generic::Vector<double, ctime_xdim> generic_input;
+  Generic::Vector<double, ctime_xdim> generic_output;
+
+  if constexpr (ctime_xdim == 0) {
+    generic_matrix_data.resize(xdim * xdim);
+    generic_input.resize(xdim);
+    generic_output.resize(xdim);
+  }
+
+  std::copy(matrix_data.begin(), matrix_data.end(),
+            generic_matrix_data.begin());
+  std::copy(input.begin(), input.end(), generic_input.begin());
+
+  //
+  DenseMatrixMultiply(matrix_data, input, output, xdim);
+  Generic::DenseMatrixMultiply<double, ctime_xdim>(
+      generic_matrix_data, generic_input, generic_output, xdim);
+
+  //
+  bool outputs_match =
+      Generic::allClose<double, ctime_xdim, 0>(generic_output, output);
+  assert(outputs_match);
+}
+
+template <size_t ctime_xdim, size_t ctime_zdim>
+void TestDenseMatrixMultiply(const size_t xdim, const size_t zdim) {
+  assert(xdim > 1);
+  assert(zdim > 1);
+
+  if constexpr (ctime_xdim != 0)
+    assert(ctime_xdim == xdim && "Compile-time dimension is inconsistent");
+
+  if constexpr (ctime_zdim != 0)
+    assert(ctime_zdim == zdim && "Compile-time dimension is inconsistent");
+
+  static_assert(!((ctime_xdim == 0) && (ctime_zdim != 0)) &&
+                "Invalid template values.");
+  //
+  std::vector<double> matrix_data(xdim * xdim);
+  fillWithRandomData(matrix_data, xdim * xdim);
+
+  std::vector<double> input(xdim * zdim);
+  fillWithRandomData(input, xdim * zdim);
+
+  std::vector<double> output(xdim * zdim);
+
+  //
+  Generic::Vector<double, ctime_xdim * ctime_xdim> generic_matrix_data;
+  Generic::Vector<double, ctime_xdim * ctime_zdim> generic_input;
+  Generic::Vector<double, ctime_xdim * ctime_zdim> generic_output;
+
+  if constexpr (ctime_xdim == 0) {
+    generic_matrix_data.resize(xdim * xdim);
+    generic_input.resize(xdim * zdim);
+    generic_output.resize(xdim * zdim);
+  }
+
+  std::copy(matrix_data.begin(), matrix_data.end(),
+            generic_matrix_data.begin());
+  std::copy(input.begin(), input.end(), generic_input.begin());
+
+  //
+  DenseMatrixMatrixMultiply(matrix_data, input, output, xdim, zdim);
+  Generic::DenseMatrixMatrixMultiply<double, ctime_xdim, ctime_zdim>(
+      generic_matrix_data, generic_input, generic_output, xdim, zdim);
+
+  //
+  bool outputs_match = Generic::allClose<double, ctime_xdim * ctime_zdim, 0>(
+      generic_output, output);
+  assert(outputs_match);
+}
+
 int main(int argc, char *argv[]) {
   TestReadLowerUpper<0>(5);
   TestReadLowerUpper<5>(5);
@@ -333,6 +424,12 @@ int main(int argc, char *argv[]) {
 
   TestLUSolve<5>(5);
   TestLUSolve<0>(5);
+
+  TestDenseMultiply<0>(5);
+  TestDenseMultiply<5>(5);
+
+  TestDenseMatrixMultiply<0, 0>(5, 3);
+  TestDenseMatrixMultiply<5, 3>(5, 3);
 
   TestLowerMatrixSolve<0, 0>(5, 3);
   TestLowerMatrixSolve<5, 3>(5, 3);

@@ -3,6 +3,7 @@
 
 #include "bl_model_struct.hpp"
 #include "boundary_data_struct.hpp"
+#include "generic_newton_solver.hpp"
 #include "newton_solver.hpp"
 #include "profile_struct.hpp"
 #include "search_struct.hpp"
@@ -14,17 +15,19 @@
 using std::array;
 using std::vector;
 
+constexpr int MODEL_RANK = 0;
+
 class BoundaryLayer {
 public:
   BoundaryLayer() = delete;
-  BoundaryLayer(int max_nb_steps, BLModel<0> model_functions);
+  BoundaryLayer(int max_nb_steps, BLModel<MODEL_RANK> model_functions);
 
   //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
 
   //
-  RhsFunction<0> GetRhsFun(SolveType solve_type);
-  RhsJacobianFunction<0> GetJacobianFun(SolveType solve_type);
+  RhsFunction<MODEL_RANK> GetRhsFun(SolveType solve_type);
+  RhsJacobianFunction<MODEL_RANK> GetJacobianFun(SolveType solve_type);
 
   // ODE integration (eta)
   int DevelopProfile(ProfileParams &profile_params, vector<double> &score,
@@ -82,7 +85,7 @@ public:
   // Post-processing
   vector<double> &GetEtaGrid(int worker_id = 0);
   vector<double> &GetStateGrid(int worker_id = 0);
-  vector<double> &GetSensitivity(int worker_id = 0);
+  Generic::Vector<double, MODEL_RANK * 2> &GetSensitivity(int worker_id = 0);
 
   void WriteEtaGrid(int worker_id = 0);
   void WriteStateGrid(const std::string &file_path, int profile_size,
@@ -106,15 +109,17 @@ private:
   array<vector<double>, MAX_NB_WORKERS> eta_grids;
   array<vector<double>, MAX_NB_WORKERS> rhs_vecs;
 
-  array<vector<double>, MAX_NB_WORKERS> sensitivity_matrices;
-  array<vector<double>, 2 * MAX_NB_WORKERS> matrix_buffers;
+  array<Generic::Vector<double, MODEL_RANK * 2>, MAX_NB_WORKERS>
+      sensitivity_matrices;
+  array<Generic::Vector<double, MODEL_RANK * MODEL_RANK>, 2 * MAX_NB_WORKERS>
+      matrix_buffers;
 
-  array<NewtonResources, MAX_NB_WORKERS> solver_resources;
+  array<Generic::NewtonResources<MODEL_RANK>, MAX_NB_WORKERS> solver_resources;
 
   vector<double> field_grid;
   vector<double> output_grid;
 
-  BLModel<0> model_functions;
+  BLModel<MODEL_RANK> model_functions;
 };
 
 #endif

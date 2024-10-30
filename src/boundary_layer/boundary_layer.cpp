@@ -1,6 +1,7 @@
 #include "boundary_layer.hpp"
 #include "dense_direct_solver.hpp"
 #include "dense_linalg.hpp"
+#include "generic_dense_linalg.hpp"
 #include "utils.hpp"
 
 #include "bl_model_default.hpp"
@@ -10,7 +11,8 @@
 #include <cassert>
 #include <tuple>
 
-BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel<0> model_functions)
+BoundaryLayer::BoundaryLayer(int max_nb_steps,
+                             BLModel<MODEL_RANK> model_functions)
     : _max_nb_steps(max_nb_steps), model_functions(model_functions),
       field_grid(FIELD_RANK * (max_nb_steps), 0.),
       output_grid(OUTPUT_RANK * (1 + _max_nb_steps)) {
@@ -20,11 +22,13 @@ BoundaryLayer::BoundaryLayer(int max_nb_steps, BLModel<0> model_functions)
     eta_grids[worker_id].resize(1 + _max_nb_steps);
     rhs_vecs[worker_id].resize(BL_RANK);
 
-    sensitivity_matrices[worker_id].resize(BL_RANK * 2);
-    matrix_buffers[2 * worker_id + 0].resize(BL_RANK * BL_RANK);
-    matrix_buffers[2 * worker_id + 1].resize(BL_RANK * BL_RANK);
+    if constexpr (MODEL_RANK == 0) {
+      sensitivity_matrices[worker_id].resize(BL_RANK * 2);
+      matrix_buffers[2 * worker_id + 0].resize(BL_RANK * BL_RANK);
+      matrix_buffers[2 * worker_id + 1].resize(BL_RANK * BL_RANK);
+    }
 
-    solver_resources[worker_id] = NewtonResources(BL_RANK);
+    solver_resources[worker_id] = Generic::NewtonResources<MODEL_RANK>(BL_RANK);
   }
 }
 
@@ -74,7 +78,8 @@ vector<double> &BoundaryLayer::GetStateGrid(int worker_id) {
   return state_grids[worker_id];
 }
 
-vector<double> &BoundaryLayer::GetSensitivity(int worker_id) {
+Generic::Vector<double, MODEL_RANK * 2> &
+BoundaryLayer::GetSensitivity(int worker_id) {
   return sensitivity_matrices[worker_id];
 }
 
@@ -181,7 +186,9 @@ int BoundaryLayer::DevelopProfile(ProfileParams &profile_params,
   ComputeScore(profile_params, state_grid, state_offset, score);
 
   if (advise) {
-    vector<double> &sensitivity = sensitivity_matrices[worker_id];
+    vector<double> sensitivity(sensitivity_matrices[worker_id].size());
+    std::copy(sensitivity_matrices[worker_id].begin(),
+              sensitivity_matrices[worker_id].end(), sensitivity.begin());
 
     printf("Sensitivity matrix:\n");
     utils::print_matrix_column_major(sensitivity, BL_RANK, 2);
@@ -219,7 +226,9 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
-  vector<double> &sensitivity = sensitivity_matrices[worker_id];
+
+  Generic::Vector<double, MODEL_RANK * 2> &sensitivity =
+      sensitivity_matrices[worker_id];
 
   const int grid_nb_steps = eta_grid.size() - 1;
   const int max_nb_steps = profile_params.nb_steps;
@@ -230,11 +239,10 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
   InitializeState(profile_params, worker_id);
   double max_step = profile_params.max_step;
 
-  // printf("Sensitivity matrix after initialize:\n");
-  // print_matrix_column_major(sensitivity, BL_RANK, 2);
-
-  vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
-  vector<double> &matrix_buffer_cm = matrix_buffers[2 * worker_id + 1];
+  Generic::Vector<double, MODEL_RANK *MODEL_RANK> &jacobian_buffer_rm =
+      matrix_buffers[2 * worker_id + 0];
+  Generic::Vector<double, MODEL_RANK *MODEL_RANK> &matrix_buffer_cm =
+      matrix_buffers[2 * worker_id + 1];
 
   RhsJacobianFunction<0> compute_rhs_jacobian =
       GetJacobianFun(profile_params.solve_type);
@@ -306,8 +314,8 @@ int BoundaryLayer::DevelopProfileExplicit(ProfileParams &profile_params,
 
       std::copy(sensitivity.begin(), sensitivity.end(),
                 matrix_buffer_cm.begin());
-      DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm,
-                                sensitivity, BL_RANK, 2);
+      Generic::DenseMatrixMatrixMultiply<double, 0, 0>(
+          jacobian_buffer_rm, matrix_buffer_cm, sensitivity, BL_RANK, 2);
     }
 
     // Update indexing
@@ -336,7 +344,9 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
-  vector<double> &sensitivity = sensitivity_matrices[worker_id];
+
+  Generic::Vector<double, MODEL_RANK * 2> &sensitivity =
+      sensitivity_matrices[worker_id];
 
   const int grid_nb_steps = eta_grid.size() - 1;
   const int max_nb_steps = profile_params.nb_steps;
@@ -360,8 +370,9 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   // (1 / 3) Objective function
   auto objective_fun = [xdim, worker_id, &eta_step, &state_offset,
                         &field_offset, &profile_params, &state_grid,
-                        compute_rhs, this](const vector<double> &state,
-                                           vector<double> &residual) {
+                        compute_rhs,
+                        this](const Generic::Vector<double, MODEL_RANK> &state,
+                              Generic::Vector<double, MODEL_RANK> &residual) {
     // U^{n+1} - U^{n} - step * R(U^{n+1}) = 0
     compute_rhs(state, 0, field_grid, field_offset, residual, profile_params);
     for (int idx = 0; idx < xdim; idx++) {
@@ -371,17 +382,20 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   };
 
   // (2 / 3) Limit update function
-  auto limit_update_fun = [xdim, &profile_params,
-                           this](const vector<double> &state,
-                                 const vector<double> &state_varn) {
-    return model_functions.limit_update(state, state_varn, profile_params);
-  };
+  auto limit_update_fun =
+      [xdim, &profile_params,
+       this](const Generic::Vector<double, MODEL_RANK> &state,
+             const Generic::Vector<double, MODEL_RANK> &state_varn) {
+        return model_functions.limit_update(state, state_varn, profile_params);
+      };
 
   // (3 / 3) Jacobian function
   auto jacobian_fun = [xdim, &eta_step, &field_offset, &profile_params,
                        compute_rhs_jacobian,
-                       this](const vector<double> &state, DenseMatrix &matrix) {
-    vector<double> &matrix_data = matrix.GetData();
+                       this](const Generic::Vector<double, MODEL_RANK> &state,
+                             Generic::DenseMatrix<MODEL_RANK> &matrix) {
+    Generic::Vector<double, MODEL_RANK *MODEL_RANK> &matrix_data =
+        matrix.GetData();
 
     compute_rhs_jacobian(state, 0, field_grid, field_offset, matrix_data,
                          profile_params);
@@ -405,9 +419,10 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
   };
 
   NewtonParams newton_params;
-  NewtonResources &newton_resources = solver_resources[worker_id];
+  Generic::NewtonResources<MODEL_RANK> &newton_resources =
+      solver_resources[worker_id];
 
-  vector<double> &solution_buffer = newton_resources.state;
+  Generic::Vector<double, MODEL_RANK> &solution_buffer = newton_resources.state;
   std::copy(state_grid.begin(), state_grid.begin() + xdim,
             solution_buffer.begin());
 
@@ -446,7 +461,7 @@ int BoundaryLayer::DevelopProfileImplicit(ProfileParams &profile_params,
       // Evolve sensitivity forward: (I - delta * J^{n+1}) S^{n+1} = S^{n}
       //  -> The Jacobian (I - delta * J^{n+1}) is located within
       //  newton_resources
-      newton_resources.matrix.MatrixSolve(sensitivity, BL_RANK, 2);
+      newton_resources.matrix.MatrixSolve<0>(sensitivity, BL_RANK, 2);
     }
 
     // Update indexing
@@ -475,7 +490,9 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   vector<double> &state_grid = state_grids[worker_id];
   vector<double> &eta_grid = eta_grids[worker_id];
   vector<double> &rhs = rhs_vecs[worker_id];
-  vector<double> &sensitivity = sensitivity_matrices[worker_id];
+
+  Generic::Vector<double, MODEL_RANK * 2> &sensitivity =
+      sensitivity_matrices[worker_id];
 
   vector<double> &jacobian_buffer_rm = matrix_buffers[2 * worker_id + 0];
   vector<double> &matrix_buffer_cm = matrix_buffers[2 * worker_id + 1];
@@ -503,8 +520,9 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   //   -> R(U^{n}) pre-computed and found in rhs buffer
   auto objective_fun = [xdim, worker_id, &eta_step, &state_offset,
                         &field_offset, &profile_params, &state_grid, &rhs,
-                        compute_rhs, this](const vector<double> &state,
-                                           vector<double> &residual) {
+                        compute_rhs,
+                        this](const Generic::Vector<double, MODEL_RANK> &state,
+                              Generic::Vector<double, MODEL_RANK> &residual) {
     // U^{n+1} - U^{n} - 0.5 * step * (R(U^{n} + R(U^{n+1}) = 0
     compute_rhs(state, 0, field_grid, field_offset, residual, profile_params);
 
@@ -515,18 +533,21 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   };
 
   // (2 / 3) Limit update function
-  auto limit_update_fun = [xdim, &profile_params,
-                           this](const vector<double> &state,
-                                 const vector<double> &state_varn) {
-    return model_functions.limit_update(state, state_varn, profile_params);
-  };
+  auto limit_update_fun =
+      [xdim, &profile_params,
+       this](const Generic::Vector<double, MODEL_RANK> &state,
+             const Generic::Vector<double, MODEL_RANK> &state_varn) {
+        return model_functions.limit_update(state, state_varn, profile_params);
+      };
 
   // (3 / 3) Jacobian function
   auto jacobian_fun = [xdim, &eta_step, &state_offset, &field_offset,
                        &profile_params, compute_rhs_jacobian,
-                       this](const vector<double> &state, DenseMatrix &matrix) {
+                       this](const Generic::Vector<double, MODEL_RANK> &state,
+                             Generic::DenseMatrix<MODEL_RANK> &matrix) {
     // (I - 0.5 * eta_step * J(X))
-    vector<double> &matrix_data = matrix.GetData();
+    Generic::Vector<double, MODEL_RANK *MODEL_RANK> &matrix_data =
+        matrix.GetData();
 
     compute_rhs_jacobian(state, 0, field_grid, field_offset, matrix_data,
                          profile_params);
@@ -550,8 +571,9 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
   };
 
   NewtonParams newton_params;
-  NewtonResources &newton_resources = solver_resources[worker_id];
-  vector<double> &solution_buffer = newton_resources.state;
+  Generic::NewtonResources<MODEL_RANK> &newton_resources =
+      solver_resources[worker_id];
+  Generic::Vector<double, MODEL_RANK> &solution_buffer = newton_resources.state;
 
   for (int idx = 0; idx < xdim; idx++) {
     solution_buffer[idx] = state_grid[idx];
@@ -615,14 +637,14 @@ int BoundaryLayer::DevelopProfileImplicitCN(ProfileParams &profile_params,
       }
       std::copy(sensitivity.begin(), sensitivity.end(),
                 matrix_buffer_cm.begin());
-      DenseMatrixMatrixMultiply(jacobian_buffer_rm, matrix_buffer_cm,
-                                sensitivity, BL_RANK, 2);
+      Generic::DenseMatrixMatrixMultiply<double, 0, 0>(
+          jacobian_buffer_rm, matrix_buffer_cm, sensitivity, BL_RANK, 2);
 
       //    (2 / 3) Left-hand side matrix is the residual Jacobian in the Newton
       //    solve
 
       //    (3 / 3) Solve for next sensitivity
-      newton_resources.matrix.MatrixSolve(sensitivity, BL_RANK, 2);
+      newton_resources.matrix.MatrixSolve<0>(sensitivity, BL_RANK, 2);
     }
 
     // Update indexing
