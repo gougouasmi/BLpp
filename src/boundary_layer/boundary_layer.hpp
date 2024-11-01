@@ -16,11 +16,13 @@ using std::array;
 using std::vector;
 
 constexpr int MODEL_RANK = 0;
+constexpr int TARGET_RANK = 2;
 
 class BoundaryLayer {
 public:
   BoundaryLayer() = delete;
-  BoundaryLayer(int max_nb_steps, BLModel<MODEL_RANK> model_functions);
+  BoundaryLayer(int max_nb_steps,
+                BLModel<MODEL_RANK, TARGET_RANK> model_functions);
 
   //
   void InitializeState(ProfileParams &profile_params, int worker_id = 0);
@@ -40,28 +42,28 @@ public:
   // Shooting algorithm implementations
   SearchOutcome ProfileSearch(ProfileParams &profile_params,
                               SearchParams &search_params,
-                              array<double, 2> &best_guess);
+                              array<double, TARGET_RANK> &best_guess);
   SearchOutcome BoxProfileSearch(ProfileParams &profile_params,
                                  SearchParams &search_params,
-                                 array<double, 2> &best_guess);
-  SearchOutcome BoxProfileSearchParallel(ProfileParams &profile_params,
-                                         SearchParams &search_params,
-                                         array<double, 2> &best_guess);
+                                 array<double, TARGET_RANK> &best_guess);
+  SearchOutcome
+  BoxProfileSearchParallel(ProfileParams &profile_params,
+                           SearchParams &search_params,
+                           array<double, TARGET_RANK> &best_guess);
   SearchOutcome
   BoxProfileSearchParallelWithQueues(ProfileParams &profile_params,
                                      SearchParams &search_params,
-                                     array<double, 2> &best_guess);
+                                     array<double, TARGET_RANK> &best_guess);
 
   // Gradient Descent / Newton method
   SearchOutcome GradientProfileSearch(ProfileParams &profile_params,
                                       SearchParams &search_params,
-                                      array<double, 2> &best_guess,
+                                      array<double, TARGET_RANK> &best_guess,
                                       int worker_id = 0);
 
-  SearchOutcome GradientProfileSearch_Exp(ProfileParams &profile_params,
-                                          SearchParams &search_params,
-                                          array<double, 2> &best_guess,
-                                          int worker_id = 0);
+  SearchOutcome GradientProfileSearch_Exp(
+      ProfileParams &profile_params, SearchParams &search_params,
+      array<double, TARGET_RANK> &best_guess, int worker_id = 0);
 
   // 2D profile calculation
   vector<SearchOutcome> Compute(const BoundaryData &boundary_data,
@@ -85,7 +87,8 @@ public:
   // Post-processing
   vector<double> &GetEtaGrid(int worker_id = 0);
   vector<double> &GetStateGrid(int worker_id = 0);
-  Generic::Vector<double, MODEL_RANK * 2> &GetSensitivity(int worker_id = 0);
+  Generic::Vector<double, MODEL_RANK * TARGET_RANK> &
+  GetSensitivity(int worker_id = 0);
 
   void WriteEtaGrid(int worker_id = 0);
   void WriteStateGrid(const std::string &file_path, int profile_size,
@@ -109,7 +112,7 @@ private:
   array<vector<double>, MAX_NB_WORKERS> eta_grids;
   array<vector<double>, MAX_NB_WORKERS> rhs_vecs;
 
-  array<Generic::Vector<double, MODEL_RANK * 2>, MAX_NB_WORKERS>
+  array<Generic::Vector<double, MODEL_RANK * TARGET_RANK>, MAX_NB_WORKERS>
       sensitivity_matrices;
   array<Generic::Vector<double, MODEL_RANK * MODEL_RANK>, 2 * MAX_NB_WORKERS>
       matrix_buffers;
@@ -119,7 +122,7 @@ private:
   vector<double> field_grid;
   vector<double> output_grid;
 
-  BLModel<MODEL_RANK> model_functions;
+  BLModel<MODEL_RANK, TARGET_RANK> model_functions;
 };
 
 #endif

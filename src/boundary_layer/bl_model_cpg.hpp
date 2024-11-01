@@ -54,8 +54,10 @@ inline void initialize_cpg(ProfileParams &profile_params,
   }
 }
 
-inline void initialize_sensitivity_cpg(ProfileParams &profile_params,
-                                       vector<double> &state_sensitivity_cm) {
+template <std::size_t CTIME_RANK, std::size_t TARGET_RANK>
+void initialize_sensitivity_cpg(
+    ProfileParams &profile_params,
+    Generic::Vector<double, CTIME_RANK * TARGET_RANK> &state_sensitivity_cm) {
   double fpp0 = profile_params.fpp0;
   double gp0 = profile_params.gp0;
   double g0 = profile_params.g0;
@@ -702,17 +704,19 @@ inline void compute_outputs_cpg(const vector<double> &state_grid,
 }
 
 // Define bundle
-static BLModel<0> cpg_model_functions(
-    initialize_cpg, initialize_sensitivity_cpg, compute_rhs_cpg<0>,
+static BLModel<0, 2> cpg_model_functions(
+    initialize_cpg, initialize_sensitivity_cpg<0, 2>, compute_rhs_cpg<0>,
     compute_lsim_rhs_cpg<0>, compute_full_rhs_cpg<0>,
     compute_rhs_jacobian_cpg<0>, compute_lsim_rhs_jacobian_cpg<0>,
     compute_full_rhs_jacobian_cpg<0>, limit_update_cpg<0>, compute_outputs_cpg);
 
 // Model that writes to arrays
 constexpr int CPG_MODEL_RANK = 5;
-static BLModel<CPG_MODEL_RANK> cpg_model_functions_stack(
-    initialize_cpg, initialize_sensitivity_cpg, compute_rhs_cpg<CPG_MODEL_RANK>,
-    compute_lsim_rhs_cpg<CPG_MODEL_RANK>, compute_full_rhs_cpg<CPG_MODEL_RANK>,
+constexpr int CPG_TARGET_RANK = 2;
+static BLModel<CPG_MODEL_RANK, CPG_TARGET_RANK> cpg_model_functions_stack(
+    initialize_cpg, initialize_sensitivity_cpg<CPG_MODEL_RANK, CPG_TARGET_RANK>,
+    compute_rhs_cpg<CPG_MODEL_RANK>, compute_lsim_rhs_cpg<CPG_MODEL_RANK>,
+    compute_full_rhs_cpg<CPG_MODEL_RANK>,
     compute_rhs_jacobian_cpg<CPG_MODEL_RANK>,
     compute_lsim_rhs_jacobian_cpg<CPG_MODEL_RANK>,
     compute_full_rhs_jacobian_cpg<CPG_MODEL_RANK>,

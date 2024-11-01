@@ -10,24 +10,27 @@ using std::vector;
 
 using InitializeFunction = void (*)(ProfileParams &profile_params,
                                     vector<double> &state);
-using InitializeSensitivityFunction =
-    void (*)(ProfileParams &profile_params, vector<double> &state_sensitivity);
 
-template <std::size_t CTIME_RANK = 0>
+template <std::size_t CTIME_RANK, std::size_t TARGET_RANK>
+using InitializeSensitivityFunction = void (*)(
+    ProfileParams &profile_params,
+    Generic::Vector<double, CTIME_RANK * TARGET_RANK> &state_sensitivity);
+
+template <std::size_t CTIME_RANK>
 using RhsFunction = double (*)(const Generic::Vector<double, CTIME_RANK> &state,
                                int state_offset, const vector<double> &field,
                                int field_offset,
                                Generic::Vector<double, CTIME_RANK> &rhs,
                                const ProfileParams &profile_params);
 
-template <std::size_t CTIME_RANK = 0>
+template <std::size_t CTIME_RANK>
 using RhsJacobianFunction =
     void (*)(const Generic::Vector<double, CTIME_RANK> &state, int state_offset,
              const vector<double> &field, int field_offset,
              Generic::Vector<double, CTIME_RANK> &matrix_data,
              const ProfileParams &profile_params);
 
-template <std::size_t CTIME_RANK = 0>
+template <std::size_t CTIME_RANK>
 using LimitUpdateFunction =
     double (*)(const Generic::Vector<double, CTIME_RANK> &state,
                const Generic::Vector<double, CTIME_RANK> &state_varn,
@@ -38,10 +41,11 @@ using ComputeOutputsFunction = void (*)(const vector<double> &state_grid,
                                         size_t profile_size,
                                         const ProfileParams &profile_params);
 
-template <std::size_t CTIME_RANK = 0> class BLModel {
+template <std::size_t CTIME_RANK, std::size_t TARGET_RANK> class BLModel {
 public:
   BLModel(InitializeFunction init_fun,
-          InitializeSensitivityFunction init_sensitivity_fun,
+          InitializeSensitivityFunction<CTIME_RANK, TARGET_RANK>
+              init_sensitivity_fun,
           RhsFunction<CTIME_RANK> rhs_self_similar_fun,
           RhsFunction<CTIME_RANK> rhs_locally_similar_fun,
           RhsFunction<CTIME_RANK> rhs_diff_diff_fun,
@@ -60,7 +64,7 @@ public:
         limit_update(limit_update_fun), compute_outputs(compute_outputs_fun){};
 
   InitializeFunction initialize;
-  InitializeSensitivityFunction initialize_sensitivity;
+  InitializeSensitivityFunction<CTIME_RANK, TARGET_RANK> initialize_sensitivity;
   LimitUpdateFunction<CTIME_RANK> limit_update;
   RhsFunction<CTIME_RANK> compute_rhs_self_similar, compute_rhs_locally_similar,
       compute_rhs_diff_diff;

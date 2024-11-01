@@ -34,9 +34,10 @@ inline void initialize_default(ProfileParams &profile_params,
   }
 }
 
-inline void
-initialize_sensitivity_default(ProfileParams &profile_params,
-                               vector<double> &state_sensitivity_cm) {
+template <std::size_t CTIME_RANK, std::size_t TARGET_RANK>
+void initialize_sensitivity_default(
+    ProfileParams &profile_params,
+    Generic::Vector<double, CTIME_RANK * TARGET_RANK> &state_sensitivity_cm) {
   double fpp0 = profile_params.fpp0;
   double gp0 = profile_params.gp0;
   double g0 = profile_params.g0;
@@ -466,11 +467,11 @@ inline void compute_outputs_default(const vector<double> &state_grid,
 }
 
 // Define bundle
-static BLModel<0> default_model_functions(
-    initialize_default, initialize_sensitivity_default, compute_rhs_default<0>,
-    compute_lsim_rhs_default<0>, compute_full_rhs_default<0>,
-    compute_rhs_jacobian_default<0>, compute_lsim_rhs_jacobian_default<0>,
-    compute_full_rhs_jacobian_default<0>, limit_update_default<0>,
-    compute_outputs_default);
+static BLModel<0, 2> default_model_functions(
+    initialize_default, initialize_sensitivity_default<0, 2>,
+    compute_rhs_default<0>, compute_lsim_rhs_default<0>,
+    compute_full_rhs_default<0>, compute_rhs_jacobian_default<0>,
+    compute_lsim_rhs_jacobian_default<0>, compute_full_rhs_jacobian_default<0>,
+    limit_update_default<0>, compute_outputs_default);
 
 #endif
