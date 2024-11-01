@@ -85,10 +85,10 @@ public:
       SearchParams &search_params, vector<vector<double>> &bl_state_grid);
 
   // Post-processing
-  vector<double> &GetEtaGrid(int worker_id = 0);
-  vector<double> &GetStateGrid(int worker_id = 0);
-  Generic::Vector<double, MODEL_RANK * TARGET_RANK> &
-  GetSensitivity(int worker_id = 0);
+  const vector<double> &GetEtaGrid(int worker_id = 0) const;
+  const vector<double> &GetStateGrid(int worker_id = 0) const;
+  const Generic::Vector<double, MODEL_RANK * TARGET_RANK> &
+  GetSensitivity(int worker_id = 0) const;
 
   void WriteEtaGrid(int worker_id = 0);
   void WriteStateGrid(const std::string &file_path, int profile_size,

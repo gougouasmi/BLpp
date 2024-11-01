@@ -2,7 +2,7 @@
 #include <cassert>
 
 namespace utils {
-void print_vector(std::vector<double> &state, int offset, int state_rank,
+void print_vector(const std::vector<double> &state, int offset, int state_rank,
                   size_t left_space) {
 
   auto make_space = [left_space]() {
@@ -20,7 +20,7 @@ void print_vector(std::vector<double> &state, int offset, int state_rank,
   printf("%.4e ].\n", state[offset + state_rank - 1]);
 }
 
-void print_matrix_column_major(std::vector<double> &matrix_data, int xdim,
+void print_matrix_column_major(const std::vector<double> &matrix_data, int xdim,
                                int ydim, size_t left_space) {
   assert(matrix_data.size() >= xdim * ydim);
 
@@ -46,7 +46,7 @@ void print_matrix_column_major(std::vector<double> &matrix_data, int xdim,
   printf("].\n");
 }
 
-void print_matrix_row_major(std::vector<double> &matrix_data, int xdim,
+void print_matrix_row_major(const std::vector<double> &matrix_data, int xdim,
                             int ydim, size_t left_space) {
   assert(matrix_data.size() >= xdim * ydim);
 

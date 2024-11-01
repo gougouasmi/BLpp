@@ -71,16 +71,16 @@ BoundaryLayer::GetJacobianFun(SolveType solve_type) {
   return nullptr;
 }
 
-vector<double> &BoundaryLayer::GetEtaGrid(int worker_id) {
+const vector<double> &BoundaryLayer::GetEtaGrid(int worker_id) const {
   return eta_grids[worker_id];
 }
 
-vector<double> &BoundaryLayer::GetStateGrid(int worker_id) {
+const vector<double> &BoundaryLayer::GetStateGrid(int worker_id) const {
   return state_grids[worker_id];
 }
 
-Generic::Vector<double, MODEL_RANK * TARGET_RANK> &
-BoundaryLayer::GetSensitivity(int worker_id) {
+const Generic::Vector<double, MODEL_RANK * TARGET_RANK> &
+BoundaryLayer::GetSensitivity(int worker_id) const {
   return sensitivity_matrices[worker_id];
 }
 
